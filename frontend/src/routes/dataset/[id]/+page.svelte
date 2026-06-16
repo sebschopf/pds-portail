@@ -1,0 +1,236 @@
+<script lang="ts">
+	import { Breadcrumb, Card, QualityBlock, ResourceList, StructureBlock } from '$lib';
+
+	let { data } = $props();
+
+	const dataset = $derived(data.dataset);
+	const structure = $derived(dataset?.dataset_structure);
+	const orgFilterLink = $derived(
+		dataset?.org_id ? `/?org=${encodeURIComponent(dataset.org_id)}&page=1` : null
+	);
+	const datasetDirectLink = $derived(dataset?.id ? `/dataset/${encodeURIComponent(dataset.id)}` : null);
+	const ponderationLink = $derived(
+		dataset?.id ? `/dataset/${encodeURIComponent(dataset.id)}/ponderation` : null
+	);
+	const datasetApiLink = $derived(dataset?.id ? `/api/v1/dataset/${encodeURIComponent(dataset.id)}` : null);
+	const breadcrumbItems = $derived([
+		{ label: 'Recherche', href: '/' },
+		{ label: dataset?.title ?? 'Fiche dataset' }
+	]);
+</script>
+
+<section class="stack">
+	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation dataset" />
+	<Card title="Fiche dataset" subtitle="Contrat backend endpoint dataset detail">
+		{#if data.status === 'error'}
+			<p class="state state-danger" role="alert">{data.errorMessage ?? 'Erreur inconnue'}</p>
+			<nav class="links" aria-label="Navigation retour">
+				<a href="/">Retour a la recherche</a>
+			</nav>
+		{:else if data.status === 'not-found'}
+			<p class="state" role="status">Dataset introuvable: {data.datasetId}</p>
+			<nav class="links" aria-label="Navigation retour">
+				<a href="/">Retour a la recherche</a>
+			</nav>
+		{:else if data.status === 'contract-error'}
+			<p class="state state-danger" role="alert">Contrat dataset backend invalide</p>
+			<nav class="links" aria-label="Navigation retour">
+				<a href="/">Retour a la recherche</a>
+			</nav>
+		{:else if dataset}
+			<h3 class="title">{dataset.title}</h3>
+
+			<section class="access-modes" aria-label="Modes d acces du dataset">
+				<h4 class="access-title">Modes d acces</h4>
+				<dl class="access-list">
+					<div>
+						<dt>Explication du score qualite</dt>
+						<dd>
+							{#if ponderationLink}
+								<a href={ponderationLink}>Comprendre la ponderation du score qualite</a>
+							{:else}
+								Non disponible
+							{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>Acces direct (URL)</dt>
+						<dd>
+							{#if datasetDirectLink}
+								<a href={datasetDirectLink}>Ouvrir directement cette fiche dataset</a>
+							{:else}
+								Non disponible
+							{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>Exploration guidee</dt>
+						<dd>
+							Naviguer via la recherche puis les ressources associees.
+						</dd>
+					</div>
+					<div>
+						<dt>Acces API (developpement)</dt>
+						<dd>
+							{#if datasetApiLink}
+								<a href={datasetApiLink}>Consulter le endpoint dataset interne</a>
+							{:else}
+								Non disponible
+							{/if}
+						</dd>
+					</div>
+				</dl>
+			</section>
+
+			<dl class="details" aria-label="Informations principales dataset">
+				<div>
+					<dt>Organisation</dt>
+					<dd>{dataset.org_name ?? 'Non renseignee'}</dd>
+				</div>
+				<div>
+					<dt>Description</dt>
+					<dd>{dataset.description ?? 'Non renseignee'}</dd>
+				</div>
+				<div>
+					<dt>Licence</dt>
+					<dd>{dataset.license ?? 'Non renseignee'}</dd>
+				</div>
+			</dl>
+
+			{#if dataset.quality_score !== undefined || dataset.completeness !== undefined || dataset.freshness_days !== undefined}
+				<QualityBlock
+					quality_score={dataset.quality_score}
+					completeness={dataset.completeness}
+					freshness_days={dataset.freshness_days}
+				/>
+			{/if}
+
+			{#if structure}
+				<StructureBlock structure={structure} />
+			{/if}
+
+			<ResourceList resources={dataset.resources} />
+
+			<nav class="links" aria-label="Navigation dataset">
+				<a href="/">Retour a la recherche</a>
+				{#if orgFilterLink}
+					<a href={orgFilterLink}>Voir les datasets de cette organisation</a>
+				{/if}
+			</nav>
+		{/if}
+	</Card>
+</section>
+
+<style>
+	.stack {
+		display: grid;
+		gap: var(--space-4);
+	}
+
+	h3.title {
+		margin: 0;
+		line-height: var(--line-height-title);
+		font-size: clamp(1.2rem, 1.2vw + 1rem, 1.7rem);
+	}
+
+	.access-modes {
+		margin-top: var(--space-4);
+		padding: var(--space-3);
+		border: var(--border-thin) solid var(--color-border);
+		border-radius: var(--radius-none);
+		background: var(--color-surface);
+	}
+
+	.access-title {
+		margin: 0 0 var(--space-2);
+		font-size: 1rem;
+		line-height: var(--line-height-title);
+	}
+
+	.access-list {
+		display: grid;
+		gap: var(--space-2);
+		margin: 0;
+	}
+
+	.access-list div {
+		display: grid;
+		gap: var(--space-1);
+	}
+
+	.access-list dt {
+		font-size: var(--font-size-ui);
+		font-weight: 700;
+		color: var(--color-on-surface-subtle);
+	}
+
+	.access-list dd {
+		margin: 0;
+		font-size: var(--font-size-ui);
+		color: var(--color-on-surface-soft);
+		overflow-wrap: anywhere;
+	}
+
+	.access-list a {
+		font-weight: 650;
+		text-decoration-thickness: 2px;
+	}
+
+	.details {
+		display: grid;
+		gap: var(--space-4);
+		margin: var(--space-4) 0 0;
+	}
+
+	.details div {
+		display: grid;
+		gap: var(--space-1);
+		padding: var(--space-3);
+		background: var(--color-surface-muted);
+		border: var(--border-thin) solid var(--color-border);
+		border-radius: var(--radius-none);
+	}
+
+	dt {
+		font-weight: 700;
+	}
+
+	dd {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.links {
+		display: flex;
+		gap: var(--space-4);
+		flex-wrap: wrap;
+		margin-top: var(--space-4);
+	}
+
+	.links a {
+		font-weight: 650;
+		text-decoration-thickness: 2px;
+		overflow-wrap: anywhere;
+	}
+
+	@media (max-width: 700px) {
+		.links {
+			display: grid;
+			gap: var(--space-3);
+		}
+	}
+
+	.state {
+		margin: 0;
+		padding: var(--space-3) var(--space-4);
+		background: var(--color-surface-muted);
+		border: var(--border-thin) dashed var(--color-border);
+		border-radius: var(--radius-none);
+	}
+
+	.state-danger {
+		background: var(--color-danger);
+		border-color: var(--color-danger);
+		color: var(--color-on-danger);
+	}
+</style>

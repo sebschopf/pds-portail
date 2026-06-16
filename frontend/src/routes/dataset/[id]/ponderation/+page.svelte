@@ -17,12 +17,15 @@
 		<section class="panel" aria-label="Formule du score">
 			<h3>Formule du score</h3>
 			<p>
-				Le score qualite est un indicateur sur 100. Il combine 5 composantes ponderees: completude,
-				fraicheur, formats exploitables, couverture des ressources et structure du dataset.
+				Le score qualite est un indicateur sur 100. Il combine 5 composantes a poids egal:
+				completude, fraicheur, formats standards, signal geo-temporel et nombre de ressources.
 			</p>
 			<p class="formula" aria-label="Formule globale de ponderation">
-				Score = 0.35 x Completude + 0.25 x Fraicheur + 0.15 x Formats + 0.15 x Ressources + 0.10 x
-				Structure
+				Score = 20 x (Completude + Fraicheur + Formats standards + Signal geo-temporel + Nombre de
+				ressources)
+			</p>
+			<p>
+				Chaque composante vaut 0, 0.5 ou 1 selon les informations disponibles.
 			</p>
 		</section>
 
@@ -45,38 +48,38 @@
 		</section>
 
 		<section class="panel" aria-label="Composante formats">
-			<h3>Composante 3 - Formats exploitables</h3>
+			<h3>Composante 3 - Formats standards</h3>
 			<p>
-				<strong>Comment c est calcule:</strong> la note augmente quand des formats reutilisables comme CSV ou
-				JSON sont disponibles.
+				<strong>Comment c est calcule:</strong> la note est haute si au moins un format standard est present
+				(CSV, JSON, GEOJSON, API).
 			</p>
 			<p>
-				<strong>Comment je peux verifier:</strong> ouvrir la section structure ou ressources et verifier la
-				presence de formats ouverts et telechargeables.
+				<strong>Comment je peux verifier:</strong> ouvrir la section ressources et verifier le format de chaque
+				ressource.
+			</p>
+		</section>
+
+		<section class="panel" aria-label="Composante signal geo-temporel">
+			<h3>Composante 4 - Signal geo-temporel</h3>
+			<p>
+				<strong>Comment c est calcule:</strong> la note monte si des signaux geographiques sont presents dans
+				les tags et si une date de creation ou modification est renseignee.
+			</p>
+			<p>
+				<strong>Comment je peux verifier:</strong> verifier la presence de tags geographiques et des dates
+				metadata sur la fiche dataset.
 			</p>
 		</section>
 
 		<section class="panel" aria-label="Composante ressources">
-			<h3>Composante 4 - Couverture des ressources</h3>
+			<h3>Composante 5 - Nombre de ressources</h3>
 			<p>
-				<strong>Comment c est calcule:</strong> la note depend du nombre de ressources publiees et de la
-				presence de liens exploitables.
+				<strong>Comment c est calcule:</strong> la note augmente avec le nombre de ressources associees au
+				dataset.
 			</p>
 			<p>
-				<strong>Comment je peux verifier:</strong> dans "Ressources associees", verifier que plusieurs
-				ressources sont listees et que les liens source s ouvrent.
-			</p>
-		</section>
-
-		<section class="panel" aria-label="Composante structure">
-			<h3>Composante 5 - Structure du dataset</h3>
-			<p>
-				<strong>Comment c est calcule:</strong> la note augmente quand la structure est claire, avec des champs
-				identifies et une frequence de mise a jour indiquee.
-			</p>
-			<p>
-				<strong>Comment je peux verifier:</strong> verifier les champs disponibles, les formats et la frequence
-				dans le bloc "Structure du jeu de donnees".
+				<strong>Comment je peux verifier:</strong> compter les ressources listees dans la section "Ressources
+				associees".
 			</p>
 		</section>
 

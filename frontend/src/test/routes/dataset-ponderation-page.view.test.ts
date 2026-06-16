@@ -15,12 +15,13 @@ describe('dataset/[id]/ponderation page', () => {
 
 		expect(view.body).toContain('Ponderation du score qualite');
 		expect(view.body).toContain('Formule du score');
-		expect(view.body).toContain('Score = 0.35 x Completude + 0.25 x Fraicheur + 0.15 x Formats + 0.15 x Ressources + 0.10 x');
+		expect(view.body).toContain('Score = 20 x (Completude + Fraicheur + Formats standards + Signal geo-temporel + Nombre de');
+		expect(view.body).toContain('Chaque composante vaut 0, 0.5 ou 1');
 		expect(view.body).toContain('Composante 1 - Completude');
 		expect(view.body).toContain('Composante 2 - Fraicheur');
-		expect(view.body).toContain('Composante 3 - Formats exploitables');
-		expect(view.body).toContain('Composante 4 - Couverture des ressources');
-		expect(view.body).toContain('Composante 5 - Structure du dataset');
+		expect(view.body).toContain('Composante 3 - Formats standards');
+		expect(view.body).toContain('Composante 4 - Signal geo-temporel');
+		expect(view.body).toContain('Composante 5 - Nombre de ressources');
 		expect(view.body).toContain('Comment c est calcule');
 		expect(view.body).toContain('Comment je peux verifier');
 	});

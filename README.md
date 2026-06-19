@@ -158,4 +158,6 @@ Le cache SQLite est réinitialisé à chaque redémarrage du backend sur Render 
 ## Projet
 
 - **État** : MVP en phase 5 (déploiement, QA, documentation)
-- **Dépôt** : [tangled.org/moustik.tngl.sh/pds-portail](https://tangled.org/moustik.tngl.sh/pds-portail)
+- **Dépôt** : [Tangled](https://tangled.org/moustik.tngl.sh/pds-portail) · [GitHub Mirror](https://github.com/sebschopf/pds-portail)
+- **Backend** : https://pds-portail-backend.onrender.com
+- **Frontend** : https://pds-portail.vercel.app

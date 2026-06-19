@@ -11,7 +11,7 @@ services:
       - key: CKAN_BASE_URL
         value: https://opendata.swiss
       - key: CORS_ALLOWED_ORIGINS
-        value: ""
+        value: https://pds-portail.vercel.app
       - key: EXPOSE_API_DOCS
         value: "false"
       - key: PYTHON_VERSION

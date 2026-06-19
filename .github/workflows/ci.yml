@@ -27,7 +27,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --frozen --extra dev
 
       - name: Format check (black)
         run: uv run black --check app/ tests/

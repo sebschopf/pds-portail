@@ -1,20 +1,29 @@
 <script lang="ts">
 	import { Breadcrumb, Card, QualityBlock, ResourceList, StructureBlock } from '$lib';
+	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 
 	let { data } = $props();
 
 	const dataset = $derived(data.dataset);
+	const searchContext = $derived(data.searchContext ?? null);
+	const searchHref = $derived(buildSearchHref(searchContext));
 	const structure = $derived(dataset?.dataset_structure);
 	const orgFilterLink = $derived(
 		dataset?.org_id ? `/?org=${encodeURIComponent(dataset.org_id)}&page=1` : null
 	);
-	const datasetDirectLink = $derived(dataset?.id ? `/dataset/${encodeURIComponent(dataset.id)}` : null);
+	const datasetDirectLink = $derived(
+		dataset?.id
+			? appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}`, searchContext)
+			: null
+	);
 	const ponderationLink = $derived(
-		dataset?.id ? `/dataset/${encodeURIComponent(dataset.id)}/ponderation` : null
+		dataset?.id
+			? appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}/ponderation`, searchContext)
+			: null
 	);
 	const datasetApiLink = $derived(dataset?.id ? `/api/v1/dataset/${encodeURIComponent(dataset.id)}` : null);
 	const breadcrumbItems = $derived([
-		{ label: 'Recherche', href: '/' },
+		{ label: 'Recherche', href: searchHref },
 		{ label: dataset?.title ?? 'Fiche dataset' }
 	]);
 </script>
@@ -25,17 +34,17 @@
 		{#if data.status === 'error'}
 			<p class="state state-danger" role="alert">{data.errorMessage ?? 'Erreur inconnue'}</p>
 			<nav class="links" aria-label="Navigation retour">
-				<a href="/">Retour a la recherche</a>
+				<a href={searchHref}>Retour a la recherche</a>
 			</nav>
 		{:else if data.status === 'not-found'}
 			<p class="state" role="status">Dataset introuvable: {data.datasetId}</p>
 			<nav class="links" aria-label="Navigation retour">
-				<a href="/">Retour a la recherche</a>
+				<a href={searchHref}>Retour a la recherche</a>
 			</nav>
 		{:else if data.status === 'contract-error'}
 			<p class="state state-danger" role="alert">Contrat dataset backend invalide</p>
 			<nav class="links" aria-label="Navigation retour">
-				<a href="/">Retour a la recherche</a>
+				<a href={searchHref}>Retour a la recherche</a>
 			</nav>
 		{:else if dataset}
 			<h3 class="title">{dataset.title}</h3>
@@ -109,10 +118,10 @@
 				<StructureBlock structure={structure} />
 			{/if}
 
-			<ResourceList resources={dataset.resources} />
+			<ResourceList resources={dataset.resources} {searchContext} />
 
 			<nav class="links" aria-label="Navigation dataset">
-				<a href="/">Retour a la recherche</a>
+				<a href={searchHref}>Retour a la recherche</a>
 				{#if orgFilterLink}
 					<a href={orgFilterLink}>Voir les datasets de cette organisation</a>
 				{/if}
@@ -143,7 +152,7 @@
 
 	.access-title {
 		margin: 0 0 var(--space-2);
-		font-size: 1rem;
+		font-size: var(--font-size-heading-sm);
 		line-height: var(--line-height-title);
 	}
 
@@ -213,7 +222,7 @@
 		overflow-wrap: anywhere;
 	}
 
-	@media (max-width: 700px) {
+	@media (max-width: 43.75rem) {
 		.links {
 			display: grid;
 			gap: var(--space-3);

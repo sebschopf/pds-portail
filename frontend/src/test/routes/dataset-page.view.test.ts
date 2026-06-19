@@ -235,6 +235,26 @@ describe('dataset/[id] page', () => {
 		expect(view.body).toContain('/resource/resource-1');
 	});
 
+	it('preserve le contexte de recherche sur les liens ressource et retour recherche', () => {
+		const view = render(Page, {
+			props: {
+				data: {
+					datasetId: 'dataset-1',
+					status: 'ok',
+					searchContext: 'q=mobilite&sort=quality_desc&page=2&org=org-1&fmt=CSV&tag=transport',
+					dataset: defaultDataset
+				}
+			}
+		});
+
+		expect(view.body).toContain(
+			'href="/?q=mobilite&amp;sort=quality_desc&amp;page=2&amp;org=org-1&amp;fmt=CSV&amp;tag=transport"'
+		);
+		expect(view.body).toContain(
+			'/resource/resource-1?ctx=q%3Dmobilite%26sort%3Dquality_desc%26page%3D2%26org%3Dorg-1%26fmt%3DCSV%26tag%3Dtransport'
+		);
+	});
+
 	it('affiche un etat explicite quand la structure est absente', () => {
 		const view = render(Page, {
 			props: {

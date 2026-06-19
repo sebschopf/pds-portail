@@ -41,5 +41,12 @@ describe('dataset/[id]/ponderation page', () => {
 		expect(view.body).toContain('Retour a la recherche');
 		expect(view.body).toContain('aria-label="Fil de navigation ponderation"');
 		expect(view.body).toContain('aria-label="Navigation ponderation"');
+		expect(view.body).toContain('aria-labelledby="ponderation-formula-title"');
+		expect(view.body).toContain('aria-labelledby="ponderation-completeness-title"');
+		expect(view.body).toContain('aria-labelledby="ponderation-freshness-title"');
+		expect(view.body).toContain('aria-labelledby="ponderation-formats-title"');
+		expect(view.body).toContain('aria-labelledby="ponderation-signal-title"');
+		expect(view.body).toContain('aria-labelledby="ponderation-resources-title"');
+		expect(view.body).toContain('aria-labelledby="ponderation-limits-title"');
 	});
 });

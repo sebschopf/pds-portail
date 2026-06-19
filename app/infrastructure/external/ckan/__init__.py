@@ -1,0 +1,1 @@
+"""CKAN external adapter package."""

@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+.svelte-kit/
+dist/
+build/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Doc & backlog (contenu interne)
+Doc/
+backlog/
+
+# Local data / cache SQLite
+data/
+
+# Build artifact Python
+pds_portail_backend.egg-info/
+
+# MCP local config (outils dev, pas pour CI)
+.mcp.json

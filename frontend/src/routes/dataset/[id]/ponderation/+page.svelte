@@ -14,13 +14,13 @@
 <section class="stack">
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ponderation" />
 	<Card title="Ponderation du score qualite" subtitle="Explication des 5 composantes et methode de verification">
-		<section class="panel" aria-label="Formule du score">
-			<h3>Formule du score</h3>
+		<section class="panel" aria-labelledby="ponderation-formula-title">
+			<h3 id="ponderation-formula-title">Formule du score</h3>
 			<p>
 				Le score qualite est un indicateur sur 100. Il combine 5 composantes a poids egal:
 				completude, fraicheur, formats standards, signal geo-temporel et nombre de ressources.
 			</p>
-			<p class="formula" aria-label="Formule globale de ponderation">
+			<p class="formula">
 				Score = 20 x (Completude + Fraicheur + Formats standards + Signal geo-temporel + Nombre de
 				ressources)
 			</p>
@@ -29,17 +29,21 @@
 			</p>
 		</section>
 
-		<section class="panel" aria-label="Composante completude">
-			<h3>Composante 1 - Completude</h3>
-			<p><strong>Comment c est calcule:</strong> la note monte quand les champs de base sont renseignes.</p>
+		<section class="panel" aria-labelledby="ponderation-completeness-title">
+			<h3 id="ponderation-completeness-title">Composante 1 - Completude</h3>
 			<p>
-				<strong>Comment je peux verifier:</strong> dans la fiche dataset, verifier presence du titre, de la
-				description, de l organisation et de la licence.
+				<strong>Comment c est calcule:</strong> la note est calculee sur 5 verifications: description
+				renseignee, tags presents, date de creation, date de modification et au moins 1 ressource.
+			</p>
+			<p>
+				<strong>Comment je peux verifier:</strong> dans la fiche dataset, verifier que la description est
+				renseignee, que des tags sont presents, que les dates metadata existent et qu au moins une
+				ressource est listee.
 			</p>
 		</section>
 
-		<section class="panel" aria-label="Composante fraicheur">
-			<h3>Composante 2 - Fraicheur</h3>
+		<section class="panel" aria-labelledby="ponderation-freshness-title">
+			<h3 id="ponderation-freshness-title">Composante 2 - Fraicheur</h3>
 			<p><strong>Comment c est calcule:</strong> plus la derniere mise a jour est recente, plus la note est haute.</p>
 			<p>
 				<strong>Comment je peux verifier:</strong> comparer la date de mise a jour du dataset avec la date du
@@ -47,8 +51,8 @@
 			</p>
 		</section>
 
-		<section class="panel" aria-label="Composante formats">
-			<h3>Composante 3 - Formats standards</h3>
+		<section class="panel" aria-labelledby="ponderation-formats-title">
+			<h3 id="ponderation-formats-title">Composante 3 - Formats standards</h3>
 			<p>
 				<strong>Comment c est calcule:</strong> la note est haute si au moins un format standard est present
 				(CSV, JSON, GEOJSON, API).
@@ -59,8 +63,8 @@
 			</p>
 		</section>
 
-		<section class="panel" aria-label="Composante signal geo-temporel">
-			<h3>Composante 4 - Signal geo-temporel</h3>
+		<section class="panel" aria-labelledby="ponderation-signal-title">
+			<h3 id="ponderation-signal-title">Composante 4 - Signal geo-temporel</h3>
 			<p>
 				<strong>Comment c est calcule:</strong> la note monte si des signaux geographiques sont presents dans
 				les tags et si une date de creation ou modification est renseignee.
@@ -71,8 +75,8 @@
 			</p>
 		</section>
 
-		<section class="panel" aria-label="Composante ressources">
-			<h3>Composante 5 - Nombre de ressources</h3>
+		<section class="panel" aria-labelledby="ponderation-resources-title">
+			<h3 id="ponderation-resources-title">Composante 5 - Nombre de ressources</h3>
 			<p>
 				<strong>Comment c est calcule:</strong> la note augmente avec le nombre de ressources associees au
 				dataset.
@@ -83,8 +87,8 @@
 			</p>
 		</section>
 
-		<section class="panel limits" aria-label="Limites d interpretation">
-			<h3>Limites d interpretation</h3>
+		<section class="panel limits" aria-labelledby="ponderation-limits-title">
+			<h3 id="ponderation-limits-title">Limites d interpretation</h3>
 			<p>
 				Ce score aide a comparer la qualite technique de publication. Il ne prouve pas que les donnees sont
 				vraies, completes dans le monde reel ou adaptees a tous les usages.
@@ -152,7 +156,7 @@
 		overflow-wrap: anywhere;
 	}
 
-	@media (max-width: 700px) {
+	@media (max-width: 43.75rem) {
 		.links {
 			display: grid;
 			gap: var(--space-3);

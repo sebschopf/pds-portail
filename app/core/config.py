@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/app.db"
     ckan_base_url: str = "https://opendata.swiss"
     cors_allowed_origins: str = "http://localhost:5173"
+    cors_allowed_origin_regex: str | None = None
     expose_api_docs: bool = True
 
     model_config = SettingsConfigDict(
@@ -14,6 +15,24 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def parsed_cors_allowed_origins(self) -> list[str]:
+        """Retourne des origines CORS nettoyees et dedupliquees.
+
+        Exemple attendu en variable d'env:
+        CORS_ALLOWED_ORIGINS="https://pds-portail.vercel.app, http://localhost:5173"
+        """
+
+        seen: set[str] = set()
+        origins: list[str] = []
+        for raw_origin in self.cors_allowed_origins.split(","):
+            origin = raw_origin.strip().rstrip("/")
+            if not origin or origin in seen:
+                continue
+            seen.add(origin)
+            origins.append(origin)
+        return origins
 
 
 @lru_cache(maxsize=1)

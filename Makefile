@@ -1,4 +1,4 @@
-.PHONY: quality quality-backend quality-frontend help
+.PHONY: quality quality-backend quality-frontend install-hooks help
 
 help:
 	@echo "Usage: make <target>"
@@ -7,6 +7,7 @@ help:
 	@echo "  quality          Exécute toute la chaîne qualité (backend + frontend)"
 	@echo "  quality-backend  Format (black), lint (ruff), types (mypy), tests (pytest)"
 	@echo "  quality-frontend Svelte check, tests (vitest), build, validation design"
+	@echo "  install-hooks    Active le hook pre-commit (qualité automatique avant chaque commit)"
 
 quality: quality-backend quality-frontend
 
@@ -20,6 +21,11 @@ quality-backend:
 	@echo "=== Backend: tests (pytest --cov-fail-under=80) ==="
 	uv run pytest --cov=app --cov-fail-under=80 --cov-report=term-missing
 	@echo "=== Backend: OK ==="
+
+install-hooks:
+	@echo "🔗 Activation du hook pre-commit (.githooks/pre-commit)..."
+	git config core.hooksPath .githooks
+	@echo "✅ Hook installé — make quality s'exécutera automatiquement avant chaque commit."
 
 quality-frontend:
 	@echo "=== Frontend: Svelte check ==="

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Hook pre-commit — vérifie la qualité avant chaque commit
+# Installé automatiquement via `make install-hooks` ou `git config core.hooksPath .githooks`
+
+echo "🔍 Exécution de make quality..."
+
+make quality 2>&1
+
+if [ $? -ne 0 ]; then
+	echo ""
+	echo "❌ Qualité échouée. Le commit est annulé."
+	echo "   Corrige les erreurs ci-dessus, puis réessaie."
+	exit 1
+fi
+
+echo ""
+echo "✅ Qualité OK. Commit autorisé."
+exit 0

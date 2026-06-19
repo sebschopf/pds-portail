@@ -73,7 +73,7 @@ def parse_package_payload(payload: object) -> CkanPackagePayload:
 
     parsed_payload: dict[str, object] = {}
     _copy_optional_str(source, parsed_payload, "id")
-    _copy_optional_str(source, parsed_payload, "title")
+    _copy_optional_text(source, parsed_payload, "title")
     _copy_optional_str(source, parsed_payload, "notes")
     _copy_optional_str(source, parsed_payload, "metadata_created")
     _copy_optional_str(source, parsed_payload, "metadata_modified")
@@ -112,7 +112,7 @@ def parse_organization_payload(payload: object) -> CkanOrganizationPayload:
     parsed_payload: dict[str, object] = {}
     _copy_optional_str(source, parsed_payload, "id")
     _copy_optional_str(source, parsed_payload, "name")
-    _copy_optional_str(source, parsed_payload, "title")
+    _copy_optional_text(source, parsed_payload, "title")
     _copy_optional_str(source, parsed_payload, "description")
     _copy_optional_str(source, parsed_payload, "image_url")
     _copy_optional_str(source, parsed_payload, "url")
@@ -178,3 +178,36 @@ def _copy_optional_str(source: dict[str, object], target: dict[str, object], key
     if not isinstance(value, str):
         raise TypeError(f"CKAN field '{key}' must be a string")
     target[key] = value
+
+
+def _copy_optional_text(source: dict[str, object], target: dict[str, object], key: str) -> None:
+    """Copie un champ texte CKAN qui peut etre string ou objet multilingue."""
+
+    value = source.get(key)
+    if value is None:
+        return
+    if isinstance(value, str):
+        target[key] = value
+        return
+    if isinstance(value, dict):
+        normalized = _extract_multilingual_text(cast(dict[str, object], value))
+        if normalized is None:
+            raise TypeError(f"CKAN field '{key}' must include at least one string value")
+        target[key] = normalized
+        return
+    raise TypeError(f"CKAN field '{key}' must be a string")
+
+
+def _extract_multilingual_text(values: dict[str, object]) -> str | None:
+    """Extrait un libelle humain depuis un objet de traductions CKAN."""
+
+    for locale in ("fr", "de", "it", "en", "rm"):
+        candidate = values.get(locale)
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate
+
+    for candidate in values.values():
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate
+
+    return None

@@ -127,6 +127,30 @@ def test_parse_package_search_logs_and_skips_invalid_records(
     assert "Record CKAN invalide ignore" in caplog.text
 
 
+def test_parse_package_search_accepts_multilingual_title_objects() -> None:
+    """Accepte les titres CKAN multilingues (objet) et les normalise en string."""
+
+    payload: dict[str, object] = {
+        "result": {
+            "results": [
+                {
+                    "id": "dataset-multilang",
+                    "title": {"fr": "Jeu de donnees sport", "en": "Sports dataset"},
+                    "organization": {"id": "org-1", "name": "etat-test"},
+                }
+            ]
+        }
+    }
+
+    parsed = parse_package_search_response(cast(CkanPackageSearchResponse, payload))
+    result = parsed.get("result")
+    assert result is not None
+    results = result.get("results")
+    assert results is not None
+    assert len(results) == 1
+    assert results[0].get("title") == "Jeu de donnees sport"
+
+
 def test_parse_package_search_rejects_non_dict_payload() -> None:
     """Refuse une reponse racine non JSON object."""
 

@@ -36,6 +36,7 @@ class CkanHttpClient:
                 response = self._client.get(
                     f"{self._base_url}/api/3/action/package_search",
                     params={"start": start, "rows": rows},
+                    follow_redirects=True,
                 )
                 response.raise_for_status()
                 return parse_package_search_response(response.json())

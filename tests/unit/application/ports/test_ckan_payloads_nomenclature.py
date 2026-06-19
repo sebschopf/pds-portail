@@ -201,6 +201,37 @@ def test_parse_package_search_accepts_multilingual_descriptions() -> None:
     assert resources[0].get("description") == "Description ressource"
 
 
+def test_parse_package_search_ignores_empty_multilingual_description_without_dropping_record() -> (
+    None
+):
+    """Un champ description multilingue vide ne doit pas invalider tout le dataset."""
+
+    payload: dict[str, object] = {
+        "result": {
+            "results": [
+                {
+                    "id": "dataset-empty-desc",
+                    "title": "Dataset valide",
+                    "description": {"fr": "", "de": "", "en": ""},
+                    "organization": {
+                        "id": "org-1",
+                        "name": "etat-test",
+                        "description": {"fr": "", "de": ""},
+                    },
+                }
+            ]
+        }
+    }
+
+    parsed = parse_package_search_response(cast(CkanPackageSearchResponse, payload))
+    result = parsed.get("result")
+    assert result is not None
+    results = result.get("results")
+    assert results is not None
+    assert len(results) == 1
+    assert results[0].get("id") == "dataset-empty-desc"
+
+
 def test_parse_package_search_rejects_non_dict_payload() -> None:
     """Refuse une reponse racine non JSON object."""
 

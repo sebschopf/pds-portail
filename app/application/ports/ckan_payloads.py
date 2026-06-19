@@ -192,7 +192,7 @@ def _copy_optional_text(source: dict[str, object], target: dict[str, object], ke
     if isinstance(value, dict):
         normalized = _extract_multilingual_text(cast(dict[str, object], value))
         if normalized is None:
-            raise TypeError(f"CKAN field '{key}' must include at least one string value")
+            return
         target[key] = normalized
         return
     raise TypeError(f"CKAN field '{key}' must be a string")

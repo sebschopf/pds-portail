@@ -151,6 +151,56 @@ def test_parse_package_search_accepts_multilingual_title_objects() -> None:
     assert results[0].get("title") == "Jeu de donnees sport"
 
 
+def test_parse_package_search_accepts_multilingual_descriptions() -> None:
+    """Accepte les descriptions multilingues pour dataset/organisation/ressource."""
+
+    payload: dict[str, object] = {
+        "result": {
+            "results": [
+                {
+                    "id": "dataset-desc-multilang",
+                    "title": "Dataset sport",
+                    "notes": {"fr": "Description fr", "en": "Description en"},
+                    "organization": {
+                        "id": "org-1",
+                        "name": "etat-test",
+                        "description": {"de": "Beschreibung de", "fr": "Description org"},
+                    },
+                    "resources": [
+                        {
+                            "id": "resource-1",
+                            "name": {"fr": "Nom ressource", "en": "Resource name"},
+                            "description": {
+                                "fr": "Description ressource",
+                                "en": "Resource description",
+                            },
+                            "url": "https://example.ch/resource.csv",
+                        }
+                    ],
+                }
+            ]
+        }
+    }
+
+    parsed = parse_package_search_response(cast(CkanPackageSearchResponse, payload))
+    result = parsed.get("result")
+    assert result is not None
+    results = result.get("results")
+    assert results is not None
+    assert len(results) == 1
+    assert results[0].get("notes") == "Description fr"
+
+    organization = results[0].get("organization")
+    assert organization is not None
+    assert organization.get("description") == "Description org"
+
+    resources = results[0].get("resources")
+    assert resources is not None
+    assert len(resources) == 1
+    assert resources[0].get("name") == "Nom ressource"
+    assert resources[0].get("description") == "Description ressource"
+
+
 def test_parse_package_search_rejects_non_dict_payload() -> None:
     """Refuse une reponse racine non JSON object."""
 

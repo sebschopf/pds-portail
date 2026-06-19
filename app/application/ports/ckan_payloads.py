@@ -74,7 +74,7 @@ def parse_package_payload(payload: object) -> CkanPackagePayload:
     parsed_payload: dict[str, object] = {}
     _copy_optional_str(source, parsed_payload, "id")
     _copy_optional_text(source, parsed_payload, "title")
-    _copy_optional_str(source, parsed_payload, "notes")
+    _copy_optional_text(source, parsed_payload, "notes")
     _copy_optional_str(source, parsed_payload, "metadata_created")
     _copy_optional_str(source, parsed_payload, "metadata_modified")
     _copy_optional_str(source, parsed_payload, "url")
@@ -113,7 +113,7 @@ def parse_organization_payload(payload: object) -> CkanOrganizationPayload:
     _copy_optional_str(source, parsed_payload, "id")
     _copy_optional_str(source, parsed_payload, "name")
     _copy_optional_text(source, parsed_payload, "title")
-    _copy_optional_str(source, parsed_payload, "description")
+    _copy_optional_text(source, parsed_payload, "description")
     _copy_optional_str(source, parsed_payload, "image_url")
     _copy_optional_str(source, parsed_payload, "url")
     return cast(CkanOrganizationPayload, parsed_payload)
@@ -142,8 +142,8 @@ def parse_resource_payload(payload: object) -> CkanResourcePayload:
     parsed_payload: dict[str, object] = {}
     _copy_optional_str(source, parsed_payload, "id")
     _copy_optional_str(source, parsed_payload, "package_id")
-    _copy_optional_str(source, parsed_payload, "name")
-    _copy_optional_str(source, parsed_payload, "description")
+    _copy_optional_text(source, parsed_payload, "name")
+    _copy_optional_text(source, parsed_payload, "description")
     _copy_optional_str(source, parsed_payload, "format")
     _copy_optional_str(source, parsed_payload, "download_url")
     _copy_optional_str(source, parsed_payload, "url")

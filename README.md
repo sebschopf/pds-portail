@@ -8,16 +8,16 @@ Le produit permet à toute personne, sans bagage technique, de trouver des datas
 
 ```
 ┌─────────────────────┐     HTTP/JSON     ┌─────────────────────┐
-│  FRONTEND (Vercel)  │ ◄──────────────► │  BACKEND (Render)      │
-│  SvelteKit 5        │                    │  Python + FastAPI   │
-│  Recherche, détail, │                    │  API REST v1        │
-│  qualité, ressources│                    └─────────┬───────────┘
-└─────────────────────┘                               │
-                                                       ▼
-                                                ┌─────────────┐
-                                                │  SQLite     │
-                                                │  Cache      │
-                                                └─────────────┘
+│  FRONTEND (Vercel)  │ ◄──────────────►  │  BACKEND (Render)   │
+│  SvelteKit 5        │                   │  Python + FastAPI   │
+│  Recherche, détail, │                   │  API REST v1        │
+│  qualité, ressources│                   └─────────┬───────────┘
+└─────────────────────┘                             │
+                                                    ▼
+                                             ┌─────────────┐
+                                             │  SQLite     │
+                                             │  Cache      │
+                                             └─────────────┘
 ```
 
 - **Frontend** : SvelteKit 5 + Svelte 5 runes — déployé sur Vite/Vercel
@@ -71,26 +71,22 @@ npm run dev:mock
 
 ## Qualité
 
-Avant chaque commit, exécuter les vérifications suivantes :
-
-### Backend
+Avant chaque commit, exécuter la commande suivante à la racine du projet :
 
 ```sh
-# Format, lint, types, tests (couverture >= 80%)
-uv run black --check app/ tests/
-uv run ruff check app/ tests/
-uv run mypy app/ tests/
-uv run pytest --cov=app --cov-fail-under=80
+make quality
 ```
 
-### Frontend
+Cela lance toute la chaîne qualité :
+
+- **Backend** : format (black), lint (ruff), types (mypy), tests (pytest --cov-fail-under=80)
+- **Frontend** : Svelte check, tests (vitest), build, validation design system
+
+Pour exécuter la qualité sur une seule partie :
 
 ```sh
-cd frontend
-npm run check            # Svelte check + TypeScript
-npm run test             # Tests unitaires Vitest
-npm run build            # Build production
-npm run validate:design  # Validation design system
+make quality-backend   # Backend uniquement
+make quality-frontend  # Frontend uniquement
 ```
 
 ## Déploiement

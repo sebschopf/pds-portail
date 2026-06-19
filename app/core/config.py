@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     ckan_base_url: str = "https://opendata.swiss"
     cors_allowed_origins: str = "http://localhost:5173"
     cors_allowed_origin_regex: str | None = None
+    enable_ckan_sync: bool = False
+    ckan_sync_bootstrap_if_empty: bool = True
+    ckan_sync_interval_minutes: int = 60
+    ckan_sync_batch_rows: int = 100
+    ckan_sync_max_batches_per_run: int = 10
+    ckan_sync_batch_delay_seconds: float = 1.0
     expose_api_docs: bool = True
 
     model_config = SettingsConfigDict(

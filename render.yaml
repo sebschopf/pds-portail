@@ -12,6 +12,18 @@ services:
         value: https://opendata.swiss
       - key: CORS_ALLOWED_ORIGINS
         value: https://pds-portail.vercel.app
+      - key: ENABLE_CKAN_SYNC
+        value: "true"
+      - key: CKAN_SYNC_BOOTSTRAP_IF_EMPTY
+        value: "true"
+      - key: CKAN_SYNC_INTERVAL_MINUTES
+        value: "60"
+      - key: CKAN_SYNC_BATCH_ROWS
+        value: "100"
+      - key: CKAN_SYNC_MAX_BATCHES_PER_RUN
+        value: "10"
+      - key: CKAN_SYNC_BATCH_DELAY_SECONDS
+        value: "1.0"
       - key: EXPOSE_API_DOCS
         value: "false"
       - key: PYTHON_VERSION

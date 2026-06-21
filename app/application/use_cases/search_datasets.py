@@ -20,16 +20,18 @@ class SearchDatasetsUseCase:
         limit: int = 20,
         org_filter: str | None = None,
         format_filter: str | None = None,
+        tag_filter: str | None = None,
         sort: str = "modified_desc",
     ) -> SearchResponse:
         """Recherche les datasets avec pagination et filtres.
 
         Args:
-            query: Texte libre (titre, description, tags)
+            query: Texte libre (titre, description)
             offset: Position dans les resultats (defaut 0)
             limit: Nombre de resultats par page (defaut 20, max 100)
             org_filter: Filtrer par ID organisation (optionnel)
             format_filter: Filtrer par format (CSV, JSON, etc) (optionnel)
+            tag_filter: Filtrer par tag specifique (optionnel)
             sort: Strategie de tri explicite
 
         Returns:
@@ -46,5 +48,6 @@ class SearchDatasetsUseCase:
             limit=limit,
             org_filter=org_filter,
             format_filter=format_filter,
+            tag_filter=tag_filter,
             sort=sort,
         )

@@ -69,11 +69,12 @@ def internal_cache_status() -> InternalCacheResponse:
 
 @api_router.get("/search", response_model=SearchResponse)
 def search(
-    q: str | None = Query(None, description="Texte libre: titre, description, tags"),
+    q: str | None = Query(None, description="Texte libre: titre, description"),
     offset: int = Query(0, ge=0, description="Position de pagination"),
     limit: int = Query(20, ge=1, le=100, description="Resultats par page"),
     org: str | None = Query(None, description="Filtrer par ID organisation"),
     fmt: str | None = Query(None, description="Filtrer par format ressource"),
+    tag: str | None = Query(None, description="Filtrer par tag (exact match)"),
     sort: Literal[
         "modified_desc",
         "modified_asc",
@@ -85,8 +86,8 @@ def search(
 ) -> SearchResponse:
     """Recherche les datasets avec pagination et filtres.
 
-    Supporte la recherche full-text sur titre/description/tags ainsi que
-    le filtrage par organisation et format de ressource. Inclut les facettes
+    Supporte la recherche full-text sur titre/description ainsi que
+    le filtrage par organisation, format de ressource, et tag. Inclut les facettes
     pour construire une interface de recherche facettee.
 
     Query params:
@@ -95,6 +96,7 @@ def search(
         limit: Resultats par page (1-100, defaut 20)
         org: Filtrer par ID organisation (optionnel)
         fmt: Filtrer par format (CSV, JSON, etc) (optionnel)
+        tag: Filtrer par tag specifique (optionnel)
         sort: Strategie de tri explicite
 
     Returns:
@@ -107,6 +109,7 @@ def search(
         limit=limit,
         org_filter=org,
         format_filter=fmt,
+        tag_filter=tag,
         sort=sort,
     )
 

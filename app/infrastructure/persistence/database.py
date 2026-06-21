@@ -11,12 +11,15 @@ class Base(DeclarativeBase):
 
 
 def _ensure_sqlite_directory(database_url: str) -> None:
-    sqlite_prefix = "sqlite:///./"
+    sqlite_prefix = "sqlite:///"
     if not database_url.startswith(sqlite_prefix):
         return
 
-    relative_path = database_url.removeprefix(sqlite_prefix)
-    db_path = Path(relative_path)
+    raw_path = database_url.removeprefix(sqlite_prefix)
+    if not raw_path or raw_path == ":memory:":
+        return
+
+    db_path = Path(raw_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
 

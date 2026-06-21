@@ -23,16 +23,18 @@ class SearchRepositoryPort(Protocol):
         limit: int = 20,
         org_filter: str | None = None,
         format_filter: str | None = None,
+        tag_filter: str | None = None,
         sort: str = "modified_desc",
     ) -> SearchResponse:
         """Recherche les datasets avec pagination et filtres optionnels.
 
         Args:
-            query: Texte libre (titre, description, tags)
+            query: Texte libre (titre, description)
             offset: Position dans les resultats
             limit: Nombre de resultats par page
             org_filter: Filtrer par organisation (slugname)
             format_filter: Filtrer par format de ressource
+            tag_filter: Filtrer par tag exact
             sort: Strategie de tri explicite
 
         Returns:

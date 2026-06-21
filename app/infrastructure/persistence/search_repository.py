@@ -40,12 +40,14 @@ class SqlAlchemySearchRepository:
         limit: int = 20,
         org_filter: str | None = None,
         format_filter: str | None = None,
+        tag_filter: str | None = None,
         sort: str = "modified_desc",
     ) -> SearchResponse:
         """Cherche les datasets avec pagination et filtres.
 
-        Effectue une recherche full-text sur titre/description/tags et agrege
-        les facettes pour l'interface de recherche.
+        Effectue une recherche full-text sur titre/description et agrege
+        les facettes pour l'interface de recherche. Supporte aussi filtrage
+        par tag specifique en match exact sur la liste des tags.
         """
 
         with SessionLocal() as session:
@@ -57,11 +59,14 @@ class SqlAlchemySearchRepository:
                     or_(
                         func.lower(DatasetModel.title).like(search_term),
                         func.lower(DatasetModel.description).like(search_term),
-                        func.lower(DatasetModel.tags).like(search_term),
                     )
                 )
             if org_filter:
                 base_filters.append(DatasetModel.org_id == org_filter)
+            if tag_filter:
+                # Filtrer par tag exact: chercher le tag dans la liste (format JSON ou CSV)
+                tag_term = f"%{tag_filter}%"
+                base_filters.append(func.lower(DatasetModel.tags).like(func.lower(tag_term)))
 
             filters = list(base_filters)
             if format_filter:

@@ -32,6 +32,14 @@ class SyncCkanBatchUseCase:
     def execute(self, start: int = 0, rows: int = 100) -> NormalizedBatch:
         """Synchronise une page CKAN complete puis retourne le batch normalise."""
 
+        if rows <= 0:
+            raise ValueError(f"rows doit etre > 0, recu {rows}")
+        if start < 0:
+            raise ValueError(f"start doit etre >= 0, recu {start}")
+
+        # La resilience reseau (backoff, retry) est dans le client.
+        # Le use case ne fait que skipper ce que le client n'a pas pu recuperer
+        # apres epuisement des tentatives, on ne surcharge pas les serveurs d'Etat.
         try:
             payload = self._client.fetch_packages_batch(start=start, rows=rows)
         except CkanTimeoutError:
@@ -65,15 +73,21 @@ class SyncCkanBatchUseCase:
                 logger.warning("Dataset ignore sans organisation id/name")
                 continue
 
-            organizations[organization_id] = Organization(
-                id=organization_id,
-                name=organization_payload.get("title")
-                or organization_payload.get("name")
-                or organization_id,
-                description=organization_payload.get("description"),
-                ckan_url=organization_payload.get("image_url") or organization_payload.get("url"),
-                last_synced=synced_at,
-            )
+            # Construite une seule fois a la premiere occurrence. CKAN garantit que
+            # les metadonnees (name, description, url) sont identiques pour tous les
+            # datasets d'une meme organisation, donc les occurrences suivantes sont
+            # ignorees sans perte d'information.
+            if organization_id not in organizations:
+                organizations[organization_id] = Organization(
+                    id=organization_id,
+                    name=organization_payload.get("title")
+                    or organization_payload.get("name")
+                    or organization_id,
+                    description=organization_payload.get("description"),
+                    ckan_url=organization_payload.get("image_url")
+                    or organization_payload.get("url"),
+                    last_synced=synced_at,
+                )
 
             dataset_id = item.get("id")
             title = item.get("title")

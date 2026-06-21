@@ -92,18 +92,6 @@
 		return value.trim();
 	}
 
-	function selectedTagAsQueryTerm(): string {
-		if (!selectedTag) {
-			return '';
-		}
-		return selectedTag.includes(' ') ? `"${selectedTag}"` : selectedTag;
-	}
-
-	function effectiveQuery(): string {
-		const parts = [safeTrim(query), selectedTagAsQueryTerm()].filter((part) => part.length > 0);
-		return parts.join(' ');
-	}
-
 	function buildSearchStateParams(): URLSearchParams {
 		const params = new URLSearchParams();
 		const textQuery = safeTrim(query);
@@ -166,15 +154,18 @@
 			limit: String(PAGE_SIZE),
 			sort
 		});
-		const queryParam = effectiveQuery();
-		if (queryParam.length > 0) {
-			params.set('q', queryParam);
+		const textQuery = safeTrim(query);
+		if (textQuery.length > 0) {
+			params.set('q', textQuery);
 		}
 		if (selectedOrg) {
 			params.set('org', selectedOrg);
 		}
 		if (selectedFormat) {
 			params.set('fmt', selectedFormat);
+		}
+		if (selectedTag) {
+			params.set('tag', selectedTag);
 		}
 		return `${apiBase}/api/v1/search?${params.toString()}`;
 	}

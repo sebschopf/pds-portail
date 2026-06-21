@@ -109,8 +109,9 @@ make quality-frontend  # Frontend uniquement
 2. Configurer :
    - **Start command** : `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}`
    - **Health check** : `/api/v1/health`
+   - **Persistent Disk** : monter `/var/data` (1 GB minimum)
 3. Définir les variables d'environnement :
-   - `DATABASE_URL` : `sqlite:///./data/app.db`
+   - `DATABASE_URL` : `sqlite:////var/data/app.db`
    - `CKAN_BASE_URL` : `https://opendata.swiss`
    - `CORS_ALLOWED_ORIGINS` : URL du frontend Vercel
    - `EXPOSE_API_DOCS` : `false`
@@ -126,7 +127,7 @@ Le fichier `.github/workflows/ci.yml` est destiné à GitHub Actions. Si le dép
 
 | Variable | Défaut | Description |
 |---|---|---|
-| `DATABASE_URL` | `sqlite:///./data/app.db` | URL de la base de données |
+| `DATABASE_URL` | `sqlite:///./data/app.db` | URL de la base de données (prod Render: `sqlite:////var/data/app.db`) |
 | `CKAN_BASE_URL` | `https://opendata.swiss` | API CKAN source |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Origines autorisées (prod: Vercel) |
 | `EXPOSE_API_DOCS` | `true` | `/docs`, `/redoc`, OpenAPI (false en prod) |
@@ -153,7 +154,11 @@ Le fichier `.github/workflows/ci.yml` est destiné à GitHub Actions. Si le dép
 
 ### Cache
 
-Le cache SQLite est réinitialisé à chaque redémarrage du backend sur Render (fichier éphémère). En local, il persiste dans `data/app.db`. L'ingestion CKAN se fait au démarrage et toutes les heures (CRON interne). À migrer vers PostgreSQL post-MVP si nécessaire.
+Le cache SQLite persiste sur Render si le service utilise un disque persistant monté sur `/var/data` et `DATABASE_URL=sqlite:////var/data/app.db`. En local, il persiste dans `data/app.db`.
+
+L'ingestion CKAN se fait au démarrage si le cache est vide (bootstrap), puis toutes les heures (CRON interne).
+
+En l'absence de disque persistant Render, le cache redevient éphémère et repart à vide après redéploiement.
 
 ## Projet
 

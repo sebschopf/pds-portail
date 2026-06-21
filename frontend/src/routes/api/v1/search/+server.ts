@@ -93,13 +93,14 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	for (const dataset of filtered) {
 		if (dataset.org_name) {
-			const current = organizationsMap.get(dataset.id) ?? {
-				name: dataset.id,
+			const orgKey = dataset.org_id ?? dataset.id;
+			const current = organizationsMap.get(orgKey) ?? {
+				name: orgKey,
 				count: 0,
 				display_name: dataset.org_name
 			};
 			current.count += 1;
-			organizationsMap.set(dataset.id, current);
+			organizationsMap.set(orgKey, current);
 		}
 
 		for (const fmt of dataset.resource_formats) {

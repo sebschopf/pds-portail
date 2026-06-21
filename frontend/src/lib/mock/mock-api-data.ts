@@ -102,6 +102,7 @@ export function buildSearchRecords() {
 	return MOCK_DATASETS.map((dataset) => ({
 		id: dataset.id,
 		title: dataset.title,
+		org_id: dataset.org_id,
 		org_name: dataset.org_name,
 		description: dataset.description,
 		quality_score: dataset.quality_score,

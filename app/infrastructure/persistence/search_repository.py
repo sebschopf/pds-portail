@@ -59,6 +59,8 @@ class SqlAlchemySearchRepository:
                     or_(
                         func.lower(DatasetModel.title).like(search_term),
                         func.lower(DatasetModel.description).like(search_term),
+                        func.lower(OrganizationModel.name).like(search_term),
+                        func.lower(DatasetModel.tags).like(search_term),
                     )
                 )
             if org_filter:

@@ -318,7 +318,7 @@
 					<h3>Organisations</h3>
 					<ul>
 						{#each data.facets.organizations.slice(0, 5) as facet (facet.name)}
-							<li>{facet.name} ({facet.count})</li>
+							<li>{facet.display_name ?? facet.name} ({facet.count})</li>
 						{/each}
 					</ul>
 				</section>

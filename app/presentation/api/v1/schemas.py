@@ -32,6 +32,13 @@ class SearchDatasetItem(BaseModel):
     resource_formats: list[str] = Field(default_factory=list)
     resource_count: int = 0
     tags: list[str] = Field(default_factory=list)
+    ranking_signals: dict[str, float] | None = Field(
+        None,
+        description=(
+            "Signaux de ranking hybride: hybrid_score, text_score, quality_normalized, "
+            "freshness_component, weight_text, weight_quality, weight_freshness"
+        ),
+    )
 
 
 class FacetItem(BaseModel):

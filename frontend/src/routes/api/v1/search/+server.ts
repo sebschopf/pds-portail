@@ -10,6 +10,7 @@ type SortValue =
 	| 'modified_asc'
 	| 'quality_desc'
 	| 'quality_asc'
+	| 'hybrid'
 	| 'title_asc'
 	| 'title_desc';
 
@@ -35,6 +36,9 @@ function toInteger(value: string | null, fallbackValue: number): number {
 function sortDatasets(datasets: ReturnType<typeof buildSearchRecords>, sort: SortValue) {
 	const copied = [...datasets];
 	copied.sort((a, b) => {
+		if (sort === 'hybrid') {
+			return (b.ranking_signals?.hybrid_score ?? 0) - (a.ranking_signals?.hybrid_score ?? 0);
+		}
 		if (sort === 'title_asc') return a.title.localeCompare(b.title);
 		if (sort === 'title_desc') return b.title.localeCompare(a.title);
 		if (sort === 'quality_asc') return (a.quality_score ?? -1) - (b.quality_score ?? -1);
@@ -58,7 +62,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const limit = Math.max(1, toInteger(url.searchParams.get('limit'), 10));
 
 	const terms = parseQueryTerms(query);
-	const records = buildSearchRecords();
+	const records = buildSearchRecords(terms);
 
 	const filtered = records.filter((dataset) => {
 		if (org && dataset.id !== org && dataset.org_name !== org) {

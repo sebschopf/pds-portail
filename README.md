@@ -162,7 +162,7 @@ En l'absence de disque persistant Render, le cache redevient éphémère et repa
 
 ## Projet
 
-- **État** : MVP en phase 5 (déploiement, QA, documentation)
+- **État** : MVP deploye en production ; travail en cours sur M6/M7 avec contraintes d'exploitation reelles
 - **Dépôt** : [Tangled](https://tangled.org/moustik.tngl.sh/pds-portail) · [GitHub Mirror](https://github.com/sebschopf/pds-portail)
 - **Backend** : https://pds-portail-backend.onrender.com
 - **Frontend** : https://pds-portail.vercel.app

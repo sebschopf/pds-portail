@@ -98,7 +98,52 @@ export const MOCK_DATASETS: MockDataset[] = [
 	}
 ];
 
-export function buildSearchRecords() {
+function computeTextScore(queryTerms: string[], title: string, description: string | null): number {
+	if (queryTerms.length === 0) return 0;
+	const titleLower = title.toLowerCase();
+	const descLower = (description ?? '').toLowerCase();
+	let matched = 0;
+	for (const term of queryTerms) {
+		const tl = term.toLowerCase();
+		if (tl && (titleLower.includes(tl) || descLower.includes(tl))) {
+			matched += 1;
+		}
+	}
+	return matched / queryTerms.length;
+}
+
+function computeFreshnessComponent(freshnessDays: number | null): number {
+	if (freshnessDays === null || freshnessDays < 0) return 0;
+	return Math.exp(-freshnessDays / 90);
+}
+
+function computeHybridSignals(
+	queryTerms: string[],
+	title: string,
+	description: string | null,
+	qualityScore: number | null,
+	freshnessDays: number | null
+): Record<string, number> | null {
+	if (queryTerms.length === 0) return null;
+	const textScore = computeTextScore(queryTerms, title, description);
+	const qualityNormalized = (qualityScore ?? 0) / 100;
+	const freshnessComponent = computeFreshnessComponent(freshnessDays);
+	const weightText = 0.5;
+	const weightQuality = 0.3;
+	const weightFreshness = 0.2;
+	const hybridScore = weightText * textScore + weightQuality * qualityNormalized + weightFreshness * freshnessComponent;
+	return {
+		hybrid_score: Math.round(hybridScore * 10000) / 10000,
+		text_score: Math.round(textScore * 10000) / 10000,
+		quality_normalized: Math.round(qualityNormalized * 10000) / 10000,
+		freshness_component: Math.round(freshnessComponent * 10000) / 10000,
+		weight_text: weightText,
+		weight_quality: weightQuality,
+		weight_freshness: weightFreshness
+	};
+}
+
+export function buildSearchRecords(queryTerms: string[] = []) {
 	return MOCK_DATASETS.map((dataset) => ({
 		id: dataset.id,
 		title: dataset.title,
@@ -112,7 +157,14 @@ export function buildSearchRecords() {
 			new Set(dataset.resources.map((resource) => resource.format).filter((fmt): fmt is string => Boolean(fmt)))
 		),
 		resource_count: dataset.resources.length,
-		tags: dataset.tags
+		tags: dataset.tags,
+		ranking_signals: computeHybridSignals(
+			queryTerms,
+			dataset.title,
+			dataset.description,
+			dataset.quality_score,
+			dataset.freshness_days
+		)
 	}));
 }
 

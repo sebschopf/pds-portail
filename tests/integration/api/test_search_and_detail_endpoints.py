@@ -391,6 +391,35 @@ def test_search_sort_explicit(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     assert by_quality_desc_ids == ["dataset-json", "dataset-csv"]
 
 
+def test_search_sort_hybrid_exposes_ranking_signals(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """GET /api/v1/search?sort=hybrid active le ranking hybride et expose ses signaux."""
+
+    database_path = tmp_path / "search-sort-hybrid.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+
+    database_port, cache_repository, app = _configure_api_modules()
+    database_port.create_schema()
+    _populate_cache_facets(cache_repository)
+
+    client = cast(Any, TestClient(app))
+
+    response = cast(Response, client.get("/api/v1/search?q=mobilite&sort=hybrid"))
+    assert response.status_code == 200
+
+    data = cast(dict[str, Any], response.json())
+    datasets = cast(list[dict[str, Any]], data["datasets"])
+
+    assert [str(item["id"]) for item in datasets] == ["dataset-json", "dataset-csv"]
+    assert datasets[0]["ranking_signals"] is not None
+    assert datasets[1]["ranking_signals"] is not None
+    assert (
+        datasets[0]["ranking_signals"]["hybrid_score"]
+        >= datasets[1]["ranking_signals"]["hybrid_score"]
+    )
+
+
 def test_search_sort_invalid_returns_422(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """GET /api/v1/search avec sort invalide retourne 422."""
 

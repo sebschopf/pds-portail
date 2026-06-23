@@ -11,6 +11,7 @@
 		| 'modified_asc'
 		| 'quality_desc'
 		| 'quality_asc'
+		| 'hybrid'
 		| 'title_asc'
 		| 'title_desc';
 
@@ -51,6 +52,7 @@
 		modified_asc: 'Date (plus ancien)',
 		quality_desc: 'Qualite (meilleure)',
 		quality_asc: 'Qualite (moins bonne)',
+		hybrid: 'Pertinence (hybride)',
 		title_asc: 'Nom (A-Z)',
 		title_desc: 'Nom (Z-A)'
 	};

@@ -80,6 +80,7 @@ def search(
         "modified_asc",
         "quality_desc",
         "quality_asc",
+        "hybrid",
         "title_asc",
         "title_desc",
     ] = Query("modified_desc", description="Strategie de tri explicite"),

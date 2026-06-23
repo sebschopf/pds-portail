@@ -13,6 +13,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.domain.ranking import compute_hybrid_score
 from app.infrastructure.persistence.database import SessionLocal
 from app.infrastructure.persistence.models import DatasetModel, OrganizationModel, ResourceModel
 from app.presentation.api.v1.schemas import (
@@ -51,6 +52,8 @@ class SqlAlchemySearchRepository:
         """
 
         with SessionLocal() as session:
+            query_terms = self._parse_query_terms(query) if query else []
+
             # Construire la clause WHERE
             base_filters: list[ColumnElement[bool]] = []
             if query:
@@ -82,25 +85,34 @@ class SqlAlchemySearchRepository:
 
             # Compter les resultats totaux
             where_clause = and_(*filters) if filters else None
-            total_query = select(func.count()).select_from(DatasetModel)
+            total_query = select(func.count()).select_from(DatasetModel).join(OrganizationModel)
             if where_clause is not None:
                 total_query = total_query.where(where_clause)
             total = session.scalar(total_query) or 0
 
-            # Chercher et paginer les resultats
-            dataset_query = (
-                select(DatasetModel)
-                .join(OrganizationModel)
-                .order_by(*self._order_by_for_sort(sort))
-                .offset(offset)
-                .limit(limit)
-            )
+            # Chercher les datasets (sans pagination si tri hybride, on trie en Python)
+            use_hybrid = sort == "hybrid" and bool(query_terms)
+            if use_hybrid:
+                # Pour le tri hybride, on charge tous les resultats filtres
+                dataset_query = (
+                    select(DatasetModel)
+                    .join(OrganizationModel)
+                    .order_by(cast(ColumnElement[object], DatasetModel.id.asc()))
+                )
+            else:
+                dataset_query = (
+                    select(DatasetModel)
+                    .join(OrganizationModel)
+                    .order_by(*self._order_by_for_sort(sort))
+                    .offset(offset)
+                    .limit(limit)
+                )
             if where_clause is not None:
                 dataset_query = dataset_query.where(where_clause)
 
             datasets: list[DatasetModel] = list(session.scalars(dataset_query).all())
 
-            # Construire les items de recherche
+            # Construire les items de recherche avec signaux de ranking
             search_items: list[SearchDatasetItem] = []
             for ds in datasets:
                 # Parser les tags depuis la chaine JSON-like
@@ -111,6 +123,18 @@ class SqlAlchemySearchRepository:
                 resource_formats = list(
                     {r.format for r in ds.resources if r.format and r.format.upper()}
                 )
+
+                # Calculer les signaux de ranking hybride si requete presente
+                ranking_signals = None
+                if query_terms:
+                    signals = compute_hybrid_score(
+                        quality_score=ds.quality_score,
+                        freshness_days=ds.freshness_days,
+                        query_terms=query_terms,
+                        title=ds.title,
+                        description=ds.description,
+                    )
+                    ranking_signals = signals.to_dict()
 
                 search_items.append(
                     SearchDatasetItem(
@@ -124,8 +148,19 @@ class SqlAlchemySearchRepository:
                         resource_formats=resource_formats,
                         resource_count=resource_count,
                         tags=tags,
+                        ranking_signals=ranking_signals,
                     )
                 )
+
+            # Si tri hybride : trier par hybrid_score descendant puis paginer
+            if use_hybrid:
+                search_items.sort(
+                    key=lambda item: (
+                        item.ranking_signals["hybrid_score"] if item.ranking_signals else 0
+                    ),
+                    reverse=True,
+                )
+                search_items = search_items[offset : offset + limit]
 
             # Agreger les facettes
             facets = self._aggregate_facets(session, base_filters)
@@ -226,6 +261,13 @@ class SqlAlchemySearchRepository:
     # Helpers prive
 
     @staticmethod
+    def _parse_query_terms(query: str | None) -> list[str]:
+        """Decoupe une requete texte en termes normalises."""
+        if not query or not query.strip():
+            return []
+        return [term.lower().strip() for term in query.split() if term.strip()]
+
+    @staticmethod
     def _parse_tags(tags_str: str | None) -> list[str]:
         """Parse la chaine CSV-like de tags vers une liste."""
         if not tags_str:
@@ -289,6 +331,7 @@ class SqlAlchemySearchRepository:
                 func.count(func.distinct(ResourceModel.dataset_id)).label("count"),
             )
             .join(DatasetModel, DatasetModel.id == ResourceModel.dataset_id)
+            .join(OrganizationModel, OrganizationModel.id == DatasetModel.org_id)
             .where(ResourceModel.format.is_not(None))
             .group_by(func.upper(ResourceModel.format))
             .order_by(func.count(func.distinct(ResourceModel.dataset_id)).desc())
@@ -303,7 +346,7 @@ class SqlAlchemySearchRepository:
             formats.append(FacetItem(name=str(format_name), count=int(count)))
 
         # Tag facet (depuis les tags des datasets filtres)
-        tag_query = select(DatasetModel.tags)
+        tag_query = select(DatasetModel.tags).select_from(DatasetModel).join(OrganizationModel)
         if base_filters:
             tag_query = tag_query.where(and_(*base_filters))
         tag_counter: Counter[str] = Counter()

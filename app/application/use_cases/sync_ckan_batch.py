@@ -97,6 +97,11 @@ class SyncCkanBatchUseCase:
 
             tags = self._extract_tags(item)
             resource_formats: list[str] = []
+            # Collecte des dates de ressources pour estimer la fraicheur reelle des donnees.
+            # metadata_modified est mis a jour par le harvester CKAN a chaque resync,
+            # ce qui le rend inutilisable pour discriminer l'age des datasets.
+            # On prefere la date de ressource la plus recente, avec fallback sur metadata_created.
+            resource_last_modified_dates: list[str] = []
 
             for resource_payload in item.get("resources", []):
                 resource_id = resource_payload.get("id")
@@ -113,6 +118,10 @@ class SyncCkanBatchUseCase:
                 if resource_format:
                     resource_formats.append(resource_format)
 
+                last_mod = resource_payload.get("last_modified")
+                if last_mod:
+                    resource_last_modified_dates.append(last_mod)
+
                 resources.append(
                     Resource(
                         id=resource_id,
@@ -122,16 +131,24 @@ class SyncCkanBatchUseCase:
                         url=resource_payload.get("url"),
                         size_bytes=resource_payload.get("size"),
                         created=resource_payload.get("created"),
-                        last_modified=resource_payload.get("last_modified"),
+                        last_modified=last_mod,
                     )
                 )
+
+            # Date de reference pour la fraicheur : la ressource la plus recente,
+            # ou metadata_created si aucune ressource n'a de date.
+            effective_modified = (
+                max(resource_last_modified_dates)
+                if resource_last_modified_dates
+                else item.get("metadata_created")
+            )
 
             indicators = compute_indicators(
                 DatasetIndicatorInput(
                     description=item.get("notes"),
                     tags=tags,
                     created=item.get("metadata_created"),
-                    modified=item.get("metadata_modified"),
+                    modified=effective_modified,
                     resource_formats=resource_formats,
                     resource_count=len(resource_formats),
                 )
@@ -145,7 +162,7 @@ class SyncCkanBatchUseCase:
                     description=item.get("notes"),
                     tags=tags,
                     created=item.get("metadata_created"),
-                    modified=item.get("metadata_modified"),
+                    modified=effective_modified,
                     quality_score=indicators.quality_score,
                     completeness=indicators.completeness,
                     freshness_days=indicators.freshness_days,

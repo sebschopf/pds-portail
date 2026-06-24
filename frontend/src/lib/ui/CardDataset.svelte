@@ -1,24 +1,13 @@
 <script lang="ts">
 	import { appendSearchContext } from '$lib/navigation/search-context';
-
-	type DatasetCardItem = {
-		id: string;
-		title: string;
-		org_name: string | null;
-		description: string | null;
-		quality_score: number | null;
-		completeness: number | null;
-		freshness_days: number | null;
-		resource_formats: string[];
-		resource_count: number;
-		tags: string[];
-	};
+	import type { RankingSignals } from '$lib/types/ranking';
+	import type { SearchDatasetItem } from '$lib/types/search';
 
 	let {
 		dataset,
 		searchContext = null
 	}: {
-		dataset: DatasetCardItem;
+		dataset: SearchDatasetItem;
 		searchContext?: string | null;
 	} = $props();
 
@@ -28,6 +17,32 @@
 		return value === null ? 'Non renseigne' : `${value}`;
 	}
 
+	function percentLabel(value: number): string {
+		return `${Math.round(value * 100)}%`;
+	}
+
+	/**
+	 * Traduit les signaux bruts du ranking hybride en raisons lisibles,
+	 * triees par contribution decroissante. Chaque raison est ponderee
+	 * (ex: text_score * weight_text) pour refleter son poids reel dans le score.
+	 * Les composantes nulles sont omises pour ne pas encombrer l'affichage.
+	 * Limite a 4 raisons maximum.
+	 */
+	function rankingReason(rs: RankingSignals): { label: string; contribution: number }[] {
+		const reasons: { label: string; contribution: number }[] = [];
+		if (rs.text_score > 0) {
+			reasons.push({ label: 'Mots de la recherche dans le titre ou la description', contribution: rs.text_score * rs.weight_text });
+		}
+		if (rs.quality_normalized > 0) {
+			reasons.push({ label: 'Qualite technique des metadonnees', contribution: rs.quality_normalized * rs.weight_quality });
+		}
+		if (rs.freshness_component > 0) {
+			reasons.push({ label: 'Fraicheur des donnees', contribution: rs.freshness_component * rs.weight_freshness });
+		}
+		reasons.sort((a, b) => b.contribution - a.contribution);
+		return reasons.slice(0, 4);
+	}
+
 	const visibleTags = $derived(dataset.tags.slice(0, MAX_TAGS));
 	const hasMoreTags = $derived(dataset.tags.length > MAX_TAGS);
 	const safeFormats = $derived(dataset.resource_formats.length > 0 ? dataset.resource_formats : ['Non renseigne']);
@@ -35,6 +50,10 @@
 		appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}`, searchContext)
 	);
 	const datasetApiLink = $derived(`/api/v1/dataset/${encodeURIComponent(dataset.id)}`);
+	const rankingReasons = $derived(dataset.ranking_signals ? rankingReason(dataset.ranking_signals) : []);
+	const ponderationLink = $derived(
+		appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}/ponderation`, searchContext)
+	);
 </script>
 
 <article class="dataset-card" aria-labelledby={`dataset-title-${dataset.id}`}>
@@ -73,6 +92,23 @@
 			{visibleTags.join(', ')}{hasMoreTags ? ', ' : ''}{#if hasMoreTags}<span aria-hidden="true">...</span><span class="sr-only">et d autres tags</span>{/if}
 		{/if}
 	</p>
+
+	{#if dataset.ranking_signals}
+		<section class="ranking" aria-label="Pourquoi ce resultat">
+			<h4>Score de pertinence : {percentLabel(dataset.ranking_signals.hybrid_score)}</h4>
+			<ol class="ranking-reasons">
+				{#each rankingReasons as reason (reason.label)}
+					<li>
+						<span class="reason-bar" style="width: {Math.round(reason.contribution * 100)}%"></span>
+						<span class="reason-text">{reason.label} ({percentLabel(reason.contribution)})</span>
+					</li>
+				{/each}
+			</ol>
+			<p class="ranking-note">
+				<a href={ponderationLink}>Comprendre le calcul du score</a>
+			</p>
+		</section>
+	{/if}
 
 	<p class="links">
 		<a href={datasetLink} aria-label={`Ouvrir la fiche: ${dataset.title}`}>
@@ -139,6 +175,58 @@
 	.links a {
 		font-weight: 600;
 		text-decoration-thickness: 2px;
+	}
+
+	.ranking {
+		display: grid;
+		gap: var(--space-2);
+		padding: var(--space-3);
+		background: color-mix(in oklch, var(--color-success) 12%, var(--color-surface-muted));
+		border: var(--border-thin) solid var(--color-success);
+		border-radius: var(--radius-none);
+	}
+
+	.ranking h4 {
+		margin: 0;
+		font-size: var(--font-size-heading-sm);
+		font-weight: 700;
+	}
+
+	.ranking-reasons {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: var(--space-2);
+	}
+
+	.ranking-reasons li {
+		position: relative;
+		padding: var(--space-1) var(--space-2);
+		font-size: var(--font-size-ui);
+		background: var(--color-surface);
+		border: var(--border-thin) solid var(--color-border);
+		overflow: hidden;
+	}
+
+	.reason-bar {
+		position: absolute;
+		inset: 0;
+		background: color-mix(in oklch, var(--color-success) 30%, transparent);
+		z-index: 0;
+	}
+
+	.reason-text {
+		position: relative;
+		z-index: 1;
+	}
+
+	.ranking-note {
+		font-size: var(--font-size-ui);
+	}
+
+	.ranking-note a {
+		font-weight: 600;
 	}
 
 	.sr-only {

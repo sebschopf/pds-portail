@@ -16,6 +16,16 @@ const BASE_DATASET = {
 	tags: ['mobilite', 'transport']
 };
 
+const RANKING_SIGNALS_SAMPLE = {
+	hybrid_score: 0.8512,
+	text_score: 1.0,
+	quality_normalized: 0.87,
+	freshness_component: 0.9048,
+	weight_text: 0.5,
+	weight_quality: 0.3,
+	weight_freshness: 0.2
+};
+
 describe('CardDataset', () => {
 	it('affiche le lien vers la fiche dataset avec le bon href et aria-label discriminant', () => {
 		const view = render(CardDataset, { props: { dataset: BASE_DATASET } });
@@ -120,5 +130,60 @@ describe('CardDataset', () => {
 		});
 
 		expect(view.body).not.toContain('...');
+	});
+
+	it('n affiche pas la section ranking quand ranking_signals est absent', () => {
+		const view = render(CardDataset, {
+			props: { dataset: BASE_DATASET }
+		});
+
+		expect(view.body).not.toContain('Score de pertinence');
+		expect(view.body).not.toContain('Mots de la recherche');
+	});
+
+	it('affiche la section ranking avec le score hybride quand ranking_signals est fourni', () => {
+		const view = render(CardDataset, {
+			props: { dataset: { ...BASE_DATASET, ranking_signals: RANKING_SIGNALS_SAMPLE } }
+		});
+
+		expect(view.body).toContain('Score de pertinence');
+		expect(view.body).toContain('85%');
+	});
+
+	it('affiche les raisons de classement triees par contribution decroissante', () => {
+		const view = render(CardDataset, {
+			props: { dataset: { ...BASE_DATASET, ranking_signals: RANKING_SIGNALS_SAMPLE } }
+		});
+
+		expect(view.body).toContain('Mots de la recherche dans le titre ou la description');
+		expect(view.body).toContain('Qualite technique des metadonnees');
+		expect(view.body).toContain('Fraicheur des donnees');
+	});
+
+	it('affiche le lien vers la page ponderation quand ranking_signals est fourni', () => {
+		const view = render(CardDataset, {
+			props: { dataset: { ...BASE_DATASET, ranking_signals: RANKING_SIGNALS_SAMPLE } }
+		});
+
+		expect(view.body).toContain('Comprendre le calcul du score');
+	});
+
+	it('n affiche pas de raison pour une composante nulle', () => {
+		const view = render(CardDataset, {
+			props: {
+				dataset: {
+					...BASE_DATASET,
+					ranking_signals: {
+						...RANKING_SIGNALS_SAMPLE,
+						text_score: 0,
+						freshness_component: 0
+					}
+				}
+			}
+		});
+
+		expect(view.body).not.toContain('Mots de la recherche');
+		expect(view.body).not.toContain('Fraicheur des donnees');
+		expect(view.body).toContain('Qualite technique des metadonnees');
 	});
 });

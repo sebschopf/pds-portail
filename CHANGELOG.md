@@ -6,6 +6,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased] (En cours - Milestones M6 & M7)
 ### Added (Ajouts)
 - PDS-40 : Recherche différenciante avec ranking hybride explicable et mise en avant de la pertinence (M6).
+- PDS-42 : Affichage du "Pourquoi ce résultat" dans les cartes de recherche et refonte de la page pondération (M6).
 - PDS-47 : Instrumentation KPI de base pour le Time-to-first-relevant-dataset (M7, planifié).
 - Gouvernance d'ouverture de session en mode production : lecture courte obligatoire, ancrage backlog/SPEC/ADR, validation ciblée et traçabilité d'exploitation.
 

@@ -5,6 +5,7 @@
 
 	import { Button, Card, CardDataset, FiltersPanel, StateBadge } from '$lib';
 	import { normalizeSearchContext } from '$lib/navigation/search-context';
+	import type { SearchDatasetItem, FacetItem, SearchResponse } from '$lib/types/search';
 
 	type SortValue =
 		| 'modified_desc'
@@ -14,37 +15,6 @@
 		| 'hybrid'
 		| 'title_asc'
 		| 'title_desc';
-
-	type SearchDatasetItem = {
-		id: string;
-		title: string;
-		org_name: string | null;
-		description: string | null;
-		quality_score: number | null;
-		completeness: number | null;
-		freshness_days: number | null;
-		resource_formats: string[];
-		resource_count: number;
-		tags: string[];
-	};
-
-	type FacetItem = {
-		name: string;
-		count: number;
-		display_name?: string;
-	};
-
-	type SearchResponse = {
-		total: number;
-		offset: number;
-		limit: number;
-		datasets: SearchDatasetItem[];
-		facets?: {
-			organizations: FacetItem[];
-			formats: FacetItem[];
-			tags: FacetItem[];
-		};
-	};
 
 	const PAGE_SIZE = 10;
 	const sortLabels: Record<SortValue, string> = {

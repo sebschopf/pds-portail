@@ -13,83 +13,83 @@
 
 <section class="stack">
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ponderation" />
-	<Card title="Comment le score de pertinence est calcule" subtitle="Score hybride combinant texte, qualite et fraicheur (PDS-40)">
+	<Card title="Comment le score de pertinence est calcule" subtitle="Les trois criteres qui determinent l'ordre des resultats">
 
 		<section class="panel" aria-labelledby="ranking-formula-title">
-			<h3 id="ranking-formula-title">Formule du score hybride</h3>
+			<h3 id="ranking-formula-title">Formule du score</h3>
 			<p>
-				Le score de pertinence combine trois signaux ponderes, calcules pour chaque dataset lorsqu'une recherche texte est active.
+				Lorsque vous faites une recherche texte, chaque dataset recoit un score de pertinence qui combine trois criteres. Ce score determine sa position dans la liste des resultats.
 			</p>
 			<p class="formula">
-				Score = 50% x Pertinence texte + 30% x Qualite normalisee + 20% x Fraicheur
+				Score = 50% x Pertinence du texte + 30% x Qualite des donnees + 20% x Fraicheur
 			</p>
 			<p>
-				Chaque composante est comprise entre 0 (tres faible) et 1 (tres fort). Le score final est egalement entre 0 et 1, exprime en pourcentage dans l'interface.
+				Le score final est toujours compris entre 0% et 100%. Il est affiche en pourcentage dans chaque carte de resultat.
 			</p>
 		</section>
 
 		<section class="panel" aria-labelledby="ranking-text-title">
-			<h3 id="ranking-text-title">Composante 1 — Pertinence texte (50%)</h3>
+			<h3 id="ranking-text-title">Critere 1: Pertinence du texte (50%)</h3>
 			<p>
-				<strong>Comment c'est calcule :</strong> le moteur verifie si les mots de votre recherche apparaissent dans le titre ou la description du dataset. Chaque terme trouve contribue au score, normalise par le nombre total de termes de la requete.
+				<strong>Comment c'est calcule:</strong> nous verifions si les mots de votre recherche apparaissent dans le titre ou la description du jeu de donnees. Plus il y a de correspondances, plus ce critere est eleve.
 			</p>
 			<p>
-				<strong>Comment verifier :</strong> si le titre contient les mots-clés de votre recherche, la composante texte sera elevee. Si aucun terme ne correspond, elle sera nulle.
+				<strong>Comment verifier:</strong> si le titre contient les mots-cles de votre recherche, ce critere sera eleve. Si aucun terme ne correspond, il sera nul.
 			</p>
 			<p class="note">
-				Limite connue : la recherche ne gere pas encore les accents ni les variantes multilingues (ex: « mobilité » ne trouvera pas « mobilite »). Cette amelioration est prevue dans la suite de la phase 6 (PDS-41).
+				Limite actuelle: la recherche ne tient pas encore compte des accents ni des variantes de langue (par exemple « mobilite » ne trouvera pas « mobilité »). Cette amelioration est prevue prochainement.
 			</p>
 		</section>
 
 		<section class="panel" aria-labelledby="ranking-quality-title">
-			<h3 id="ranking-quality-title">Composante 2 — Qualite technique (30%)</h3>
+			<h3 id="ranking-quality-title">Critere 2: Qualite des donnees (30%)</h3>
 			<p>
-				<strong>Comment c'est calcule :</strong> le score qualite (sur 100, voir section « Qualite » de la fiche dataset) est ramene entre 0 et 1. Un score qualite de 87 donne une composante de 0,87.
+				<strong>Comment c'est calcule:</strong> le score de qualite (sur 100, visible dans la section « Qualite » de la fiche dataset) est ramene sur une echelle de 0 a 1. Par exemple, un score qualite de 87 donne un critere de 0,87.
 			</p>
 			<p>
-				<strong>Comment verifier :</strong> le score qualite est affiche dans la fiche dataset et dans la carte de resultat. Il reflete la completude des metadonnees, la presence de formats standards, les signaux geo-temporels et le nombre de ressources.
+				<strong>Comment verifier:</strong> le score de qualite est affiche dans la fiche dataset et dans chaque carte de resultat. Il reflete la completude des informations, la presence de formats standard, les indications geographiques et temporelles, ainsi que le nombre de ressources disponibles.
 			</p>
 		</section>
 
 		<section class="panel" aria-labelledby="ranking-freshness-title">
-			<h3 id="ranking-freshness-title">Composante 3 — Fraicheur des donnees (20%)</h3>
+			<h3 id="ranking-freshness-title">Critere 3: Fraicheur des donnees (20%)</h3>
 			<p>
-				<strong>Comment c'est calcule :</strong> plus les donnees sont recentes, plus la composante est elevee. La formule utilise un decay exponentiel : la contribution diminue progressivement avec l'age du dataset (facteur d'echelle : 90 jours).
+				<strong>Comment c'est calcule:</strong> plus les donnees sont recentes, plus ce critere est eleve. La contribution diminue progressivement avec l'age du jeu de donnees. L'echelle de reference est de 90 jours.
 			</p>
 			<ul>
-				<li>Donnees mises a jour aujourd'hui → fraicheur = 100%</li>
-				<li>Donnees mises a jour il y a 90 jours → fraicheur ≈ 37%</li>
-				<li>Donnees mises a jour il y a 180 jours → fraicheur ≈ 14%</li>
-				<li>Date de mise a jour inconnue → fraicheur = 0%</li>
+				<li>Donnees mises a jour aujourd'hui: fraicheur = 100%</li>
+				<li>Donnees mises a jour il y a 90 jours: fraicheur ≈ 37%</li>
+				<li>Donnees mises a jour il y a 180 jours: fraicheur ≈ 14%</li>
+				<li>Date de mise a jour inconnue: fraicheur = 0%</li>
 			</ul>
 			<p>
-				<strong>Comment verifier :</strong> le nombre de jours depuis la derniere mise a jour est affiche dans la carte de resultat (« Fraicheur (jours) »).
+				<strong>Comment verifier:</strong> le nombre de jours depuis la derniere mise a jour est affiche dans la carte de resultat (indication « Fraicheur (jours) »).
 			</p>
 		</section>
 
 		<section class="panel" aria-labelledby="ranking-weights-title">
-			<h3 id="ranking-weights-title">Pourquoi ces poids ?</h3>
+			<h3 id="ranking-weights-title">Pourquoi ces pourcentages ?</h3>
 			<p>
-				Les poids 50% / 30% / 20% sont un compromis documente (PDS-40) :
+				Les poids 50%, 30% et 20% refletent nos priorites pour vous aider a trouver les donnees les plus utiles:
 			</p>
 			<ul>
-				<li><strong>Texte (50%)</strong> : la pertinence semantique est le signal principal — un bon resultat doit parler de ce que vous cherchez.</li>
-				<li><strong>Qualite (30%)</strong> : la fiabilite des metadonnees est un critere discriminant fort — des donnees mal documentees sont moins exploitables.</li>
-				<li><strong>Fraicheur (20%)</strong> : la recence est importante mais pas dominante — des donnees plus anciennes mais de qualite et pertinentes peuvent rester utiles.</li>
+				<li><strong>Texte (50%)</strong>: c'est le critere principal. Un bon resultat doit correspondre a ce que vous cherchez.</li>
+				<li><strong>Qualite (30%)</strong>: des donnees bien documentees sont plus faciles a comprendre et a reutiliser.</li>
+				<li><strong>Fraicheur (20%)</strong>: des donnees recentes sont souvent plus pertinentes, mais des donnees plus anciennes et de qualite peuvent rester utiles.</li>
 			</ul>
 			<p class="note">
-				Ces poids sont versionnes et pourront evoluer avec les retours utilisateurs (phase 7).
+				Ces pourcentages sont fixes pour le moment. Ils pourront evoluer en fonction des retours des utilisateurs et utilisatrices.
 			</p>
 		</section>
 
 		<section class="panel limits" aria-labelledby="ranking-limits-title">
 			<h3 id="ranking-limits-title">Limites d'interpretation</h3>
 			<ul>
-				<li>Le score hybride ne s'applique que lorsqu'une recherche texte est active. Sans recherche, le tri par defaut est par date de modification.</li>
-				<li>Le score textuel ne gere pas les accents ni les synonymes (ameliore en phase 6, PDS-41).</li>
-				<li>Le score qualite est base sur les metadonnees publiees — il ne garantit pas que les donnees sont vraies ou completes dans le monde reel.</li>
-				<li>La fraicheur depend de la date de derniere modification declaree par l'organisation productrice.</li>
-				<li>Les poids sont statiques pour le MVP ; ils pourront etre ajustes via les KPI d'usage (phase 7, PDS-47).</li>
+				<li>Le score de pertinence ne s'applique que lorsque vous faites une recherche avec des mots-cles. Sans recherche, les resultats sont tries par date de modification.</li>
+				<li>La recherche ne tient pas encore compte des accents ni des synonymes (cette amelioration est prevue prochainement).</li>
+				<li>Le score de qualite est base sur les informations publiees par les organisations. Il ne garantit pas que les donnees sont exactes ou completes dans la realite.</li>
+				<li>La fraicheur depend de la date de derniere modification declaree par l'organisation qui produit les donnees.</li>
+				<li>Avant de reutiliser des donnees, verifiez aussi leur source, la periode couverte, la methode de collecte et la licence.</li>
 			</ul>
 		</section>
 

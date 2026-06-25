@@ -28,14 +28,28 @@ class CkanHttpClient:
         self._backoff_base_seconds = backoff_base_seconds
         self._sleep = sleep
 
-    def fetch_packages_batch(self, start: int, rows: int = 100) -> CkanPackageSearchResponse:
-        """Recupere une page ``package_search`` puis valide sa forme JSON."""
+    def fetch_packages_batch(
+        self,
+        start: int,
+        rows: int = 100,
+        modified_since: str | None = None,
+    ) -> CkanPackageSearchResponse:
+        """Recupere une page ``package_search`` puis valide sa forme JSON.
+
+        Si ``modified_since`` est fourni (format ISO 8601), ajoute le filtre
+        ``fq=metadata_modified:[date TO NOW]`` pour ne recuperer que les datasets
+        modifies depuis cette date (synchro differentielle).
+        """
+
+        params: dict[str, int | str] = {"start": start, "rows": rows}
+        if modified_since:
+            params["fq"] = f"metadata_modified:[{modified_since} TO NOW]"
 
         for attempt in range(self._max_retries + 1):
             try:
                 response = self._client.get(
                     f"{self._base_url}/api/3/action/package_search",
-                    params={"start": start, "rows": rows},
+                    params=params,
                     follow_redirects=True,
                 )
                 response.raise_for_status()

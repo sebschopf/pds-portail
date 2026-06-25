@@ -20,8 +20,11 @@ class FakeCkanClient:
         self._cursor = 0
         self.calls: list[tuple[int, int]] = []
 
-    def fetch_packages_batch(self, start: int, rows: int = 100) -> CkanPackageSearchResponse:
+    def fetch_packages_batch(
+        self, start: int, rows: int = 100, modified_since: str | None = None
+    ) -> CkanPackageSearchResponse:
         self.calls.append((start, rows))
+        _ = modified_since
         payload = self._payloads[min(self._cursor, len(self._payloads) - 1)]
         self._cursor += 1
         return payload

@@ -29,8 +29,17 @@ class SyncCkanBatchUseCase:
         self._client = client
         self._repository = repository
 
-    def execute(self, start: int = 0, rows: int = 100) -> NormalizedBatch:
-        """Synchronise une page CKAN complete puis retourne le batch normalise."""
+    def execute(
+        self,
+        start: int = 0,
+        rows: int = 100,
+        modified_since: str | None = None,
+    ) -> NormalizedBatch:
+        """Synchronise une page CKAN complete puis retourne le batch normalise.
+
+        Si ``modified_since`` est fourni (ISO 8601), utilise le filtre
+        ``fq=metadata_modified`` pour la synchro differentielle (PDS-53).
+        """
 
         if rows <= 0:
             raise ValueError(f"rows doit etre > 0, recu {rows}")
@@ -41,7 +50,9 @@ class SyncCkanBatchUseCase:
         # Le use case ne fait que skipper ce que le client n'a pas pu recuperer
         # apres epuisement des tentatives, on ne surcharge pas les serveurs d'Etat.
         try:
-            payload = self._client.fetch_packages_batch(start=start, rows=rows)
+            payload = self._client.fetch_packages_batch(
+                start=start, rows=rows, modified_since=modified_since
+            )
         except CkanTimeoutError:
             logger.warning("Timeout sur le lot CKAN start=%s rows=%s, lot ignore", start, rows)
             return NormalizedBatch(organizations=[], datasets=[], resources=[])

@@ -250,6 +250,7 @@ def _run_sync_cycle_sync(settings: Settings) -> None:
     Evite d'importer main.py (qui cree un objet app au niveau module).
     """
     import time as time_module
+    from datetime import UTC, datetime
 
     from app.application.use_cases.sync_ckan_batch import SyncCkanBatchUseCase
     from app.infrastructure.external.ckan.client import CkanHttpClient
@@ -263,6 +264,26 @@ def _run_sync_cycle_sync(settings: Settings) -> None:
 
     raw_offset = repository.get_sync_state("ckan_offset")
     current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    last_full_sync = repository.get_sync_state("last_full_sync")
+
+    # Mode differentiel (PDS-53)
+    if last_full_sync and current_offset == 0:
+        logger.info("Manual CKAN sync: mode differentiel active, modified_since=%s", last_full_sync)
+        batch = use_case.execute(
+            start=0,
+            rows=settings.ckan_sync_batch_rows,
+            modified_since=last_full_sync,
+        )
+        synced_count = len(batch.datasets)
+        now = datetime.now(UTC).isoformat()
+        repository.set_sync_state("last_full_sync", now)
+        logger.info(
+            "Manual CKAN diff sync finished: synced_datasets=%s, new last_full_sync=%s",
+            synced_count,
+            now,
+        )
+        return
+
     logger.info("Manual CKAN sync starting at offset=%s", current_offset)
 
     total_synced = 0
@@ -273,13 +294,19 @@ def _run_sync_cycle_sync(settings: Settings) -> None:
 
         if synced_count < settings.ckan_sync_batch_rows:
             current_offset = 0
+            now = datetime.now(UTC).isoformat()
+            repository.set_sync_state("last_full_sync", now)
+            logger.info(
+                "Manual CKAN sync: fin du catalogue atteinte, offset reinitialise a 0, "
+                "last_full_sync=%s",
+                now,
+            )
         else:
             current_offset += settings.ckan_sync_batch_rows
 
         repository.set_sync_state("ckan_offset", str(current_offset))
 
         if synced_count < settings.ckan_sync_batch_rows:
-            logger.info("Manual CKAN sync: fin du catalogue atteinte, offset reinitialise a 0")
             break
 
         if batch_index < settings.ckan_sync_max_batches_per_run - 1:

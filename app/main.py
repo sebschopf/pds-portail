@@ -33,6 +33,30 @@ def _run_sync_cycle(settings: Settings) -> None:
 
     raw_offset = repository.get_sync_state("ckan_offset")
     current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    last_full_sync = repository.get_sync_state("last_full_sync")
+
+    # Mode differentiel (PDS-53) : si le catalogue a deja ete entierement charge
+    # (offset remis a 0 apres avoir atteint la fin), on ne recupere que les datasets
+    # modifies depuis la derniere synchro. Sinon, on continue le bootstrap incremental.
+    if last_full_sync and current_offset == 0:
+        logger.info("CKAN sync: mode differentiel active, modified_since=%s", last_full_sync)
+        from datetime import UTC, datetime
+
+        batch = use_case.execute(
+            start=0,
+            rows=settings.ckan_sync_batch_rows,
+            modified_since=last_full_sync,
+        )
+        synced_count = len(batch.datasets)
+        now = datetime.now(UTC).isoformat()
+        repository.set_sync_state("last_full_sync", now)
+        logger.info(
+            "CKAN diff sync finished: synced_datasets=%s, new last_full_sync=%s",
+            synced_count,
+            now,
+        )
+        return
+
     logger.info("CKAN sync starting at offset=%s", current_offset)
 
     total_synced = 0
@@ -43,15 +67,24 @@ def _run_sync_cycle(settings: Settings) -> None:
 
         # Si le lot est partiel, on a atteint la fin du catalogue CKAN.
         # On reinitialise l'offset pour que le prochain cycle reprenne du debut.
+        # On enregistre aussi last_full_sync pour activer le mode differentiel.
         if synced_count < settings.ckan_sync_batch_rows:
+            from datetime import UTC, datetime
+
             current_offset = 0
+            now = datetime.now(UTC).isoformat()
+            repository.set_sync_state("last_full_sync", now)
+            logger.info(
+                "CKAN sync: fin du catalogue atteinte, offset reinitialise a 0, "
+                "last_full_sync=%s",
+                now,
+            )
         else:
             current_offset += settings.ckan_sync_batch_rows
 
         repository.set_sync_state("ckan_offset", str(current_offset))
 
         if synced_count < settings.ckan_sync_batch_rows:
-            logger.info("CKAN sync: fin du catalogue atteinte, offset reinitialise a 0")
             break
 
         if batch_index < settings.ckan_sync_max_batches_per_run - 1:

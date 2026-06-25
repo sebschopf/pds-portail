@@ -67,27 +67,11 @@ class SqlAlchemySearchRepository:
                 # Construire un LIKE pour chaque terme etendu (OR logique)
                 term_clauses: list[ColumnElement[bool]] = []
                 for term in expansion.all_terms:
-                    search_term = f"%{term}%"
-                    term_clauses.append(
-                        or_(
-                            DatasetModel.title.collate("NOCASE").like(search_term),
-                            DatasetModel.description.collate("NOCASE").like(search_term),
-                            OrganizationModel.name.collate("NOCASE").like(search_term),
-                            DatasetModel.tags.collate("NOCASE").like(search_term),
-                        )
-                    )
+                    term_clauses.append(self._search_like_clause(term))
                 base_filters.append(or_(*term_clauses))
             elif query:
                 # Fallback: requete sans expansion (aucun concept reconnu)
-                search_term = f"%{query.lower()}%"
-                base_filters.append(
-                    or_(
-                        DatasetModel.title.collate("NOCASE").like(search_term),
-                        DatasetModel.description.collate("NOCASE").like(search_term),
-                        OrganizationModel.name.collate("NOCASE").like(search_term),
-                        DatasetModel.tags.collate("NOCASE").like(search_term),
-                    )
-                )
+                base_filters.append(self._search_like_clause(query))
             if org_filter:
                 base_filters.append(DatasetModel.org_id == org_filter)
             if tag_filter:
@@ -341,6 +325,72 @@ class SqlAlchemySearchRepository:
             return items
 
     # Helpers prive
+
+    # Diacritiques a normaliser pour la recherche insensible aux accents.
+    # SQLite COLLATE NOCASE gere la casse mais pas les accents.
+    _DIACRITIC_MAP: dict[str, str] = {
+        "é": "e",
+        "è": "e",
+        "ê": "e",
+        "ë": "e",
+        "à": "a",
+        "â": "a",
+        "ä": "a",
+        "î": "i",
+        "ï": "i",
+        "ô": "o",
+        "ö": "o",
+        "û": "u",
+        "ü": "u",
+        "ù": "u",
+        "ç": "c",
+        "ñ": "n",
+        "ß": "ss",
+    }
+
+    @classmethod
+    def _normalize_diacritics(cls, column: ColumnElement[str]) -> ColumnElement[str]:
+        """Applique func.replace() en chaine pour chaque diacritique.
+
+        Transforme un champ comme 'Genève' en 'Geneve' pour que
+        LIKE '%geneve%' puisse matcher. Combine avec COLLATE NOCASE
+        pour l'insensibilite a la casse.
+        """
+        result: ColumnElement[str] = column
+        for accented, plain in cls._DIACRITIC_MAP.items():
+            result = func.replace(result, accented, plain)
+        return result
+
+    @classmethod
+    def _search_like_clause(cls, search_term: str) -> ColumnElement[bool]:
+        """Construit une clause OR LIKE sur titre, description, org, tags.
+
+        Normalise les diacritiques sur les colonnes pour que la recherche
+        sans accents (ex: 'geneve') matche les donnees avec accents (ex: 'Genève').
+        Utilise COLLATE NOCASE pour la casse.
+        """
+        pattern = f"%{search_term}%"
+        title_like = (
+            cls._normalize_diacritics(cast(ColumnElement[str], DatasetModel.title))
+            .collate("NOCASE")
+            .like(pattern)
+        )
+        desc_like = (
+            cls._normalize_diacritics(cast(ColumnElement[str], DatasetModel.description))
+            .collate("NOCASE")
+            .like(pattern)
+        )
+        org_like = (
+            cls._normalize_diacritics(cast(ColumnElement[str], OrganizationModel.name))
+            .collate("NOCASE")
+            .like(pattern)
+        )
+        tags_like = (
+            cls._normalize_diacritics(cast(ColumnElement[str], DatasetModel.tags))
+            .collate("NOCASE")
+            .like(pattern)
+        )
+        return or_(title_like, desc_like, org_like, tags_like)
 
     @staticmethod
     def _parse_query_terms(query: str | None) -> list[str]:

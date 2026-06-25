@@ -437,24 +437,24 @@ class SqlAlchemySearchRepository:
         cache_count = session.query(FacetsCacheModel).count()
         if cache_count > 0:
             # Cache hit : lecture directe
-            org_rows = (
+            cached_org_rows = (
                 session.query(FacetsCacheModel)
                 .filter(FacetsCacheModel.facet_type == "org")
                 .order_by(FacetsCacheModel.count.desc())
                 .all()
             )
-            orgs = [
+            cached_orgs = [
                 FacetItem(name=row.name, display_name=row.display_name, count=row.count)
-                for row in org_rows
+                for row in cached_org_rows
             ]
-            fmt_rows = (
+            cached_fmt_rows = (
                 session.query(FacetsCacheModel)
                 .filter(FacetsCacheModel.facet_type == "format")
                 .order_by(FacetsCacheModel.count.desc())
                 .all()
             )
-            formats = [FacetItem(name=row.name, count=row.count) for row in fmt_rows]
-            return SearchFacets(organizations=orgs, formats=formats, tags=[])
+            cached_formats = [FacetItem(name=row.name, count=row.count) for row in cached_fmt_rows]
+            return SearchFacets(organizations=cached_orgs, formats=cached_formats, tags=[])
 
         # Fallback : agregation directe (cache non encore peuple)
         org_query = (
@@ -474,7 +474,7 @@ class SqlAlchemySearchRepository:
         if base_filters:
             org_query = org_query.where(and_(*base_filters))
 
-        orgs = []
+        orgs: list[FacetItem] = []
         for org_id, org_name, count in session.execute(org_query).all():
             orgs.append(
                 FacetItem(
@@ -498,7 +498,7 @@ class SqlAlchemySearchRepository:
         if base_filters:
             format_query = format_query.where(and_(*base_filters))
 
-        formats = []
+        formats: list[FacetItem] = []
         for format_name, count in session.execute(format_query).all():
             if format_name:
                 formats.append(FacetItem(name=str(format_name), count=int(count)))

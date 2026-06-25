@@ -3,6 +3,10 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from app.application.use_cases.compare_datasets import (
+    CompareDatasetsUseCase,
+    InvalidCompareRequestError,
+)
 from app.application.use_cases.get_dataset_detail import GetDatasetDetailUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
 from app.application.use_cases.get_resource_detail import GetResourceDetailUseCase
@@ -10,6 +14,8 @@ from app.application.use_cases.search_datasets import SearchDatasetsUseCase
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.search_repository import SqlAlchemySearchRepository
 from app.presentation.api.v1.schemas import (
+    CompareRequest,
+    CompareResponse,
     DatasetDetailResponse,
     ResourceDetailResponse,
     SearchResponse,
@@ -150,3 +156,25 @@ def get_resource(resource_id: str) -> ResourceDetailResponse:
     if not detail:
         raise HTTPException(status_code=404, detail=f"Resource {resource_id} not found")
     return detail
+
+
+@api_router.post("/compare", response_model=CompareResponse)
+def compare_datasets(request: CompareRequest) -> CompareResponse:
+    """Compare 2 a 4 datasets sur des criteres homogenes (PDS-43).
+
+    Charge les datasets en une seule requete batch et retourne les champs
+    comparables : qualite, fraicheur, formats, ressources, tags, etc.
+
+    Body:
+        ids: Liste de 2 a 4 IDs de datasets
+
+    Returns:
+        CompareResponse avec les items trouves (ordre preserve)
+
+    Raises:
+        400: Moins de 2 IDs fournis ou IDs invalides
+    """
+    try:
+        return CompareDatasetsUseCase(SqlAlchemySearchRepository()).execute(request)
+    except InvalidCompareRequestError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

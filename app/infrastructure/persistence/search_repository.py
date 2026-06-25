@@ -10,14 +10,16 @@ from collections import Counter
 from typing import cast
 
 from sqlalchemy import and_, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.domain.query_expansion import expand_query
 from app.domain.ranking import compute_hybrid_score
 from app.infrastructure.persistence.database import SessionLocal
 from app.infrastructure.persistence.models import DatasetModel, OrganizationModel, ResourceModel
 from app.presentation.api.v1.schemas import (
     AccessMode,
+    CompareItem,
     DatasetDetailResponse,
     DatasetStructure,
     FacetItem,
@@ -54,9 +56,29 @@ class SqlAlchemySearchRepository:
         with SessionLocal() as session:
             query_terms = self._parse_query_terms(query) if query else []
 
+            # Expand query with multilingual synonyms (PDS-41)
+            # Builds a LIKE clause that matches ALL expanded terms against
+            # title, description, org name, and tags.
+            expansion = expand_query(query) if query else None
+
             # Construire la clause WHERE
             base_filters: list[ColumnElement[bool]] = []
-            if query:
+            if query and expansion and expansion.all_terms:
+                # Construire un LIKE pour chaque terme etendu (OR logique)
+                term_clauses: list[ColumnElement[bool]] = []
+                for term in expansion.all_terms:
+                    search_term = f"%{term}%"
+                    term_clauses.append(
+                        or_(
+                            func.lower(DatasetModel.title).like(search_term),
+                            func.lower(DatasetModel.description).like(search_term),
+                            func.lower(OrganizationModel.name).like(search_term),
+                            func.lower(DatasetModel.tags).like(search_term),
+                        )
+                    )
+                base_filters.append(or_(*term_clauses))
+            elif query:
+                # Fallback: requete sans expansion (aucun concept reconnu)
                 search_term = f"%{query.lower()}%"
                 base_filters.append(
                     or_(
@@ -257,6 +279,66 @@ class SqlAlchemySearchRepository:
                 dataset_id=resource.dataset_id,
                 dataset_title=resource.dataset.title,
             )
+
+    # --- Comparaison guidee (PDS-43) ---
+
+    def get_by_ids(self, ids: list[str]) -> list[CompareItem]:
+        """Charge plusieurs datasets en 1 seul round-trip DB pour comparaison.
+
+        Optimisation batch : WHERE id IN (...) avec 3 JOINs au lieu de
+        N requetes individuelles. Les IDs inexistants sont ignores.
+        """
+        if not ids:
+            return []
+
+        with SessionLocal() as session:
+            datasets: list[DatasetModel] = list(
+                session.scalars(
+                    select(DatasetModel)
+                    .options(
+                        # Charger organisation et ressources en 1 seul round-trip
+                        # (evite N+1 requetes pour 2-4 datasets).
+                        joinedload(DatasetModel.organization),
+                        joinedload(DatasetModel.resources),
+                    )
+                    .where(
+                        DatasetModel.id.in_(ids),
+                        DatasetModel.org_id.is_not(None),
+                    )
+                    .order_by(DatasetModel.id)
+                )
+                .unique()
+                .all()
+            )
+
+            # Construire les items comparables dans l'ordre des IDs demandes
+            ds_map: dict[str, DatasetModel] = {ds.id: ds for ds in datasets}
+            items: list[CompareItem] = []
+            for ds_id in ids:
+                ds = ds_map.get(ds_id)
+                if ds is None:
+                    continue  # Silencieusement ignorer les IDs inexistants
+                tags = self._parse_tags(ds.tags) if ds.tags else []
+                resource_formats = list(
+                    {r.format for r in ds.resources if r.format and r.format.upper()}
+                )
+                items.append(
+                    CompareItem(
+                        id=ds.id,
+                        title=ds.title,
+                        org_name=ds.organization.name if ds.organization else None,
+                        description=ds.description,
+                        license=None,  # Pas de metadata licence pour MVP
+                        quality_score=ds.quality_score,
+                        completeness=ds.completeness,
+                        freshness_days=ds.freshness_days,
+                        resource_formats=resource_formats,
+                        resource_count=len(ds.resources),
+                        tags=tags,
+                        ckan_url=ds.ckan_url,
+                    )
+                )
+            return items
 
     # Helpers prive
 

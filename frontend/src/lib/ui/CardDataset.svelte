@@ -5,10 +5,16 @@
 
 	let {
 		dataset,
-		searchContext = null
+		searchContext = null,
+		isCompared = false,
+		compareDisabled = false,
+		onToggleCompare = () => {}
 	}: {
 		dataset: SearchDatasetItem;
 		searchContext?: string | null;
+		isCompared?: boolean;
+		compareDisabled?: boolean;
+		onToggleCompare?: (id: string) => void;
 	} = $props();
 
 	const MAX_TAGS = 5;
@@ -58,7 +64,19 @@
 
 <article class="dataset-card" aria-labelledby={`dataset-title-${dataset.id}`}>
 	<header class="dataset-head">
-		<h3 id={`dataset-title-${dataset.id}`}>{dataset.title}</h3>
+		<div class="title-row">
+			<h3 id={`dataset-title-${dataset.id}`}>{dataset.title}</h3>
+			<label class="compare-check">
+				<input
+					type="checkbox"
+					checked={isCompared}
+					disabled={compareDisabled && !isCompared}
+					onchange={() => onToggleCompare(dataset.id)}
+					aria-label={isCompared ? `Retirer ${dataset.title} de la comparaison` : `Ajouter ${dataset.title} a la comparaison`}
+				/>
+				<span>Comparer</span>
+			</label>
+		</div>
 		<p class="meta">Organisation: {dataset.org_name ?? 'Non renseignee'}</p>
 	</header>
 
@@ -137,6 +155,36 @@
 	.dataset-head {
 		display: grid;
 		gap: var(--space-1);
+	}
+
+	.title-row {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: var(--space-2);
+	}
+
+	.compare-check {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		font-size: var(--font-size-ui);
+		font-weight: 600;
+		cursor: pointer;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+
+	.compare-check input[type="checkbox"] {
+		width: 1.25rem;
+		height: 1.25rem;
+		accent-color: var(--color-primary);
+		cursor: pointer;
+	}
+
+	.compare-check input[type="checkbox"]:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 
 	h3 {

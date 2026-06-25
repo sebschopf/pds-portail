@@ -3,7 +3,7 @@
 	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
 
-	import { Button, Card, CardDataset, FiltersPanel, StateBadge } from '$lib';
+	import { Button, Card, CardDataset, CompareBar, FiltersPanel, StateBadge } from '$lib';
 	import { normalizeSearchContext } from '$lib/navigation/search-context';
 	import type { SearchDatasetItem, FacetItem, SearchResponse } from '$lib/types/search';
 
@@ -38,6 +38,29 @@
 	let errorMessage = $state('');
 	let data = $state<SearchResponse | null>(null);
 	let resultHeading = $state<HTMLParagraphElement | null>(null);
+
+	// Etat comparaison guidee (PDS-43)
+	const MAX_COMPARE = 4;
+	let compareIds = $state<string[]>([]);
+	const compareDisabled = $derived(compareIds.length >= MAX_COMPARE);
+
+	function toggleCompare(id: string): void {
+		const idx = compareIds.indexOf(id);
+		if (idx >= 0) {
+			compareIds = compareIds.filter((cid) => cid !== id);
+		} else if (compareIds.length < MAX_COMPARE) {
+			compareIds = [...compareIds, id];
+		}
+	}
+
+	function clearCompare(): void {
+		compareIds = [];
+	}
+
+	function navigateToCompare(): void {
+		const ids = compareIds.join(',');
+		window.location.href = `/comparer?ids=${encodeURIComponent(ids)}`;
+	}
 
 	const totalPages = $derived.by(() => {
 		if (!data) {
@@ -212,6 +235,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>Recherche - PDS Portail</title>
+</svelte:head>
+
 <section class="stack">
 	<Card title="Recherche datasets" subtitle="Appels reels sur le contrat backend PDS-6bis">
 		<div class="badges" aria-label="Etats interface">
@@ -255,7 +282,13 @@
 		<ul class="results" aria-label="Resultats de recherche">
 			{#each data.datasets as dataset (dataset.id)}
 				<li>
-					<CardDataset {dataset} {searchContext} />
+					<CardDataset
+						{dataset}
+						{searchContext}
+						isCompared={compareIds.includes(dataset.id)}
+						compareDisabled={compareDisabled}
+						onToggleCompare={toggleCompare}
+					/>
 				</li>
 			{/each}
 		</ul>
@@ -282,6 +315,12 @@
 	{:else}
 		<p class="state">Aucun resultat charge pour le moment.</p>
 	{/if}
+
+	<CompareBar
+		{compareIds}
+		onClear={clearCompare}
+		onCompare={navigateToCompare}
+	/>
 
 	{#if data?.facets}
 		<Card title="Facettes" subtitle="Aide a la navigation des resultats">

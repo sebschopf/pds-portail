@@ -2,6 +2,7 @@ export { default as Button } from './ui/Button.svelte';
 export { default as Breadcrumb } from './ui/Breadcrumb.svelte';
 export { default as Card } from './ui/Card.svelte';
 export { default as CardDataset } from './ui/CardDataset.svelte';
+export { default as CompareBar } from './ui/CompareBar.svelte';
 export { default as FiltersPanel } from './ui/FiltersPanel.svelte';
 export { default as Input } from './ui/Input.svelte';
 export { default as QualityBlock } from './ui/QualityBlock.svelte';

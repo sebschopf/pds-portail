@@ -7,6 +7,7 @@ detail sans exposer les details SQLAlchemy ou schema CKAN.
 from typing import Protocol
 
 from app.presentation.api.v1.schemas import (
+    CompareItem,
     DatasetDetailResponse,
     ResourceDetailResponse,
     SearchResponse,
@@ -52,4 +53,24 @@ class DatasetDetailRepositoryPort(Protocol):
 
     def get_resource(self, resource_id: str) -> ResourceDetailResponse | None:
         """Retourne le detail d'une ressource avec reference au dataset."""
+        ...
+
+
+class CompareRepositoryPort(Protocol):
+    """Contrat pour la comparaison guidee de datasets (PDS-43).
+
+    Charge plusieurs datasets en une seule requete batch pour les comparer
+    sur des criteres homogenes (qualite, fraicheur, formats, etc.).
+    """
+
+    def get_by_ids(self, ids: list[str]) -> list[CompareItem]:
+        """Charge les datasets comparables en batch (1 seul round-trip DB).
+
+        Args:
+            ids: Liste de 2 a 4 IDs de datasets.
+
+        Returns:
+            Liste de CompareItem (ordre preserve). Les IDs inexistants sont
+            silencieusement ignores (pas d'erreur).
+        """
         ...

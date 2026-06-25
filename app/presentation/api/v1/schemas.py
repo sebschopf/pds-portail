@@ -119,3 +119,43 @@ class ResourceDetailResponse(BaseModel):
     last_modified: str | None = None
     dataset_id: str | None = None
     dataset_title: str | None = None
+
+
+# --- Schemas pour la comparaison guidee (PDS-43) ---
+
+MAX_COMPARE_IDS = 4
+"""Nombre maximal de datasets comparables simultanement."""
+
+
+class CompareRequest(BaseModel):
+    """Requete de comparaison : liste d'IDs de datasets (2 a 4)."""
+
+    ids: list[str] = Field(
+        ...,
+        min_length=2,
+        max_length=MAX_COMPARE_IDS,
+        description="IDs des datasets a comparer (2 a 4)",
+    )
+
+
+class CompareItem(BaseModel):
+    """Dataset comparable : champs homogenes pour le tableau comparatif."""
+
+    id: str
+    title: str
+    org_name: str | None = None
+    description: str | None = None
+    license: str | None = None
+    quality_score: int | None = Field(None, description="Score qualite 0-100")
+    completeness: int | None = Field(None, description="Completude metadata 0-100")
+    freshness_days: int | None = Field(None, description="Jours depuis derniere MAJ")
+    resource_formats: list[str] = Field(default_factory=list)
+    resource_count: int = 0
+    tags: list[str] = Field(default_factory=list)
+    ckan_url: str | None = None
+
+
+class CompareResponse(BaseModel):
+    """Reponse de comparaison : liste de datasets comparables."""
+
+    items: list[CompareItem] = Field(description="Datasets comparables (2 a 4)")

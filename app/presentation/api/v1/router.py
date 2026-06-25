@@ -1,3 +1,4 @@
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
@@ -11,7 +12,9 @@ from app.application.use_cases.get_dataset_detail import GetDatasetDetailUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
 from app.application.use_cases.get_resource_detail import GetResourceDetailUseCase
 from app.application.use_cases.search_datasets import SearchDatasetsUseCase
+from app.core.config import Settings, get_settings
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
+from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
 from app.infrastructure.persistence.search_repository import SqlAlchemySearchRepository
 from app.presentation.api.v1.schemas import (
     CompareRequest,
@@ -20,6 +23,8 @@ from app.presentation.api.v1.schemas import (
     ResourceDetailResponse,
     SearchResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -178,3 +183,110 @@ def compare_datasets(request: CompareRequest) -> CompareResponse:
         return CompareDatasetsUseCase(SqlAlchemySearchRepository()).execute(request)
     except InvalidCompareRequestError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class SyncStatusResponse(BaseModel):
+    """Etat de la synchronisation CKAN incrementale."""
+
+    ckan_offset: int
+    updated_at: str | None
+
+
+@api_router.get("/internal/sync/status", response_model=SyncStatusResponse)
+def internal_sync_status() -> SyncStatusResponse:
+    """Retourne l'offset courant de la synchronisation CKAN incrementale.
+
+    Permet de superviser la progression du chargement du catalogue
+    opendata.swiss (~10 000+ datasets) sans acceder a la base de donnees.
+    """
+    repository = SqlAlchemyCacheRepository()
+    raw_offset = repository.get_sync_state("ckan_offset")
+    ckan_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+
+    # Recupere l'horodatage de derniere mise a jour depuis la table sync_state
+    updated_at: str | None = None
+    if raw_offset:
+        # On exploite la capacite de get_sync_state a nous donner l'info
+        # l'horodatage est stocke dans la table, mais on n'a pas d'API directe.
+        # On fait une lecture directe via le modele.
+        from app.infrastructure.persistence.database import SessionLocal
+        from app.infrastructure.persistence.models import SyncStateModel
+
+        with SessionLocal() as session:
+            row = session.get(SyncStateModel, "ckan_offset")
+            if row:
+                updated_at = row.updated_at
+
+    return SyncStatusResponse(ckan_offset=ckan_offset, updated_at=updated_at)
+
+
+@api_router.post("/internal/sync")
+def internal_sync_trigger() -> dict[str, str]:
+    """Declenche un cycle de synchronisation CKAN immediat (PDS-52).
+
+    Utilise les memes parametres de lot que le scheduler periodique
+    (ckan_sync_max_batches_per_run, ckan_sync_batch_rows, etc.).
+    Utile pour forcer un rattrapage sans attendre le prochain cycle horaire.
+
+    Returns:
+        Message de confirmation avec le timestamp de declenchement.
+    """
+    settings = get_settings()
+    if not settings.enable_ckan_sync:
+        raise HTTPException(
+            status_code=503, detail="CKAN sync is disabled (ENABLE_CKAN_SYNC=false)"
+        )
+
+    from datetime import UTC, datetime
+
+    logger.info("CKAN sync triggered manually via /internal/sync")
+    _run_sync_cycle_sync(settings)
+    return {"message": "Sync cycle completed", "triggered_at": datetime.now(UTC).isoformat()}
+
+
+def _run_sync_cycle_sync(settings: Settings) -> None:
+    """Copie defensive de _run_sync_cycle pour usage synchrone dans un endpoint.
+
+    Evite d'importer main.py (qui cree un objet app au niveau module).
+    """
+    import time as time_module
+
+    from app.application.use_cases.sync_ckan_batch import SyncCkanBatchUseCase
+    from app.infrastructure.external.ckan.client import CkanHttpClient
+    from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
+
+    repository = SqlAlchemyCacheRepository()
+    use_case = SyncCkanBatchUseCase(
+        client=CkanHttpClient(),
+        repository=repository,
+    )
+
+    raw_offset = repository.get_sync_state("ckan_offset")
+    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    logger.info("Manual CKAN sync starting at offset=%s", current_offset)
+
+    total_synced = 0
+    for batch_index in range(settings.ckan_sync_max_batches_per_run):
+        batch = use_case.execute(start=current_offset, rows=settings.ckan_sync_batch_rows)
+        synced_count = len(batch.datasets)
+        total_synced += synced_count
+
+        if synced_count < settings.ckan_sync_batch_rows:
+            current_offset = 0
+        else:
+            current_offset += settings.ckan_sync_batch_rows
+
+        repository.set_sync_state("ckan_offset", str(current_offset))
+
+        if synced_count < settings.ckan_sync_batch_rows:
+            logger.info("Manual CKAN sync: fin du catalogue atteinte, offset reinitialise a 0")
+            break
+
+        if batch_index < settings.ckan_sync_max_batches_per_run - 1:
+            time_module.sleep(settings.ckan_sync_batch_delay_seconds)
+
+    logger.info(
+        "Manual CKAN sync cycle finished: synced_datasets=%s next_offset=%s",
+        total_synced,
+        current_offset,
+    )

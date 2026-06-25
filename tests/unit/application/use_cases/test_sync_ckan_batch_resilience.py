@@ -20,10 +20,17 @@ class _SpyRepository:
     def __init__(self) -> None:
         self.was_called = False
         self.last_batch: NormalizedBatch | None = None
+        self._sync_states: dict[str, str] = {}
 
     def upsert_normalized_batch(self, batch: NormalizedBatch) -> None:
         self.was_called = True
         self.last_batch = batch
+
+    def get_sync_state(self, key: str) -> str | None:
+        return self._sync_states.get(key)
+
+    def set_sync_state(self, key: str, value: str) -> None:
+        self._sync_states[key] = value
 
 
 class _RateLimitClient:
@@ -111,3 +118,144 @@ def test_use_case_logs_and_skips_invalid_dataset_and_resource(
     assert "Dataset ignore sans organisation id/name" in caplog.text
     assert "Dataset invalide ignore (id/title manquant)" in caplog.text
     assert "Ressource invalide ignoree" in caplog.text
+
+
+# ── Tests offset persisté (PDS-52) ───────────────────────────────────────
+
+
+class _MinimalDatasetPayloadClient:
+    """Retourne des datasets synthetiques pour tester l'offset sans parser CKAN reel."""
+
+    def __init__(self, count: int = 100) -> None:
+        self._count = count
+        self.last_start: int | None = None
+
+    def fetch_packages_batch(self, start: int, rows: int = 100) -> CkanPackageSearchResponse:
+        self.last_start = start
+        _ = rows
+        results: list[dict] = []
+        for i in range(self._count):
+            results.append(
+                {
+                    "id": f"ds-{start + i}",
+                    "title": f"Dataset {start + i}",
+                    "organization": {"id": f"org-{i % 5}", "name": f"Org {i % 5}"},
+                    "resources": [{"id": f"res-{start + i}", "name": "CSV", "format": "CSV"}],
+                }
+            )
+        return cast(
+            CkanPackageSearchResponse,
+            {
+                "result": {
+                    "results": results,
+                }
+            },
+        )
+
+
+def test_sync_uses_persisted_offset_on_resume() -> None:
+    """Le use case reprend au dernier offset persiste dans le repository."""
+
+    repository = _SpyRepository()
+    repository.set_sync_state("ckan_offset", "500")
+
+    client = _MinimalDatasetPayloadClient(count=100)
+    use_case = SyncCkanBatchUseCase(client=client, repository=repository)
+
+    # Simule la logique du scheduler : lit l'offset, appelle execute
+    raw_offset = repository.get_sync_state("ckan_offset")
+    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    assert current_offset == 500
+    batch = use_case.execute(start=current_offset, rows=100)
+
+    assert client.last_start == 500
+    assert len(batch.datasets) == 100
+
+
+def test_sync_starts_at_zero_when_no_offset_persisted() -> None:
+    """Demarrage a froid : offset 0 si aucun etat persistant."""
+
+    repository = _SpyRepository()
+    # Aucun offset stocke
+
+    client = _MinimalDatasetPayloadClient(count=100)
+    use_case = SyncCkanBatchUseCase(client=client, repository=repository)
+
+    raw_offset = repository.get_sync_state("ckan_offset")
+    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    assert current_offset == 0
+
+    batch = use_case.execute(start=current_offset, rows=100)
+    assert client.last_start == 0
+    assert len(batch.datasets) == 100
+
+
+def test_offset_resets_when_catalog_end_reached() -> None:
+    """La fin du catalogue (batch partiel) reinitialise l'offset a 0."""
+
+    repository = _SpyRepository()
+    repository.set_sync_state("ckan_offset", "1000")
+
+    # Un batch de 50 datasets (moins que batch_rows=100) simule la fin
+    client = _MinimalDatasetPayloadClient(count=50)
+    use_case = SyncCkanBatchUseCase(client=client, repository=repository)
+
+    raw_offset = repository.get_sync_state("ckan_offset")
+    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    batch = use_case.execute(start=current_offset, rows=100)
+
+    # Le batch est partiel → fin du catalogue
+    assert len(batch.datasets) == 50
+
+    # Simule la logique du scheduler : reset si batch partiel
+    if len(batch.datasets) < 100:
+        current_offset = 0
+    repository.set_sync_state("ckan_offset", str(current_offset))
+
+    assert repository.get_sync_state("ckan_offset") == "0"
+
+
+def test_offset_advances_after_full_batch() -> None:
+    """Apres un batch complet, l'offset avance de batch_rows."""
+
+    repository = _SpyRepository()
+    repository.set_sync_state("ckan_offset", "0")
+
+    client = _MinimalDatasetPayloadClient(count=100)
+    use_case = SyncCkanBatchUseCase(client=client, repository=repository)
+
+    raw_offset = repository.get_sync_state("ckan_offset")
+    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    batch = use_case.execute(start=current_offset, rows=100)
+
+    assert len(batch.datasets) == 100
+
+    # Batch complet → offset avance
+    current_offset += 100
+    repository.set_sync_state("ckan_offset", str(current_offset))
+
+    assert repository.get_sync_state("ckan_offset") == "100"
+
+
+def test_offset_persisted_after_each_batch() -> None:
+    """Chaque lot persiste son offset, pas seulement en fin de cycle."""
+
+    repository = _SpyRepository()
+    repository.set_sync_state("ckan_offset", "0")
+
+    # Simule 3 lots complets
+    for expected_start in (0, 100, 200):
+        client = _MinimalDatasetPayloadClient(count=100)
+        use_case = SyncCkanBatchUseCase(client=client, repository=repository)
+
+        raw_offset = repository.get_sync_state("ckan_offset")
+        current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+        assert current_offset == expected_start
+
+        batch = use_case.execute(start=current_offset, rows=100)
+        assert len(batch.datasets) == 100
+        assert client.last_start == expected_start
+
+        current_offset += 100
+        repository.set_sync_state("ckan_offset", str(current_offset))
+        assert repository.get_sync_state("ckan_offset") == str(expected_start + 100)

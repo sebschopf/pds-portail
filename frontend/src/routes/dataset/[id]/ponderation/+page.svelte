@@ -11,6 +11,10 @@
 	]);
 </script>
 
+<svelte:head>
+	<title>Pondération - PDS Portail</title>
+</svelte:head>
+
 <section class="stack">
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ponderation" />
 	<Card title="Comment le score de pertinence est calcule" subtitle="Les trois criteres qui determinent l'ordre des resultats">

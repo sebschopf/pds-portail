@@ -166,3 +166,22 @@ En l'absence de disque persistant Render, le cache redevient éphémère et repa
 - **Dépôt** : [Tangled](https://tangled.org/moustik.tngl.sh/pds-portail) · [GitHub Mirror](https://github.com/sebschopf/pds-portail)
 - **Backend** : https://pds-portail-backend.onrender.com
 - **Frontend** : https://pds-portail.vercel.app
+
+## Documentation
+
+La documentation complète du projet est dans le dossier `Doc/`. Voir [`Doc/README.md`](Doc/README.md) pour l'index complet.
+
+### Lectures essentielles
+
+| Document | Description |
+|---|---|
+| [Discovery Brief](Doc/10-produit/01-cadrage/discovery-brief.md) | Probleme, opportunite, personas, criteres de succes |
+| [PRD](Doc/10-produit/02-prd/prd.md) | Objectifs produit, exigences fonctionnelles, non-scope |
+| [SPEC-001 Architecture](Doc/20-technique/01-spec/spec-001-technical-architecture.md) | Architecture technique, stack, decisions |
+| [SPEC-003 Multilingue](Doc/20-technique/01-spec/spec-003-recherche-multilingue-synonymes.md) | Recherche multilingue FR/DE/IT/EN et synonymes metier |
+| [ADR-001 a ADR-025](Doc/30-decisions/adr/) | Toutes les decisions architecturales justifiees |
+| [Diagramme de flux](Doc/20-technique/01-spec/diagramme-flux-donnees.md) | Diagrammes Mermaid des flux de donnees |
+| [Glossaire](Doc/20-technique/03-glossaire/glossaire.md) | Tous les termes techniques en langage accessible |
+| [Modele de menaces](Doc/20-technique/04-securite/modele-de-menaces.md) | Surface d'attaque, menaces, protections |
+| [Procedure d'exploitation](Doc/20-technique/02-exploitation/procedure-exploitation.md) | Runbooks, monitoring, rollback |
+| [Guide utilisateur](Doc/10-produit/04-support/guide-utilisateur.md) | Documentation utilisateur du produit |

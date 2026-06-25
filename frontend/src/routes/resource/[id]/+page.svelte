@@ -37,7 +37,12 @@
 		{ label: resource?.dataset_title ?? 'Dataset', href: datasetLink ?? undefined },
 		{ label: resource?.name ?? 'Fiche ressource' }
 	]);
+	const pageTitle = $derived(resource?.name ? `${resource.name} - PDS Portail` : 'Fiche ressource - PDS Portail');
 </script>
+
+<svelte:head>
+	<title>{pageTitle}</title>
+</svelte:head>
 
 <section class="stack">
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ressource" />

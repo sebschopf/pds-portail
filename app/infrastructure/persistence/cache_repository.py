@@ -1,10 +1,16 @@
 import json
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from app.domain.ckan_normalized import NormalizedBatch
 from app.infrastructure.persistence.database import SessionLocal
-from app.infrastructure.persistence.models import DatasetModel, OrganizationModel, ResourceModel
+from app.infrastructure.persistence.models import (
+    DatasetModel,
+    OrganizationModel,
+    ResourceModel,
+    SyncStateModel,
+)
 
 
 class SqlAlchemyCacheRepository:
@@ -13,6 +19,19 @@ class SqlAlchemyCacheRepository:
             self._upsert_organizations(session, batch)
             self._upsert_datasets(session, batch)
             self._upsert_resources(session, batch)
+            session.commit()
+
+    def get_sync_state(self, key: str) -> str | None:
+        """Lit un etat persistant ou retourne None si la cle n'existe pas."""
+        with SessionLocal() as session:
+            row = session.get(SyncStateModel, key)
+            return row.value if row else None
+
+    def set_sync_state(self, key: str, value: str) -> None:
+        """Ecrit un etat persistant avec horodatage de derniere mise a jour."""
+        now = datetime.now(UTC).isoformat()
+        with SessionLocal() as session:
+            session.merge(SyncStateModel(key=key, value=value, updated_at=now))
             session.commit()
 
     def _upsert_organizations(self, session: Session, batch: NormalizedBatch) -> None:

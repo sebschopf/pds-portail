@@ -2,16 +2,14 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import { navigating } from '$app/state';
-	import { onMount } from 'svelte';
 
 	let { children } = $props();
 	let readableMode = $state(false);
+	let initialized = $state(false);
 
 	function toggleReadableMode(): void {
 		readableMode = !readableMode;
-		if (typeof localStorage !== 'undefined') {
-			localStorage.setItem('pds-readable-mode', readableMode ? '1' : '0');
-		}
+		localStorage.setItem('pds-readable-mode', readableMode ? '1' : '0');
 		document.body.classList.toggle('readable', readableMode);
 	}
 
@@ -21,9 +19,12 @@
 		main?.focus();
 	}
 
-	onMount(() => {
-		readableMode = localStorage.getItem('pds-readable-mode') === '1';
-		document.body.classList.toggle('readable', readableMode);
+	$effect(() => {
+		if (!initialized) {
+			readableMode = localStorage.getItem('pds-readable-mode') === '1';
+			document.body.classList.toggle('readable', readableMode);
+			initialized = true;
+		}
 	});
 </script>
 

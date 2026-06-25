@@ -53,3 +53,17 @@ class ResourceModel(Base):
     last_modified: Mapped[str | None] = mapped_column(String, nullable=True)
 
     dataset: Mapped[DatasetModel] = relationship(back_populates="resources")
+
+
+class SyncStateModel(Base):
+    """Suivi d'etat persistant pour les synchronisations (ex: offset CKAN).
+
+    Stocke des paires cle-valeur avec horodatage de derniere mise a jour.
+    Utilise pour reprendre l'ingestion incrementale apres redemarrage.
+    """
+
+    __tablename__ = "sync_state"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)

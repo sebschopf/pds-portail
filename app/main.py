@@ -25,25 +25,43 @@ def _cache_is_populated() -> bool:
 
 
 def _run_sync_cycle(settings: Settings) -> None:
+    repository = SqlAlchemyCacheRepository()
     use_case = SyncCkanBatchUseCase(
         client=CkanHttpClient(),
-        repository=SqlAlchemyCacheRepository(),
+        repository=repository,
     )
+
+    raw_offset = repository.get_sync_state("ckan_offset")
+    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
+    logger.info("CKAN sync starting at offset=%s", current_offset)
 
     total_synced = 0
     for batch_index in range(settings.ckan_sync_max_batches_per_run):
-        start = batch_index * settings.ckan_sync_batch_rows
-        batch = use_case.execute(start=start, rows=settings.ckan_sync_batch_rows)
+        batch = use_case.execute(start=current_offset, rows=settings.ckan_sync_batch_rows)
         synced_count = len(batch.datasets)
         total_synced += synced_count
 
+        # Si le lot est partiel, on a atteint la fin du catalogue CKAN.
+        # On reinitialise l'offset pour que le prochain cycle reprenne du debut.
         if synced_count < settings.ckan_sync_batch_rows:
+            current_offset = 0
+        else:
+            current_offset += settings.ckan_sync_batch_rows
+
+        repository.set_sync_state("ckan_offset", str(current_offset))
+
+        if synced_count < settings.ckan_sync_batch_rows:
+            logger.info("CKAN sync: fin du catalogue atteinte, offset reinitialise a 0")
             break
 
         if batch_index < settings.ckan_sync_max_batches_per_run - 1:
             time.sleep(settings.ckan_sync_batch_delay_seconds)
 
-    logger.info("CKAN sync cycle finished: synced_datasets=%s", total_synced)
+    logger.info(
+        "CKAN sync cycle finished: synced_datasets=%s next_offset=%s",
+        total_synced,
+        current_offset,
+    )
 
 
 def _start_sync_worker(app: FastAPI, settings: Settings) -> None:

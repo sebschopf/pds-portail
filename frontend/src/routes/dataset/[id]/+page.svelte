@@ -26,7 +26,12 @@
 		{ label: 'Recherche', href: searchHref },
 		{ label: dataset?.title ?? 'Fiche dataset' }
 	]);
+	const pageTitle = $derived(dataset?.title ? `${dataset.title} - PDS Portail` : 'Fiche dataset - PDS Portail');
 </script>
+
+<svelte:head>
+	<title>{pageTitle}</title>
+</svelte:head>
 
 <section class="stack">
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation dataset" />

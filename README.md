@@ -8,7 +8,7 @@ Le produit permet à toute personne, sans bagage technique, de trouver des datas
 
 ```
 ┌─────────────────────┐     HTTP/JSON     ┌─────────────────────┐
-│  FRONTEND (Vercel)  │ ◄──────────────►  │  BACKEND (Render)   │
+│  FRONTEND (Vercel)  │ ◄──────────────►  │  BACKEND (Fly.io)   │
 │  SvelteKit 5        │                   │  Python + FastAPI   │
 │  Recherche, détail, │                   │  API REST v1        │
 │  qualité, ressources│                   └─────────┬───────────┘
@@ -16,13 +16,13 @@ Le produit permet à toute personne, sans bagage technique, de trouver des datas
                                                     ▼
                                              ┌─────────────┐
                                              │  SQLite     │
-                                             │  Cache      │
+                                             │  Cache (1GB)│
                                              └─────────────┘
 ```
 
 - **Frontend** : SvelteKit 5 + Svelte 5 runes — déployé sur Vite/Vercel
-- **Backend** : Python 3.12 + FastAPI + SQLAlchemy — déployé sur Render
-- **Cache** : SQLite locale (fichier, intégrée au backend)
+- **Backend** : Python 3.12 + FastAPI + SQLAlchemy — déployé sur Fly.io (cdg)
+- **Cache** : SQLite sur volume persistant (1 GB, snapshots automatiques)
 - **Source** : API CKAN opendata.swiss (métadonnées publiques)
 
 ## Pré-requis
@@ -99,23 +99,17 @@ make quality-frontend  # Frontend uniquement
    - **Build command** : `npm run build`
    - **Output directory** : `.svelte-kit/output`
 3. Définir les variables d'environnement :
-   - `PUBLIC_API_BASE_URL` : URL du backend Render
+   - `PUBLIC_API_BASE_URL` : `https://pds-portail-backend.fly.dev`
    - `PUBLIC_USE_MOCK_API` : **ne pas définir** (interdit en production)
 4. Vercel détecte automatiquement `@sveltejs/adapter-auto`.
 
-### Backend — Render
+### Backend — Fly.io
 
-1. Connecter le dépôt Git à Render en tant que **Web Service**.
-2. Configurer :
-   - **Start command** : `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}`
-   - **Health check** : `/api/v1/health`
-   - **Persistent Disk** : monter `/var/data` (1 GB minimum)
-3. Définir les variables d'environnement :
-   - `DATABASE_URL` : `sqlite:////var/data/app.db`
-   - `CKAN_BASE_URL` : `https://opendata.swiss`
-   - `CORS_ALLOWED_ORIGINS` : URL du frontend Vercel
-   - `EXPOSE_API_DOCS` : `false`
-   - `PYTHON_VERSION` : `3.12`
+1. Installer flyctl : `curl -L https://fly.io/install.sh | sh`
+2. Déployer : `flyctl deploy` (utilise `Dockerfile` + `fly.toml` à la racine)
+3. Volume persistant créé une fois : `flyctl volumes create pds_portail_cache --region cdg --size 1`
+4. Variables d'environnement définies dans `fly.toml` (section `[env]`)
+5. URL : `https://pds-portail-backend.fly.dev`
 
 ### CI — Pipeline local
 
@@ -127,7 +121,7 @@ Le fichier `.github/workflows/ci.yml` est destiné à GitHub Actions. Si le dép
 
 | Variable | Défaut | Description |
 |---|---|---|
-| `DATABASE_URL` | `sqlite:///./data/app.db` | URL de la base de données (prod Render: `sqlite:////var/data/app.db`) |
+| `DATABASE_URL` | `sqlite:///./data/app.db` | URL de la base de données (prod Fly.io: `sqlite:////var/data/app.db`) |
 | `CKAN_BASE_URL` | `https://opendata.swiss` | API CKAN source |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Origines autorisées (prod: Vercel) |
 | `EXPOSE_API_DOCS` | `true` | `/docs`, `/redoc`, OpenAPI (false en prod) |
@@ -136,35 +130,35 @@ Le fichier `.github/workflows/ci.yml` est destiné à GitHub Actions. Si le dép
 
 | Variable | Dev | Prod |
 |---|---|---|
-| `PUBLIC_API_BASE_URL` | `http://127.0.0.1:8000` | URL Render cible |
+| `PUBLIC_API_BASE_URL` | `http://127.0.0.1:8000` | `https://pds-portail-backend.fly.dev` |
 | `PUBLIC_USE_MOCK_API` | absent ou `1` (dev:mock) | **interdit** |
 
 ## Exploitation
 
 ### Monitoring
 
-- **Backend** : logs accessibles via le dashboard Render.
+- **Backend** : logs accessibles via `flyctl logs` ou le dashboard Fly.io.
 - **Health check** : `GET /api/v1/health` répond `{"status":"ok","last_sync":"..."}`.
 - **Frontend** : pas de tracker tiers (conformité RGPD). Les erreurs sont visibles dans la console navigateur.
 
 ### Rollback
 
 - **Frontend** : Vercel permet de déployer une version antérieure (Deployments → ... → Promote to Production).
-- **Backend** : Render permet de revenir à un déploiement précédent (Dashboard → Deploys → Rollback).
+- **Backend** : Fly.io permet de revenir à une version précédente (`flyctl deploy --image <previous>` ou dashboard → Machines → redeploy older version).
 
 ### Cache
 
-Le cache SQLite persiste sur Render si le service utilise un disque persistant monté sur `/var/data` et `DATABASE_URL=sqlite:////var/data/app.db`. En local, il persiste dans `data/app.db`.
+Le cache SQLite persiste sur un volume Fly.io (1 GB) monté sur `/var/data`. Les snapshots automatiques (rétention 5 jours) protègent contre la perte de données. En local, il persiste dans `data/app.db`.
 
-L'ingestion CKAN se fait au démarrage si le cache est vide (bootstrap), puis toutes les heures (CRON interne).
+L'ingestion CKAN est incrémentale : bootstrap au démarrage si cache vide, puis 1000 datasets par cycle horaire. Une fois le catalogue complet chargé (~10h), le mode différentiel s'active automatiquement (seuls les datasets modifiés depuis la dernière synchro sont récupérés, via `fq=metadata_modified`).
 
-En l'absence de disque persistant Render, le cache redevient éphémère et repart à vide après redéploiement.
+Endpoints de supervision : `GET /api/v1/internal/sync/status` (offset courant), `POST /api/v1/internal/sync` (forcer un cycle).
 
 ## Projet
 
 - **État** : MVP deploye en production ; travail en cours sur M6/M7 avec contraintes d'exploitation reelles
 - **Dépôt** : [Tangled](https://tangled.org/moustik.tngl.sh/pds-portail) · [GitHub Mirror](https://github.com/sebschopf/pds-portail)
-- **Backend** : https://pds-portail-backend.onrender.com
+- **Backend** : https://pds-portail-backend.fly.dev
 - **Frontend** : https://pds-portail.vercel.app
 
 ## Documentation

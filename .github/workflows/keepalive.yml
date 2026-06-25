@@ -1,13 +1,11 @@
-name: Keepalive Render (anti cold-sleep)
+name: Health check backend Fly.io
 
-# Ping le backend Render toutes les 12 minutes pour empecher la
-# mise en veille du free tier (>15 min d'inactivite = conteneur suspendu).
-# La suspension tuerait le worker d'ingestion CKAN incrementale (PDS-52).
+# Fly.io n'a pas de cold-sleep, ce workflow sert uniquement de
+# monitoring externe (alerte si le backend est down plus de 12 min).
 
 on:
   schedule:
     - cron: "*/12 * * * *"
-  # Permet le declenchement manuel depuis l'onglet Actions
   workflow_dispatch:
 
 jobs:
@@ -15,4 +13,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping backend health endpoint
-        run: curl --fail --silent --max-time 30 https://pds-portail-backend.onrender.com/api/v1/health
+        run: curl --fail --silent --max-time 30 https://pds-portail-backend.fly.dev/api/v1/health

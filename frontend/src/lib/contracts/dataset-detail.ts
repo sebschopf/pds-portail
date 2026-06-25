@@ -1,3 +1,5 @@
+import { isNullableString, isNullableNumber } from '$lib/contracts/guards';
+
 export type DatasetStructureContract = {
 	fields: string[];
 	formats: string[];
@@ -28,14 +30,6 @@ export type DatasetDetailContract = {
 	resources: ResourceContract[];
 	dataset_structure: DatasetStructureContract;
 };
-
-function isNullableString(value: unknown): value is string | null {
-	return typeof value === 'string' || value === null;
-}
-
-function isNullableNumber(value: unknown): value is number | null {
-	return typeof value === 'number' || value === null;
-}
 
 export function isDatasetStructureContract(payload: unknown): payload is DatasetStructureContract {
 	if (typeof payload !== 'object' || payload === null) {

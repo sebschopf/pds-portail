@@ -1,5 +1,6 @@
 import type { PageLoad } from './$types';
-import type { CompareItem, CompareResponse } from '$lib/types/compare';
+import type { CompareItem } from '$lib/types/compare';
+import { isCompareResponse } from '$lib/contracts/compare';
 
 type ComparePageData = {
 	error: string | null;
@@ -8,7 +9,8 @@ type ComparePageData = {
 
 /**
  * Loader pour la page /comparer — appelle POST /api/v1/compare.
- * Lit les IDs depuis ?ids=id1,id2,id3 et les transmet au backend.
+ * Lit les IDs depuis ?ids=id1,id2,id3, les transmet au backend
+ * et valide la réponse avec le contrat isCompareResponse.
  */
 export const load: PageLoad<ComparePageData> = async ({ url, fetch }) => {
 	const rawIds = url.searchParams.get('ids') ?? '';
@@ -46,10 +48,16 @@ export const load: PageLoad<ComparePageData> = async ({ url, fetch }) => {
 			};
 		}
 
-		const data: CompareResponse = await response.json();
+		const payload = (await response.json()) as unknown;
+		if (!isCompareResponse(payload)) {
+			throw new Error(
+				"Contrat invalide : la reponse du backend ne correspond pas a CompareResponse"
+			);
+		}
+
 		return {
 			error: null,
-			items: data.items,
+			items: payload.items,
 		};
 	} catch (err) {
 		return {

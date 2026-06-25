@@ -6,7 +6,7 @@ declare global {
 			message: string;
 		}
 		interface Locals {
-			// Réservé pour les données injectées par hooks.server.ts
+			nonce: string;
 		}
 		interface PageData {
 			// Données partagées entre layouts et pages, actuellement minimales

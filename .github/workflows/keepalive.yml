@@ -1,0 +1,18 @@
+name: Keepalive Render (anti cold-sleep)
+
+# Ping le backend Render toutes les 12 minutes pour empecher la
+# mise en veille du free tier (>15 min d'inactivite = conteneur suspendu).
+# La suspension tuerait le worker d'ingestion CKAN incrementale (PDS-52).
+
+on:
+  schedule:
+    - cron: "*/12 * * * *"
+  # Permet le declenchement manuel depuis l'onglet Actions
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health endpoint
+        run: curl --fail --silent --max-time 30 https://pds-portail-backend.onrender.com/api/v1/health

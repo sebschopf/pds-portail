@@ -62,6 +62,7 @@
 			<p>Pas assez de datasets charges pour afficher une comparaison.</p>
 			<a href="/" class="back-link">Retour a la recherche</a>
 		</div>
+	{:else}
 		<!-- Desktop : tableau HTML semantique -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div class="table-wrapper" role="region" aria-label="Tableau comparatif — defiler horizontalement si necessaire" tabindex="0">

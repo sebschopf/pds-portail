@@ -1,0 +1,112 @@
+# PDS-Portail — Règles contextuelles pour Cline (CLINE-RULES)
+
+## Contexte projet
+
+- **Nom** : PDS-Portail — Explorateur Open Data Suisse
+- **Mission** : Permettre à un non-expert de chercher, comprendre et comparer des datasets opendata.swiss
+- **Stack** : Backend Python/FastAPI, Frontend SvelteKit 5, Base SQLite, Ingestion CKAN
+- **Dépôts** : GitHub `sebschopf/pds-portail`, Tangled `did:plc:nbr4gz4cedmnw2jizmjsuspr`
+- **Sprint actif** : M8 (durcissement) terminé le 2026-06-25
+
+## URLs de production
+
+- **Frontend** : https://pds-portail.vercel.app
+- **Backend API** : https://pds-portail-backend.fly.dev/api/v1/
+- **Backend Health** : https://pds-portail-backend.fly.dev/api/v1/health
+- **Source données** : https://opendata.swiss (API CKAN)
+- **Déploiement** : Fly.io (backend, volume 1GB /var/data) + Vercel (frontend, adapter-auto)
+
+## Commandes qualité
+
+Ces commandes sont obligatoires avant tout commit. La gate `make quality` les exécute toutes.
+
+```bash
+# Backend (depuis la racine)
+uv run black --check app/ tests/       # format
+uv run ruff check app/ tests/          # lint
+uv run mypy app/ tests/                # types
+uv run pytest --cov=app --cov-fail-under=80  # tests (≥80% couverture)
+
+# Frontend (depuis frontend/)
+npx svelte-check    # types SvelteKit
+npm run test        # vitest (10 files, 74 tests)
+npm run build       # build production Vercel
+npm run validate:design  # validation tokens OKLCH
+
+# Commande unique
+make quality
+```
+
+## Règles de travail avec Cline
+
+1. **Ancrage obligatoire** : Avant toute réponse, lire la tâche backlog correspondante via MCP `backlog` (`task_view`)
+2. **Lecture courte** : Lire les fichiers pertinents, pas tout le projet
+3. **Gate qualité** : Toujours exécuter `make quality` avant de committer
+4. **Formatage** : Toujours préfixer les résumés finaux et les entrées du CHANGELOG par le numéro de ticket actif (ex: `PDS-XX:`).
+5. **CHANGELOG.md** : Mettre à jour systématiquement pour chaque ticket complété
+6. **MemPalace + Memory** : Aligner après chaque ticket (drawer + entité + relations)
+7. **Commits** : Messages en français, préfixés par `PDS-NN:` ou ticket, push sur `origin` (tangled) + `github`
+8. **Pas de commit** de `RAPPORT-AUDIT.md` ni des fichiers `backlog/tasks/` (internes)
+
+## MCP disponibles et quand les utiliser
+
+| MCP | Usage |
+|-----|-------|
+| **backlog** | Lire/créer/éditer les tickets, milestones, documents |
+| **mempalace** | Mémoire de session (AAAK), search sémantique, diary, tunnels |
+| **memory** | Knowledge graph structuré (entités + relations) |
+| **svelte** | Documentation Svelte 5 / SvelteKit officielle |
+| **surreal** | Requêtes SurrealDB (si besoin) |
+
+### Protocole MemPalace + Memory
+
+1. **Début de session** : `mempalace_status` + `memory.read_graph` pour charger le contexte
+2. **Avant de répondre** sur un sujet passé : `mempalace_search` ou `memory.search_nodes`
+3. **Après chaque ticket** : `mempalace_add_drawer` + `memory.create_entities/relations` + `mempalace_diary_write`
+4. **Tunnels** : Créer des tunnels cross-room pour relier les tickets entre eux
+
+## Structure du projet
+
+```
+app/                  # Backend Python FastAPI
+  application/        # Use cases, ports
+  domain/            # Logique métier (ranking, quality, query_expansion)
+  infrastructure/    # Persistence SQLite, client CKAN
+  presentation/api/  # Routes API v1
+frontend/            # Frontend SvelteKit 5
+  src/
+    lib/contracts/   # Validateurs runtime (dataset-detail, compare, guards)
+    lib/types/       # Types TypeScript
+    lib/ui/          # Composants Svelte (CardDataset, QualityBlock, CompareBar…)
+    routes/          # Pages (+page.svelte, +page.ts) et API endpoints (+server.ts)
+    test/            # Tests vitest
+tests/               # Tests backend pytest
+Doc/                 # Documentation gouvernance/technique
+backlog/             # Tâches backlog (géré par MCP backlog)
+```
+
+## Accessibilité (priorité absolue, non négociable)
+
+Ces règles sont issues des ADR-005, ADR-012, ADR-013. Toute modification UI ou contenu doit les respecter.
+
+| Règle | Exigence | Référence |
+|-------|----------|-----------|
+| **Standard** | WCAG 2.2 Niveau AA obligatoire, AAA cible | ADR-005 |
+| **Contraste** | 4.5:1 minimum (AA), 7:1 cible (AAA) | ADR-013 |
+| **Navigation** | 100% clavier, ordre logique, skip-link, pas de piège clavier | ADR-005 |
+| **Typographie** | Atkinson Hyperlegible, min 18px body, interligne 1.6, pas de serif sauf contenu éditorial | ADR-012 |
+| **Couleurs** | OKLCH uniquement (pas de hex/rgb/hsl), sémantique (success/warning/danger), jamais couleur seule pour info | ADR-013 |
+| **ARIA** | Labels explicites sur tout composant interactif, rôles sémantiques, `aria-label` sur icônes seules | ADR-005 |
+| **Formulaires** | Labels associés, erreurs explicites, pas de placeholder seul | ADR-005 |
+| **Assets** | Aucun CDN externe (privacy by design, RGPD) | ADR-014 |
+| **Tests** | `validate:design` vérifie contraste et tokens OKLCH, tests UI incluent vérifications ARIA et clavier | ADR-002 |
+| **Langue** | `lang="fr"` sur `<html>`, titres de page uniques et descriptifs | PDS-51 |
+
+## Conventions
+
+- **Langue** : Français (UI, commentaires, commits, CHANGELOG), Anglais (code logique)
+- **Typographie** : OKLCH, Atkinson Hyperlegible, pas de CDN externe
+- **CSP** : Déclarative dans `svelte.config.ts` (`kit.csp.mode: 'nonce'`)
+- **Sécurité** : Rate-limiting slowapi 30 req/min, timeout CKAN 30s, CSP stricte
+- **Pas de mock en production** : `PUBLIC_USE_MOCK_API !== '1'`
+- **Fichiers internes non commités** : `RAPPORT-AUDIT.md`, `backlog/tasks/*.md`

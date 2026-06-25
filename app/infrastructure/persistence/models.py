@@ -67,3 +67,20 @@ class SyncStateModel(Base):
     key: Mapped[str] = mapped_column(String, primary_key=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class FacetsCacheModel(Base):
+    """Facettes pre-calculees pour eviter les agregations par requete (PDS-44).
+
+    Chaque ligne correspond a une entree de facette (organisation, format, tag).
+    Mise a jour apres chaque cycle d'ingestion CKAN.
+    """
+
+    __tablename__ = "facets_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    facet_type: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)

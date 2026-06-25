@@ -55,6 +55,8 @@ def _run_sync_cycle(settings: Settings) -> None:
             synced_count,
             now,
         )
+        if synced_count > 0:
+            repository.rebuild_facets()
         return
 
     logger.info("CKAN sync starting at offset=%s", current_offset)
@@ -90,6 +92,8 @@ def _run_sync_cycle(settings: Settings) -> None:
         if batch_index < settings.ckan_sync_max_batches_per_run - 1:
             time.sleep(settings.ckan_sync_batch_delay_seconds)
 
+    if total_synced > 0:
+        repository.rebuild_facets()
     logger.info(
         "CKAN sync cycle finished: synced_datasets=%s next_offset=%s",
         total_synced,

@@ -6,7 +6,6 @@ en interrogeant le cache SQLite et en normalisant les reponses.
 
 from __future__ import annotations
 
-from collections import Counter
 from typing import cast
 
 from sqlalchemy import and_, func, or_, select
@@ -16,7 +15,12 @@ from sqlalchemy.sql.elements import ColumnElement
 from app.domain.query_expansion import expand_query
 from app.domain.ranking import compute_hybrid_score
 from app.infrastructure.persistence.database import SessionLocal
-from app.infrastructure.persistence.models import DatasetModel, OrganizationModel, ResourceModel
+from app.infrastructure.persistence.models import (
+    DatasetModel,
+    FacetsCacheModel,
+    OrganizationModel,
+    ResourceModel,
+)
 from app.presentation.api.v1.schemas import (
     AccessMode,
     CompareItem,
@@ -424,11 +428,35 @@ class SqlAlchemySearchRepository:
         session: Session,
         base_filters: list[ColumnElement[bool]],
     ) -> SearchFacets:
-        """Agrege les facettes pour les filtres de recherche."""
-        # Construction minimale pour MVP: orgs, formats
-        # Les facettes completes requerraient l'agrégation CKAN
+        """Lit les facettes depuis le cache pre-calcule, avec fallback direct (PDS-44).
 
-        # Organizations facet
+        Si la table facets_cache est peuplee (cas de production apres ingestion),
+        les facettes sont lues directement sans agregation SQL couteuse.
+        Sinon, fallback sur l'agregation directe (cas des tests ou premier demarrage).
+        """
+        cache_count = session.query(FacetsCacheModel).count()
+        if cache_count > 0:
+            # Cache hit : lecture directe
+            org_rows = (
+                session.query(FacetsCacheModel)
+                .filter(FacetsCacheModel.facet_type == "org")
+                .order_by(FacetsCacheModel.count.desc())
+                .all()
+            )
+            orgs = [
+                FacetItem(name=row.name, display_name=row.display_name, count=row.count)
+                for row in org_rows
+            ]
+            fmt_rows = (
+                session.query(FacetsCacheModel)
+                .filter(FacetsCacheModel.facet_type == "format")
+                .order_by(FacetsCacheModel.count.desc())
+                .all()
+            )
+            formats = [FacetItem(name=row.name, count=row.count) for row in fmt_rows]
+            return SearchFacets(organizations=orgs, formats=formats, tags=[])
+
+        # Fallback : agregation directe (cache non encore peuple)
         org_query = (
             select(
                 OrganizationModel.id,
@@ -446,7 +474,7 @@ class SqlAlchemySearchRepository:
         if base_filters:
             org_query = org_query.where(and_(*base_filters))
 
-        orgs: list[FacetItem] = []
+        orgs = []
         for org_id, org_name, count in session.execute(org_query).all():
             orgs.append(
                 FacetItem(
@@ -456,7 +484,6 @@ class SqlAlchemySearchRepository:
                 )
             )
 
-        # Format facet (depuis les ressources des datasets filtres)
         format_query = (
             select(
                 func.upper(ResourceModel.format).label("format_name"),
@@ -471,13 +498,14 @@ class SqlAlchemySearchRepository:
         if base_filters:
             format_query = format_query.where(and_(*base_filters))
 
-        formats: list[FacetItem] = []
+        formats = []
         for format_name, count in session.execute(format_query).all():
-            if not format_name:
-                continue
-            formats.append(FacetItem(name=str(format_name), count=int(count)))
+            if format_name:
+                formats.append(FacetItem(name=str(format_name), count=int(count)))
 
-        # Tag facet (depuis les tags des datasets filtres)
+        # Tags : agregation directe depuis les donnees (dernier recours)
+        from collections import Counter
+
         tag_query = select(DatasetModel.tags).select_from(DatasetModel).join(OrganizationModel)
         if base_filters:
             tag_query = tag_query.where(and_(*base_filters))
@@ -488,9 +516,7 @@ class SqlAlchemySearchRepository:
             for tag in SqlAlchemySearchRepository._parse_tags(tags_str):
                 if tag:
                     tag_counter[tag] += 1
-        tags: list[FacetItem] = [
-            FacetItem(name=name, count=count) for name, count in tag_counter.most_common()
-        ]
+        tags = [FacetItem(name=name, count=count) for name, count in tag_counter.most_common()]
 
         return SearchFacets(organizations=orgs, formats=formats, tags=tags)
 

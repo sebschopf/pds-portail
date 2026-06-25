@@ -1,12 +1,14 @@
 import json
 from datetime import UTC, datetime
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.domain.ckan_normalized import NormalizedBatch
 from app.infrastructure.persistence.database import SessionLocal
 from app.infrastructure.persistence.models import (
     DatasetModel,
+    FacetsCacheModel,
     OrganizationModel,
     ResourceModel,
     SyncStateModel,
@@ -79,3 +81,66 @@ class SqlAlchemyCacheRepository:
                     last_modified=resource.last_modified,
                 )
             )
+
+    def rebuild_facets(self) -> None:
+        """Reconstruit le cache de facettes depuis les donnees existantes (PDS-44).
+
+        Vide la table facets_cache puis recalcule les organisations, formats
+        et tags agregees. Appele apres chaque cycle d'ingestion pour que les
+        facettes reflechissent l'etat frais du cache.
+        """
+        now = datetime.now(UTC).isoformat()
+        with SessionLocal() as session:
+            # Vider les facettes existantes
+            session.query(FacetsCacheModel).delete()
+
+            # Facettes organisations
+            org_rows = (
+                session.query(
+                    OrganizationModel.id,
+                    OrganizationModel.name,
+                    func.count(DatasetModel.id).label("cnt"),
+                )
+                .join(DatasetModel)
+                .group_by(OrganizationModel.id, OrganizationModel.name)
+                .order_by(func.count(DatasetModel.id).desc())
+                .limit(20)
+                .all()
+            )
+            for org_id, org_name, cnt in org_rows:
+                session.add(
+                    FacetsCacheModel(
+                        facet_type="org",
+                        name=str(org_id),
+                        display_name=str(org_name),
+                        count=int(cnt),
+                        updated_at=now,
+                    )
+                )
+
+            # Facettes formats (nombre de datasets distincts par format)
+            format_rows = (
+                session.query(
+                    func.upper(ResourceModel.format).label("fmt"),
+                    func.count(func.distinct(ResourceModel.dataset_id)).label("cnt"),
+                )
+                .where(ResourceModel.format.is_not(None))
+                .group_by(func.upper(ResourceModel.format))
+                .order_by(
+                    func.count(func.distinct(ResourceModel.dataset_id)).desc(),
+                )
+                .all()
+            )
+            for fmt, cnt in format_rows:
+                if fmt:
+                    session.add(
+                        FacetsCacheModel(
+                            facet_type="format",
+                            name=str(fmt),
+                            display_name=None,
+                            count=int(cnt),
+                            updated_at=now,
+                        )
+                    )
+
+            session.commit()

@@ -31,9 +31,35 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 
 
 def create_schema() -> None:
-    from app.infrastructure.persistence.models import DatasetModel, OrganizationModel, ResourceModel
+    from app.infrastructure.persistence.models import (
+        DatasetModel,
+        FacetsCacheModel,
+        OrganizationModel,
+        ResourceModel,
+        SyncStateModel,
+    )
 
     # Reference explicite pour enregistrement SQLAlchemy (side-effect obligatoire)
-    _ = (DatasetModel, OrganizationModel, ResourceModel)
+    _ = (DatasetModel, OrganizationModel, ResourceModel, SyncStateModel, FacetsCacheModel)
 
     Base.metadata.create_all(bind=engine)
+
+    # Creer l'index FTS5 pour la recherche full-text (PDS-44).
+    # FTS5 n'est pas gere par SQLAlchemy → creation en SQL brut.
+    # IF NOT EXISTS evite les erreurs si la table virtuelle existe deja.
+    import sqlite3
+
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    db_path = settings.database_url.removeprefix("sqlite:///")
+    if db_path:
+        conn = sqlite3.connect(db_path)
+        conn.execute("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS datasets_fts USING fts5(
+                id, title, description, org_name,
+                content='datasets',
+                content_rowid='rowid'
+            )
+            """)
+        conn.close()

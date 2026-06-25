@@ -84,3 +84,24 @@ class FacetsCacheModel(Base):
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
     count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     updated_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class SyncMetricsModel(Base):
+    """Metriques d'ingestion CKAN pour pilotage et audit (PDS-45).
+
+    Chaque ligne correspond a un cycle de synchronisation termine.
+    Permet de suivre le volume, la duree, les erreurs et le mode
+    (bootstrap vs differentiel) sur la duree.
+    """
+
+    __tablename__ = "sync_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    synced_datasets: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    synced_organizations: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    synced_resources: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    errors: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    mode: Mapped[str] = mapped_column(String(20), nullable=False)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    started_at: Mapped[str] = mapped_column(String, nullable=False)
+    completed_at: Mapped[str] = mapped_column(String, nullable=False)

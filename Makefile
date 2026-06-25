@@ -17,6 +17,11 @@ quality-backend:
 	@echo "=== Backend: lint (ruff) ==="
 	uv run ruff check app/ tests/
 	@echo "=== Backend: types (mypy) ==="
+	# Note PDS-45 : les fakes de test (test_sync_ckan_batch_resilience.py,
+	# test_run_sync_cycle.py) sont volontairement inlinees. Une tentative
+	# de factorisation dans un module partage a echoue : mypy voit le
+	# module en double sans __init__.py, et pytest ne trouve pas le module
+	# avec __init__.py. Cf. docstrings des fichiers conceres.
 	uv run mypy app/ tests/
 	@echo "=== Backend: tests (pytest --cov-fail-under=80) ==="
 	uv run pytest --cov=app --cov-fail-under=80 --cov-report=term-missing

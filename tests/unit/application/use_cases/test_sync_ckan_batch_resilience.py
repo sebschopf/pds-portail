@@ -1,7 +1,14 @@
-"""Tests de resilience du use case de synchronisation CKAN."""
+"""Tests de resilience du use case de synchronisation CKAN.
+
+Note : les classes de test (_SpyRepository, _TimeoutClient, etc.) sont
+volontairement inlinees plutot que factorisees dans un module partage.
+La tentative de factorisation (PDS-45) a revele des incompatibilites mypy
+(module trouve deux fois) sans `__init__.py`, et des imports impossibles
+(ModuleNotFoundError) avec `__init__.py`. Cf. Makefile pour la decision.
+"""
 
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -22,6 +29,7 @@ class _SpyRepository:
         self.was_called = False
         self.last_batch: NormalizedBatch | None = None
         self._sync_states: dict[str, str] = {}
+        self.facets_rebuilt = False
 
     def upsert_normalized_batch(self, batch: NormalizedBatch) -> None:
         self.was_called = True
@@ -32,6 +40,15 @@ class _SpyRepository:
 
     def set_sync_state(self, key: str, value: str) -> None:
         self._sync_states[key] = value
+
+    def rebuild_facets(self) -> None:
+        self.facets_rebuilt = True
+
+    def add_sync_metrics(self, metrics: dict[str, int | str]) -> None:
+        pass
+
+    def get_sync_state_updated_at(self, _key: str) -> str | None:
+        return None
 
 
 class _RateLimitClient:
@@ -140,7 +157,7 @@ class _MinimalDatasetPayloadClient:
         self.last_start = start
         self.last_modified_since = modified_since
         _ = rows
-        results: list[dict] = []
+        results: list[dict[str, Any]] = []
         for i in range(self._count):
             results.append(
                 {

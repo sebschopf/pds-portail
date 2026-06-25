@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     ckan_sync_batch_rows: int = 100
     ckan_sync_max_batches_per_run: int = 10
     ckan_sync_batch_delay_seconds: float = 1.0
+    ckan_http_timeout_seconds: float = 30.0
     expose_api_docs: bool = True
 
     model_config = SettingsConfigDict(

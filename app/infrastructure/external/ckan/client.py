@@ -23,7 +23,7 @@ class CkanHttpClient:
     ) -> None:
         settings = get_settings()
         self._base_url = settings.ckan_base_url.rstrip("/")
-        self._client = http_client or httpx.Client(timeout=30.0)
+        self._client = http_client or httpx.Client(timeout=settings.ckan_http_timeout_seconds)
         self._max_retries = max_retries
         self._backoff_base_seconds = backoff_base_seconds
         self._sleep = sleep

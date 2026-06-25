@@ -1,14 +1,17 @@
 import logging
 import threading
-import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
-from app.application.use_cases.sync_ckan_batch import SyncCkanBatchUseCase
+from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
 from app.core.config import Settings, get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
@@ -19,93 +22,24 @@ from app.presentation.api.v1.router import api_router
 logger = logging.getLogger(__name__)
 
 
-def _cache_is_populated() -> bool:
-    snapshot = GetHealthStatusUseCase(SqlAlchemyCacheReadRepository()).execute()
-    return snapshot.cache_populated
-
-
 def _run_sync_cycle(settings: Settings) -> None:
-    repository = SqlAlchemyCacheRepository()
-    use_case = SyncCkanBatchUseCase(
+    """Execute un cycle via le use case deduplication PDS-45 (ADR-003)."""
+    use_case = RunSyncCycleUseCase(
         client=CkanHttpClient(),
-        repository=repository,
+        repository=SqlAlchemyCacheRepository(),
+        settings=settings,
     )
-
-    raw_offset = repository.get_sync_state("ckan_offset")
-    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
-    last_full_sync = repository.get_sync_state("last_full_sync")
-
-    # Mode differentiel (PDS-53) : si le catalogue a deja ete entierement charge
-    # (offset remis a 0 apres avoir atteint la fin), on ne recupere que les datasets
-    # modifies depuis la derniere synchro. Sinon, on continue le bootstrap incremental.
-    if last_full_sync and current_offset == 0:
-        logger.info("CKAN sync: mode differentiel active, modified_since=%s", last_full_sync)
-        from datetime import UTC, datetime
-
-        batch = use_case.execute(
-            start=0,
-            rows=settings.ckan_sync_batch_rows,
-            modified_since=last_full_sync,
-        )
-        synced_count = len(batch.datasets)
-        now = datetime.now(UTC).isoformat()
-        repository.set_sync_state("last_full_sync", now)
-        logger.info(
-            "CKAN diff sync finished: synced_datasets=%s, new last_full_sync=%s",
-            synced_count,
-            now,
-        )
-        if synced_count > 0:
-            repository.rebuild_facets()
-        return
-
-    logger.info("CKAN sync starting at offset=%s", current_offset)
-
-    total_synced = 0
-    for batch_index in range(settings.ckan_sync_max_batches_per_run):
-        batch = use_case.execute(start=current_offset, rows=settings.ckan_sync_batch_rows)
-        synced_count = len(batch.datasets)
-        total_synced += synced_count
-
-        # Si le lot est partiel, on a atteint la fin du catalogue CKAN.
-        # On reinitialise l'offset pour que le prochain cycle reprenne du debut.
-        # On enregistre aussi last_full_sync pour activer le mode differentiel.
-        if synced_count < settings.ckan_sync_batch_rows:
-            from datetime import UTC, datetime
-
-            current_offset = 0
-            now = datetime.now(UTC).isoformat()
-            repository.set_sync_state("last_full_sync", now)
-            logger.info(
-                "CKAN sync: fin du catalogue atteinte, offset reinitialise a 0, "
-                "last_full_sync=%s",
-                now,
-            )
-        else:
-            current_offset += settings.ckan_sync_batch_rows
-
-        repository.set_sync_state("ckan_offset", str(current_offset))
-
-        if synced_count < settings.ckan_sync_batch_rows:
-            break
-
-        if batch_index < settings.ckan_sync_max_batches_per_run - 1:
-            time.sleep(settings.ckan_sync_batch_delay_seconds)
-
-    if total_synced > 0:
-        repository.rebuild_facets()
-    logger.info(
-        "CKAN sync cycle finished: synced_datasets=%s next_offset=%s",
-        total_synced,
-        current_offset,
-    )
+    use_case.execute()
 
 
 def _start_sync_worker(app: FastAPI, settings: Settings) -> None:
     stop_event = threading.Event()
 
     def _worker() -> None:
-        if settings.ckan_sync_bootstrap_if_empty and not _cache_is_populated():
+        cache_populated = (
+            GetHealthStatusUseCase(SqlAlchemyCacheReadRepository()).execute().cache_populated
+        )
+        if settings.ckan_sync_bootstrap_if_empty and not cache_populated:
             logger.info("CKAN bootstrap sync triggered (cache empty)")
             try:
                 _run_sync_cycle(settings)
@@ -169,6 +103,13 @@ def create_app() -> FastAPI:
         openapi_url=openapi_url,
         lifespan=_build_lifespan(settings),
     )
+    # Rate-limiting global via slowapi (PDS-54)
+    limiter = Limiter(key_func=get_remote_address, default_limits=["30/minute"])
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
+    # Cast requis : slowapi retourne un handler non generique incompatible mypy/strict
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.parsed_cors_allowed_origins,

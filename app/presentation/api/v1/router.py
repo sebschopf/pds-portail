@@ -11,8 +11,10 @@ from app.application.use_cases.compare_datasets import (
 from app.application.use_cases.get_dataset_detail import GetDatasetDetailUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
 from app.application.use_cases.get_resource_detail import GetResourceDetailUseCase
+from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
 from app.application.use_cases.search_datasets import SearchDatasetsUseCase
-from app.core.config import Settings, get_settings
+from app.core.config import get_settings
+from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
 from app.infrastructure.persistence.search_repository import SqlAlchemySearchRepository
@@ -203,21 +205,68 @@ def internal_sync_status() -> SyncStatusResponse:
     raw_offset = repository.get_sync_state("ckan_offset")
     ckan_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
 
-    # Recupere l'horodatage de derniere mise a jour depuis la table sync_state
-    updated_at: str | None = None
-    if raw_offset:
-        # On exploite la capacite de get_sync_state a nous donner l'info
-        # l'horodatage est stocke dans la table, mais on n'a pas d'API directe.
-        # On fait une lecture directe via le modele.
-        from app.infrastructure.persistence.database import SessionLocal
-        from app.infrastructure.persistence.models import SyncStateModel
-
-        with SessionLocal() as session:
-            row = session.get(SyncStateModel, "ckan_offset")
-            if row:
-                updated_at = row.updated_at
+    # Recupere l'horodatage via le port repository (ADR-003, PDS-45)
+    updated_at = repository.get_sync_state_updated_at("ckan_offset")
 
     return SyncStatusResponse(ckan_offset=ckan_offset, updated_at=updated_at)
+
+
+class SyncMetricsItem(BaseModel):
+    """Metriques d'un cycle de sync unique (PDS-45)."""
+
+    id: int
+    synced_datasets: int
+    synced_organizations: int
+    synced_resources: int
+    errors: int
+    mode: str
+    duration_ms: int
+    started_at: str
+    completed_at: str
+
+
+class SyncMetricsResponse(BaseModel):
+    """Historique des metriques d'ingestion (PDS-45)."""
+
+    items: list[SyncMetricsItem]
+    total: int
+
+
+@api_router.get("/internal/sync/metrics", response_model=SyncMetricsResponse)
+def internal_sync_metrics(
+    limit: int = Query(20, ge=1, le=100, description="Nombre de cycles recents"),
+) -> SyncMetricsResponse:
+    """Retourne l'historique des metriques d'ingestion CKAN (PDS-45).
+
+    Permet le pilotage du volume, de la duree et des erreurs d'ingestion.
+    Les cycles les plus recents apparaissent en premier.
+
+    Query params:
+        limit: Nombre de cycles a retourner (1-100, defaut 20)
+    """
+    from app.infrastructure.persistence.database import SessionLocal
+    from app.infrastructure.persistence.models import SyncMetricsModel
+
+    with SessionLocal() as session:
+        total = session.query(SyncMetricsModel).count()
+        rows = (
+            session.query(SyncMetricsModel).order_by(SyncMetricsModel.id.desc()).limit(limit).all()
+        )
+        items = [
+            SyncMetricsItem(
+                id=row.id,
+                synced_datasets=row.synced_datasets,
+                synced_organizations=row.synced_organizations,
+                synced_resources=row.synced_resources,
+                errors=row.errors,
+                mode=row.mode,
+                duration_ms=row.duration_ms,
+                started_at=row.started_at,
+                completed_at=row.completed_at,
+            )
+            for row in rows
+        ]
+        return SyncMetricsResponse(items=items, total=total)
 
 
 @api_router.post("/internal/sync")
@@ -240,80 +289,10 @@ def internal_sync_trigger() -> dict[str, str]:
     from datetime import UTC, datetime
 
     logger.info("CKAN sync triggered manually via /internal/sync")
-    _run_sync_cycle_sync(settings)
-    return {"message": "Sync cycle completed", "triggered_at": datetime.now(UTC).isoformat()}
-
-
-def _run_sync_cycle_sync(settings: Settings) -> None:
-    """Copie defensive de _run_sync_cycle pour usage synchrone dans un endpoint.
-
-    Evite d'importer main.py (qui cree un objet app au niveau module).
-    """
-    import time as time_module
-    from datetime import UTC, datetime
-
-    from app.application.use_cases.sync_ckan_batch import SyncCkanBatchUseCase
-    from app.infrastructure.external.ckan.client import CkanHttpClient
-    from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
-
-    repository = SqlAlchemyCacheRepository()
-    use_case = SyncCkanBatchUseCase(
+    use_case = RunSyncCycleUseCase(
         client=CkanHttpClient(),
-        repository=repository,
+        repository=SqlAlchemyCacheRepository(),
+        settings=settings,
     )
-
-    raw_offset = repository.get_sync_state("ckan_offset")
-    current_offset = int(raw_offset) if raw_offset and raw_offset.isdigit() else 0
-    last_full_sync = repository.get_sync_state("last_full_sync")
-
-    # Mode differentiel (PDS-53)
-    if last_full_sync and current_offset == 0:
-        logger.info("Manual CKAN sync: mode differentiel active, modified_since=%s", last_full_sync)
-        batch = use_case.execute(
-            start=0,
-            rows=settings.ckan_sync_batch_rows,
-            modified_since=last_full_sync,
-        )
-        synced_count = len(batch.datasets)
-        now = datetime.now(UTC).isoformat()
-        repository.set_sync_state("last_full_sync", now)
-        logger.info(
-            "Manual CKAN diff sync finished: synced_datasets=%s, new last_full_sync=%s",
-            synced_count,
-            now,
-        )
-        return
-
-    logger.info("Manual CKAN sync starting at offset=%s", current_offset)
-
-    total_synced = 0
-    for batch_index in range(settings.ckan_sync_max_batches_per_run):
-        batch = use_case.execute(start=current_offset, rows=settings.ckan_sync_batch_rows)
-        synced_count = len(batch.datasets)
-        total_synced += synced_count
-
-        if synced_count < settings.ckan_sync_batch_rows:
-            current_offset = 0
-            now = datetime.now(UTC).isoformat()
-            repository.set_sync_state("last_full_sync", now)
-            logger.info(
-                "Manual CKAN sync: fin du catalogue atteinte, offset reinitialise a 0, "
-                "last_full_sync=%s",
-                now,
-            )
-        else:
-            current_offset += settings.ckan_sync_batch_rows
-
-        repository.set_sync_state("ckan_offset", str(current_offset))
-
-        if synced_count < settings.ckan_sync_batch_rows:
-            break
-
-        if batch_index < settings.ckan_sync_max_batches_per_run - 1:
-            time_module.sleep(settings.ckan_sync_batch_delay_seconds)
-
-    logger.info(
-        "Manual CKAN sync cycle finished: synced_datasets=%s next_offset=%s",
-        total_synced,
-        current_offset,
-    )
+    use_case.execute()
+    return {"message": "Sync cycle completed", "triggered_at": datetime.now(UTC).isoformat()}

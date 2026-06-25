@@ -11,6 +11,7 @@ from app.infrastructure.persistence.models import (
     FacetsCacheModel,
     OrganizationModel,
     ResourceModel,
+    SyncMetricsModel,
     SyncStateModel,
 )
 
@@ -22,6 +23,39 @@ class SqlAlchemyCacheRepository:
             self._upsert_datasets(session, batch)
             self._upsert_resources(session, batch)
             session.commit()
+
+    def get_sync_state_updated_at(self, key: str) -> str | None:
+        """Retourne l'horodatage de derniere mise a jour ou None (PDS-45, ADR-003)."""
+        with SessionLocal() as session:
+            row = session.get(SyncStateModel, key)
+            return row.updated_at if row else None
+
+    def add_sync_metrics(self, metrics: dict[str, int | str]) -> None:
+        """Persiste les metriques d'un cycle de sync termine (PDS-45).
+
+        Stocke le volume, la duree, les erreurs et le mode pour pilotage
+        et audit de l'ingestion CKAN.
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
+        try:
+            with SessionLocal() as session:
+                session.add(
+                    SyncMetricsModel(
+                        synced_datasets=int(metrics.get("synced_datasets", 0)),
+                        synced_organizations=int(metrics.get("synced_organizations", 0)),
+                        synced_resources=int(metrics.get("synced_resources", 0)),
+                        errors=int(metrics.get("errors", 0)),
+                        mode=str(metrics.get("mode", "bootstrap")),
+                        duration_ms=int(metrics.get("duration_ms", 0)),
+                        started_at=str(metrics.get("started_at", "")),
+                        completed_at=str(metrics.get("completed_at", "")),
+                    )
+                )
+                session.commit()
+        except Exception:
+            logger.exception("Echec de persistance des metriques de sync (non bloquant)")
 
     def get_sync_state(self, key: str) -> str | None:
         """Lit un etat persistant ou retourne None si la cle n'existe pas."""

@@ -36,11 +36,19 @@ def create_schema() -> None:
         FacetsCacheModel,
         OrganizationModel,
         ResourceModel,
+        SyncMetricsModel,
         SyncStateModel,
     )
 
     # Reference explicite pour enregistrement SQLAlchemy (side-effect obligatoire)
-    _ = (DatasetModel, OrganizationModel, ResourceModel, SyncStateModel, FacetsCacheModel)
+    _ = (
+        DatasetModel,
+        OrganizationModel,
+        ResourceModel,
+        SyncStateModel,
+        FacetsCacheModel,
+        SyncMetricsModel,
+    )
 
     Base.metadata.create_all(bind=engine)
 

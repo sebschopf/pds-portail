@@ -70,10 +70,10 @@ class SqlAlchemySearchRepository:
                     search_term = f"%{term}%"
                     term_clauses.append(
                         or_(
-                            func.lower(DatasetModel.title).like(search_term),
-                            func.lower(DatasetModel.description).like(search_term),
-                            func.lower(OrganizationModel.name).like(search_term),
-                            func.lower(DatasetModel.tags).like(search_term),
+                            DatasetModel.title.collate("NOCASE").like(search_term),
+                            DatasetModel.description.collate("NOCASE").like(search_term),
+                            OrganizationModel.name.collate("NOCASE").like(search_term),
+                            DatasetModel.tags.collate("NOCASE").like(search_term),
                         )
                     )
                 base_filters.append(or_(*term_clauses))
@@ -82,10 +82,10 @@ class SqlAlchemySearchRepository:
                 search_term = f"%{query.lower()}%"
                 base_filters.append(
                     or_(
-                        func.lower(DatasetModel.title).like(search_term),
-                        func.lower(DatasetModel.description).like(search_term),
-                        func.lower(OrganizationModel.name).like(search_term),
-                        func.lower(DatasetModel.tags).like(search_term),
+                        DatasetModel.title.collate("NOCASE").like(search_term),
+                        DatasetModel.description.collate("NOCASE").like(search_term),
+                        OrganizationModel.name.collate("NOCASE").like(search_term),
+                        DatasetModel.tags.collate("NOCASE").like(search_term),
                     )
                 )
             if org_filter:
@@ -93,7 +93,7 @@ class SqlAlchemySearchRepository:
             if tag_filter:
                 # Filtrer par tag exact: chercher le tag dans la liste (format JSON ou CSV)
                 tag_term = f"%{tag_filter}%"
-                base_filters.append(func.lower(DatasetModel.tags).like(func.lower(tag_term)))
+                base_filters.append(DatasetModel.tags.collate("NOCASE").like(tag_term))
 
             filters = list(base_filters)
             if format_filter:

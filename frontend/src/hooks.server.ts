@@ -13,6 +13,10 @@ import type { Handle } from '@sveltejs/kit';
  *
  * X-Frame-Options n'est pas injecté ici car la CSP contient déjà
  * `frame-ancestors 'none'` qui est strictement supérieur.
+ *
+ * Permissions-Policy : contient uniquement les features standard
+ * (supportées sans flag par Chromium ≥120, Firefox ≥120, Safari ≥17).
+ * Source : https://github.com/w3c/webappsec-permissions-policy/blob/main/features.md
  */
 export const handle: Handle = async ({ event, resolve }) => {
 	const response = await resolve(event);
@@ -35,21 +39,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 		'strict-origin-when-cross-origin'
 	);
 
-	// Permissions-Policy : désactiver tout ce qui n'est pas utilisé
+	// Permissions-Policy : désactiver les features non utilisées
+	// Uniquement les features reconnues par défaut (pas de flag expérimental)
 	response.headers.set(
 		'Permissions-Policy',
 		[
 			'accelerometer=()',
-			'ambient-light-sensor=()',
 			'autoplay=()',
-			'battery=()',
 			'camera=()',
 			'cross-origin-isolated=()',
 			'display-capture=()',
-			'document-domain=()',
 			'encrypted-media=()',
-			'execution-while-not-rendered=()',
-			'execution-while-out-of-viewport=()',
 			'fullscreen=()',
 			'geolocation=()',
 			'gyroscope=()',
@@ -57,14 +57,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 			'magnetometer=()',
 			'microphone=()',
 			'midi=()',
-			'navigation-override=()',
 			'payment=()',
 			'picture-in-picture=()',
 			'publickey-credentials-get=()',
 			'screen-wake-lock=()',
 			'sync-xhr=()',
 			'usb=()',
-			'web-share=()',
 			'xr-spatial-tracking=()'
 		].join(', ')
 	);

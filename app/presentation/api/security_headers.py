@@ -11,6 +11,10 @@ Headers couverts :
   - Referrer-Policy
   - Cross-Origin-Opener-Policy (COOP)
   - Permissions-Policy
+
+Permissions-Policy : contient uniquement les features standard
+(supportees sans flag par Chromium >=120, Firefox >=120, Safari >=17).
+Source : https://github.com/w3c/webappsec-permissions-policy/blob/main/features.md
 """
 
 from collections.abc import Awaitable, Callable
@@ -76,20 +80,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if self._enable_coop:
             headers_to_set["Cross-Origin-Opener-Policy"] = "same-origin"
 
-        # Permissions-Policy : desactiver tout ce qui n'est pas utilise
+        # Permissions-Policy : desactiver les features non utilisees
+        # Uniquement les features reconnues par defaut (pas de flag experimental)
         if self._enable_permissions_policy:
             headers_to_set["Permissions-Policy"] = (
-                "accelerometer=(), ambient-light-sensor=(), autoplay=(), "
-                "battery=(), camera=(), cross-origin-isolated=(), "
-                "display-capture=(), document-domain=(), "
-                "encrypted-media=(), execution-while-not-rendered=(), "
-                "execution-while-out-of-viewport=(), fullscreen=(), "
-                "geolocation=(), gyroscope=(), keyboard-map=(), "
-                "magnetometer=(), microphone=(), midi=(), "
-                "navigation-override=(), payment=(), "
+                "accelerometer=(), autoplay=(), camera=(), "
+                "cross-origin-isolated=(), display-capture=(), "
+                "encrypted-media=(), fullscreen=(), geolocation=(), "
+                "gyroscope=(), keyboard-map=(), magnetometer=(), "
+                "microphone=(), midi=(), payment=(), "
                 "picture-in-picture=(), publickey-credentials-get=(), "
                 "screen-wake-lock=(), sync-xhr=(), usb=(), "
-                "web-share=(), xr-spatial-tracking=()"
+                "xr-spatial-tracking=()"
             )
 
         for header_name, header_value in headers_to_set.items():

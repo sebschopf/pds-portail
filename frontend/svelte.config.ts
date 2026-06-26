@@ -8,9 +8,8 @@ const config: Config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-		// If your environment is not supported or you settled on a specific environment, switch out the adapter.
-		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
+		// adapter-auto détecte Vercel automatiquement en production,
+		// Vercel gère la redirection HTTPS (PDS-38)
 		adapter: adapter(),
 
 		csp: {
@@ -29,13 +28,15 @@ const config: Config = {
 				'frame-ancestors': ['none'],
 				'form-action': ['self'],
 				'base-uri': ['self'],
-				'object-src': ['none']
+				'object-src': ['none'],
+				// Trusted Types (PDS-38) - trajectoire documentée, mode rapport
+				'report-uri': ['/api/v1/csp-report']
 			}
 		},
 
 		csrf: {
 			// Allow cross-origin requests from the backend for API routes.
-			// The frontend is served from Vercel, backend from Render.
+			// The frontend is served from Vercel, backend from Fly.io.
 			checkOrigin: process.env.NODE_ENV === 'production'
 		}
 	}

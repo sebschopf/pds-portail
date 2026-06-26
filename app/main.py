@@ -19,6 +19,7 @@ from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCache
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
 from app.infrastructure.persistence.database import create_schema
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
+from app.presentation.api.security_headers import SecurityHeadersMiddleware
 from app.presentation.api.v1.router import api_router
 
 logger = logging.getLogger(__name__)
@@ -128,6 +129,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Security headers (PDS-38, ADR-021)
+    app.add_middleware(SecurityHeadersMiddleware, settings=settings)  # type: ignore[arg-type]
     app.include_router(api_router)
     return app
 

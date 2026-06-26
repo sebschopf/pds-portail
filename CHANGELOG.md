@@ -3,8 +3,9 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] (En cours - Milestones M6 & M7)
+## [Unreleased] (En cours - Milestones M6, M7, M8)
 ### Added (Ajouts)
+- PDS-38 : Durcissement HTTPS et headers de sécurité web — middleware `SecurityHeadersMiddleware` backend (HSTS, X-Content-Type-Options, X-Frame-Options, COOP, Referrer-Policy, Permissions-Policy), headers injectés dans `hooks.server.ts` frontend, script `scripts/check-security-headers.sh` de vérification HTTP, Trusted Types en mode rapport via CSP, documentation des compromis MVP (M8).
 - PDS-45 : Métriques d'ingestion CKAN — table `sync_metrics`, endpoint `GET /api/v1/internal/sync/metrics`, refactorisation extraction `RunSyncCycleUseCase` (élimination duplication ADR-003) (M7).
 - PDS-40 : Recherche différenciante avec ranking hybride explicable et mise en avant de la pertinence (M6).
 - PDS-41 : Recherche multilingue FR/DE/IT/EN — dictionnaire 20 concepts × 4 langues, 15 concepts de synonymes métier, expansion de requête traçable intégrée au pipeline de recherche (M6).

@@ -1,7 +1,10 @@
 import json
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import func
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.ckan_normalized import NormalizedBatch
@@ -14,6 +17,8 @@ from app.infrastructure.persistence.models import (
     SyncMetricsModel,
     SyncStateModel,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SqlAlchemyCacheRepository:
@@ -71,16 +76,54 @@ class SqlAlchemyCacheRepository:
             session.commit()
 
     def _upsert_organizations(self, session: Session, batch: NormalizedBatch) -> None:
+        """Upsert tolerant aux conflits de ckan_url (PDS-58 hotfix).
+
+        Utilise INSERT OR REPLACE via le dialecte SQLite car session.merge()
+        peut echouer sur la contrainte UNIQUE(ckan_url) quand deux organisations
+        distinctes (id different) partagent la meme URL CKAN.
+        """
         for organization in batch.organizations:
-            session.merge(
-                OrganizationModel(
+            stmt = (
+                sqlite_insert(OrganizationModel)
+                .values(
                     id=organization.id,
                     name=organization.name,
                     description=organization.description,
                     ckan_url=organization.ckan_url,
                     last_synced=organization.last_synced,
                 )
+                .on_conflict_do_update(
+                    index_elements=[OrganizationModel.id],
+                    set_={
+                        "name": organization.name,
+                        "description": organization.description,
+                        "ckan_url": organization.ckan_url,
+                        "last_synced": organization.last_synced,
+                    },
+                )
             )
+            try:
+                session.execute(stmt)
+            except IntegrityError:
+                # Conflit sur ckan_url : l'org existe deja avec un id different.
+                # On cherche l'org existante par ckan_url et on met a jour son nom.
+                existing = (
+                    session.query(OrganizationModel)
+                    .filter(OrganizationModel.ckan_url == organization.ckan_url)
+                    .first()
+                )
+                if existing:
+                    existing.name = organization.name
+                    existing.description = organization.description
+                    existing.last_synced = organization.last_synced
+                    logger.debug(
+                        "Organisation conflit ckan_url=%s: id=%s mis a jour depuis id=%s",
+                        organization.ckan_url,
+                        existing.id,
+                        organization.id,
+                    )
+                else:
+                    raise
 
     def _upsert_datasets(self, session: Session, batch: NormalizedBatch) -> None:
         for dataset in batch.datasets:

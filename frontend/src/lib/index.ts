@@ -17,3 +17,11 @@ export { default as StructureBlock } from './ui/molecules/StructureBlock.svelte'
 // Organisms
 export { default as Card } from './ui/organisms/Card.svelte';
 export { default as CardDataset } from './ui/organisms/CardDataset.svelte';
+
+// Icônes SVG néo-brutalistes (PDS-67)
+export { default as SearchIcon } from './assets/icons/SearchIcon.svelte';
+export { default as FilterIcon } from './assets/icons/FilterIcon.svelte';
+export { default as DatasetIcon } from './assets/icons/DatasetIcon.svelte';
+export { default as CompareIcon } from './assets/icons/CompareIcon.svelte';
+export { default as EmptyIcon } from './assets/icons/EmptyIcon.svelte';
+export { default as ErrorIcon } from './assets/icons/ErrorIcon.svelte';

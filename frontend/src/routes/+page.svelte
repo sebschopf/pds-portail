@@ -3,7 +3,7 @@
 	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
 
-	import { Button, Card, CardDataset, CompareBar, FiltersPanel, StateBadge } from '$lib';
+	import { Button, Card, CardDataset, CompareBar, FiltersPanel, SkeletonCard, StateBadge } from '$lib';
 	import { normalizeSearchContext } from '$lib/navigation/search-context';
 	import type { SearchDatasetItem, FacetItem, SearchResponse } from '$lib/types/search';
 
@@ -272,7 +272,13 @@
 	</Card>
 
 	{#if isLoading}
-		<p class="state" role="status" aria-live="polite">Chargement des resultats...</p>
+		<div role="status" aria-live="polite" aria-label="Chargement des resultats">
+			<ul class="results">
+				{#each Array(3) as _}
+					<li><SkeletonCard /></li>
+				{/each}
+			</ul>
+		</div>
 	{:else if errorMessage}
 		<p class="state state-danger" role="alert">Echec recherche: {errorMessage}</p>
 	{:else if data && data.datasets.length > 0}

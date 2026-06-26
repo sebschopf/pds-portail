@@ -1,5 +1,6 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
+	import { Skeleton } from '$lib';
 	import '../app.css';
 	import { navigating } from '$app/state';
 
@@ -45,7 +46,7 @@
 	</header>
 
 	{#if navigating.to}
-		<p class="loading" role="status" aria-live="polite">Chargement en cours...</p>
+		<Skeleton width="100%" height="var(--border-strong)" ariaLabel="Chargement de la page" />
 	{/if}
 
 	<main id="main-content" tabindex="-1">
@@ -98,15 +99,6 @@
 		font-size: clamp(1.55rem, 2vw + 1rem, 2.5rem);
 	}
 
-	.loading {
-		margin: 0 0 var(--space-4);
-		padding: var(--space-2) var(--space-3);
-		background: var(--color-surface-muted);
-		border: var(--border-thin) solid var(--color-border);
-		border-radius: var(--radius-none);
-		display: inline-block;
-		font-size: var(--font-size-ui);
-	}
 
 	.readable-toggle {
 		margin-top: var(--space-3);

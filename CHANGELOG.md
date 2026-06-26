@@ -3,8 +3,9 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] (En cours - Milestones M6, M7, M8)
+## [Unreleased] (En cours - Milestones M6, M7, M8, M9)
 ### Added (Ajouts)
+- PDS-60 : Skeletons et états de chargement — composant `Skeleton` réutilisable avec shimmer OKLCH et support `prefers-reduced-motion`, molécule `SkeletonCard` alignée sur `CardDataset` pour éviter le CLS, remplacement de tous les textes "Chargement..." dans `+layout.svelte` (barre de navigation) et `+page.svelte` (3 squelettes pendant la recherche). (M9)
 - PDS-38 : Durcissement HTTPS et headers de sécurité web — middleware `SecurityHeadersMiddleware` backend (HSTS, X-Content-Type-Options, X-Frame-Options, COOP, Referrer-Policy, Permissions-Policy), headers injectés dans `hooks.server.ts` frontend, script `scripts/check-security-headers.sh` de vérification HTTP, Trusted Types en mode rapport via CSP, documentation des compromis MVP (M8).
 - PDS-65 : Réorganisation du design system en Atomic Design — tokens CSS extraits (colors, typography, spacing), composants rangés en atoms/molecules/organisms, barrel `$lib/index.ts` ré-export, document `spec-004-ui-design-system.md`, script `validate-design-system.mjs` adapté pour suivre les `@import` CSS (M9).
 - PDS-45 : Métriques d'ingestion CKAN — table `sync_metrics`, endpoint `GET /api/v1/internal/sync/metrics`, refactorisation extraction `RunSyncCycleUseCase` (élimination duplication ADR-003) (M7).
@@ -28,6 +29,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-37 : Baseline SEO technique MVP — métadonnées par type de page (title, meta description, canonical, robots, sitemap), document `Doc/20-technique/05-seo/seo-baseline.md`, `sitemap.xml` statique, `robots.txt` avec directive Sitemap, cartographie des écarts Lighthouse SEO et limites MVP explicites. Références multi-moteurs (Google, Bing, IBM). (M8).
 - PDS-59 : Baseline de métriques qualité sans blocage automatique — intégration Lighthouse dans `make quality` (desktop ≥90, mobile ≥70), script `check-lighthouse-thresholds.mjs`, document `Doc/20-technique/02-exploitation/slo-baseline.md` listant les métriques et leur vérification, pas de CI/CD externe ni dashboard (M8).
 - PDS-58 : Métriques d'usage minimales via le cache existant — endpoints internes `GET /api/v1/internal/metrics/top-queries` (top N par hit_count) et `GET /api/v1/internal/metrics/zero-results` (requêtes sans résultat), exploite la table `query_cache` (PDS-46) sans infrastructure supplémentaire, protégés par `INTERNAL_API_TOKEN`, pas de PII (M8).
+- PDS-68 : Documentation du Design System — trois nouveaux documents techniques : SPEC-006 (Référence des Composants / UI Catalog avec Props, Events, Slots et exemples pour les 11 composants), Guide de gestion des Icônes et Assets SVG (pipeline SVGO → Svelte, règles currentColor/viewBox, checklist conformité) et Checklist d'Accessibilité QA manuelle (42 items sur 5 parcours critiques : clavier, lecteur d'écran, zoom 200%, motion réduite, mode sombre). README table des matières dans `Doc/20-technique/01-spec/` et mise à jour de l'index `Doc/README.md` (M9).
 
 ### Fixed
 - PDS-40 : suppression des warnings SQLAlchemy de produit cartésien dans les requêtes de recherche/facettes afin de fiabiliser les comptages et la recherche en exploitation.
@@ -47,4 +49,3 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ### Security
 - PDS-54 : Protection anti-abus de l'API publique avec rate-limiting slowapi (30 req/min) et timeout strict sur les appels CKAN externes (30s par défaut, configurable).
-

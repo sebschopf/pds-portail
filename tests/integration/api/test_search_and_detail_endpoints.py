@@ -738,3 +738,97 @@ def test_query_cache_disabled_flag_turns_off_cache(
     assert data["total_entries"] == 0, "Aucune entree de cache si flag OFF"
     assert data["hits"] == 0, "Pas de hit si flag OFF"
     assert data["misses"] == 0, "Pas de miss non plus si flag OFF (cache non utilise)"
+
+
+def test_cache_ttl_expired_bypasses_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """T1a: Une entree de cache avec TTL expire est ignoree (stale + bypass)."""
+
+    database_path = tmp_path / "cache-ttl.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("QUERY_CACHE_ENABLED", "true")
+
+    database_port, cache_repository, app = _configure_api_modules(enable_query_cache=True)
+    database_port.create_schema()
+    _populate_cache_nominale(cache_repository)
+
+    client = cast(Any, TestClient(app))
+
+    # Injecter une entree de cache avec un created_at vieux (TTL 1 seconde)
+    from app.domain.cache_invalidation import CacheEndpointType, build_search_cache_key
+
+    stale_key = build_search_cache_key(
+        query="vieux",
+        offset=0,
+        limit=20,
+        org_filter=None,
+        format_filter=None,
+        tag_filter=None,
+        sort="modified_desc",
+    )
+    from app.infrastructure.persistence.database import SessionLocal
+    from app.infrastructure.persistence.models import QueryCacheModel
+
+    with SessionLocal() as session:
+        session.merge(
+            QueryCacheModel(
+                key=stale_key,
+                endpoint_type=CacheEndpointType.SEARCH.value,
+                response_json='{"total":0,"offset":0,"limit":20,"datasets":[]}',
+                created_at="2020-01-01T00:00:00+00:00",  # Tres vieux
+                hit_count=0,
+            )
+        )
+        session.commit()
+
+    # Recherche qui matcherait la cle stale si le TTL etait ignore
+    response = cast(Response, client.get("/api/v1/search?q=vieux"))
+    assert response.status_code == 200
+
+    # Verifier que l'entree stale a ete comptee comme stale
+    stats = cast(Response, client.get("/api/v1/internal/cache/stats"))
+    data = cast(dict[str, Any], stats.json())
+    assert data["stale_entries"] >= 1, "L'entree perimee doit etre comptee comme stale"
+
+
+def test_cache_json_malformed_bypasses(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """T1b: Un JSON malforme dans le cache ne casse pas l'API (bypass + warning)."""
+    database_path = tmp_path / "cache-json.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("QUERY_CACHE_ENABLED", "true")
+
+    database_port, cache_repository, app = _configure_api_modules(enable_query_cache=True)
+    database_port.create_schema()
+    _populate_cache_nominale(cache_repository)
+
+    client = cast(Any, TestClient(app))
+
+    # Injecter du JSON invalide dans le cache
+    from app.domain.cache_invalidation import CacheEndpointType, build_search_cache_key
+
+    bad_key = build_search_cache_key(
+        query="corrompu",
+        offset=0,
+        limit=20,
+        org_filter=None,
+        format_filter=None,
+        tag_filter=None,
+        sort="modified_desc",
+    )
+    from app.infrastructure.persistence.database import SessionLocal
+    from app.infrastructure.persistence.models import QueryCacheModel
+
+    with SessionLocal() as session:
+        session.merge(
+            QueryCacheModel(
+                key=bad_key,
+                endpoint_type=CacheEndpointType.SEARCH.value,
+                response_json="NOT VALID JSON {{{[][",
+                created_at="2026-06-26T10:00:00+00:00",
+                hit_count=0,
+            )
+        )
+        session.commit()
+
+    # La recherche ne doit pas echouer malgre le JSON invalide
+    response = cast(Response, client.get("/api/v1/search?q=corrompu"))
+    assert response.status_code == 200

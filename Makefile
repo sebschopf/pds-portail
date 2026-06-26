@@ -41,4 +41,6 @@ quality-frontend:
 	cd frontend && npm run build
 	@echo "=== Frontend: Validation design system ==="
 	cd frontend && npm run validate:design
+	@echo "=== Frontend: Lighthouse (vérification seuils) ==="
+	cd frontend/scripts && node check-lighthouse-thresholds.mjs
 	@echo "=== Frontend: OK ==="

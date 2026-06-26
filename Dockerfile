@@ -21,9 +21,11 @@ FROM python:3.12-slim AS run
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV UV_CACHE_DIR=/tmp/.uv-cache
 
-# Cree un utilisateur non-root pour la securite
-RUN groupadd --system appgroup && useradd --system --no-create-home --gid appgroup appuser
+# Cree un utilisateur non-root pour la securite avec uid/gid 999
+# (correspond aux permissions du volume monte par Fly.io)
+RUN groupadd --system --gid 999 appgroup && useradd --system --no-create-home --uid 999 --gid appgroup appuser
 
 WORKDIR /app
 
@@ -38,6 +40,10 @@ COPY --from=build /build/app/ ./app/
 # Volume persistant pour le cache SQLite (monte par fly.toml)
 RUN mkdir -p /var/data && chown appuser:appgroup /var/data
 
+# Donne les droits d'ecriture a appuser sur /app pour eviter
+# "Permission denied" lors du build editable de setuptools par uv run
+RUN chown -R appuser:appgroup /app
+
 # HEALTHCHECK Docker pour permettre a Fly.io de detecter une instance malade
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD uv run python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v1/health')" || exit 1
@@ -45,5 +51,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 # Bascule vers l'utilisateur non-root
 USER appuser
 
-# Demarre uvicorn
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Demarre uvicorn via uv run python -m (evite le shebang casse du binaire uvicorn)
+CMD ["uv", "run", "python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

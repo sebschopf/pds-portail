@@ -50,9 +50,11 @@ export const load: PageLoad<ComparePageData> = async ({ url, fetch }) => {
 
 		const payload = (await response.json()) as unknown;
 		if (!isCompareResponse(payload)) {
-			throw new Error(
-				"Contrat invalide : la reponse du backend ne correspond pas a CompareResponse"
-			);
+			return {
+				error:
+					"Erreur contrat: la reponse du backend ne correspond pas a CompareResponse.",
+				items: [],
+			};
 		}
 
 		return {

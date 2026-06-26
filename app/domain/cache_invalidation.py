@@ -104,32 +104,6 @@ def build_compare_cache_key(ids: list[str]) -> str:
     return CacheKey(endpoint_type=CacheEndpointType.COMPARE, fingerprint=fingerprint).to_string()
 
 
-# --- Règles d'invalidation ---
-
-
-def invalidation_scope_after_sync(synced_dataset_ids: list[str]) -> dict[CacheEndpointType, bool]:
-    """Détermine le scope d'invalidation après un cycle de sync.
-
-    Retourne un dict indiquant quels types de cache doivent être invalidés
-    selon les IDs de datasets modifiés pendant la sync.
-
-    Règles (ADR-007, ADR-023):
-    - Si >= 1 dataset sync: invalider SEARCH (les résultats peuvent changer)
-    - Si >= 1 dataset sync: invalider FACETS (les compteurs peuvent changer)
-    - Invalider DATASET_DETAIL uniquement pour les datasets spécifiques modifiés
-    - COMPARE: invalidé seulement si un des datasets comparés a changé
-    - RESOURCE_DETAIL: invalidé seulement si la ressource a changé
-    """
-    scope: dict[CacheEndpointType, bool] = {
-        CacheEndpointType.SEARCH: len(synced_dataset_ids) > 0,
-        CacheEndpointType.DATASET_DETAIL: len(synced_dataset_ids) > 0,
-        CacheEndpointType.RESOURCE_DETAIL: len(synced_dataset_ids) > 0,
-        CacheEndpointType.COMPARE: len(synced_dataset_ids) > 0,
-        CacheEndpointType.FACETS: len(synced_dataset_ids) > 0,
-    }
-    return scope
-
-
 def is_cache_stale(created_at_iso: str, ttl_seconds: int) -> bool:
     """Vérifie si une entrée de cache a dépassé son TTL.
 

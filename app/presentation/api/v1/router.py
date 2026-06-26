@@ -1,7 +1,7 @@
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel
 
 from app.application.use_cases.cached_get_dataset_detail import CachedGetDatasetDetailUseCase
@@ -13,6 +13,7 @@ from app.application.use_cases.compare_datasets import (
 from app.application.use_cases.get_dataset_detail import GetDatasetDetailUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
 from app.application.use_cases.get_resource_detail import GetResourceDetailUseCase
+from app.application.use_cases.invalidate_cache_after_sync import invalidate_cache_after_sync
 from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
 from app.application.use_cases.search_datasets import SearchDatasetsUseCase
 from app.core.config import get_settings
@@ -323,16 +324,10 @@ def internal_sync_trigger() -> dict[str, str]:
     metrics = use_case.execute()
 
     # Invalidation du cache applicatif apres sync (PDS-46)
-    synced_count = int(metrics["synced_datasets"])
-    if settings.query_cache_enabled and synced_count > 0:
-        from app.domain.cache_invalidation import CacheEndpointType
-
-        cache = SqlAlchemyQueryCacheRepository()
-        cache.invalidate_by_endpoint_type(CacheEndpointType.SEARCH)
-        logger.info(
-            "Cache SEARCH invalide apres sync: %s datasets modifies",
-            metrics["synced_datasets"],
-        )
+    invalidate_cache_after_sync(
+        cache=SqlAlchemyQueryCacheRepository(),
+        synced_count=int(metrics["synced_datasets"]),
+    )
     return {"message": "Sync cycle completed", "triggered_at": datetime.now(UTC).isoformat()}
 
 
@@ -366,8 +361,20 @@ def internal_cache_stats() -> CacheStatsResponse:
 
 
 @api_router.post("/internal/cache/reset-stats")
-def internal_cache_reset_stats() -> dict[str, str]:
-    """Reinitialise les compteurs hit/miss du cache applicatif (PDS-46)."""
+def internal_cache_reset_stats(
+    x_internal_token: str | None = Header(None, alias="X-Internal-Token"),
+) -> dict[str, str]:
+    """Reinitialise les compteurs hit/miss du cache applicatif (PDS-46).
+
+    Protege par un token optionnel (INTERNAL_API_TOKEN). Si le token est
+    configure, il doit etre passe dans le header X-Internal-Token.
+    Sans token configure, l'endpoint reste ouvert (dev local).
+    """
+    settings = get_settings()
+    if settings.internal_api_token and (
+        not x_internal_token or x_internal_token != settings.internal_api_token
+    ):
+        raise HTTPException(status_code=401, detail="Invalid or missing internal token")
     cache = SqlAlchemyQueryCacheRepository()
     cache.reset_stats()
     return {"message": "Cache stats reset"}

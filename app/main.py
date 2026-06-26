@@ -11,25 +11,35 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
+from app.application.use_cases.invalidate_cache_after_sync import invalidate_cache_after_sync
 from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
 from app.core.config import Settings, get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
 from app.infrastructure.persistence.database import create_schema
+from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.presentation.api.v1.router import api_router
 
 logger = logging.getLogger(__name__)
 
 
 def _run_sync_cycle(settings: Settings) -> None:
-    """Execute un cycle via le use case deduplication PDS-45 (ADR-003)."""
+    """Execute un cycle via le use case deduplication PDS-45 (ADR-003).
+
+    Invalide le cache applicatif apres sync si des datasets ont ete modifies.
+    """
     use_case = RunSyncCycleUseCase(
         client=CkanHttpClient(),
         repository=SqlAlchemyCacheRepository(),
         settings=settings,
     )
-    use_case.execute()
+    metrics = use_case.execute()
+    # Invalidation du cache applicatif apres sync (PDS-46)
+    invalidate_cache_after_sync(
+        cache=SqlAlchemyQueryCacheRepository(),
+        synced_count=int(metrics.get("synced_datasets", 0)),
+    )
 
 
 def _start_sync_worker(app: FastAPI, settings: Settings) -> None:

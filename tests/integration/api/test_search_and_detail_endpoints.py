@@ -54,6 +54,7 @@ def _configure_api_modules(
     import app.infrastructure.persistence.cache_repository as cache_repository_module
     import app.infrastructure.persistence.database as database_module
     import app.infrastructure.persistence.models as models_module
+    import app.infrastructure.persistence.query_cache_repository as query_cache_repository_module
     import app.infrastructure.persistence.search_repository as search_repository_module
     import app.main as main_module
     import app.presentation.api.v1.router as router_module
@@ -61,6 +62,7 @@ def _configure_api_modules(
     database_module = importlib.reload(database_module)
     models_module = importlib.reload(models_module)
     cache_repository_module = importlib.reload(cache_repository_module)
+    query_cache_repository_module = importlib.reload(query_cache_repository_module)
     search_repository_module = importlib.reload(search_repository_module)
     search_datasets_use_case_module = importlib.reload(search_datasets_use_case_module)
     dataset_detail_use_case_module = importlib.reload(dataset_detail_use_case_module)
@@ -552,3 +554,187 @@ def test_resource_detail_nominale(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     assert data["format"] == "CSV"
     assert data["dataset_id"] == dataset_id
     assert data["dataset_title"] == "Donnees de mobilite urbaine"
+
+
+# ---------------------------------------------------------------------------
+# PDS-46 : Tests du cache applicatif
+# ---------------------------------------------------------------------------
+
+
+def test_query_cache_tables_created_by_create_schema(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """T3: create_schema() cree bien les tables query_cache et cache_hit_stats."""
+    import sqlite3
+
+    database_path = tmp_path / "cache-tables.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("QUERY_CACHE_ENABLED", "true")
+
+    database_port, _, _ = _configure_api_modules(enable_query_cache=True)
+    database_port.create_schema()
+
+    conn = sqlite3.connect(str(database_path))
+    tables = {
+        row[0]
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    }
+    conn.close()
+    assert "query_cache" in tables, "query_cache table should exist after create_schema()"
+    assert "cache_hit_stats" in tables, "cache_hit_stats table should exist after create_schema()"
+
+
+def test_internal_cache_stats_endpoint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """T4a: GET /internal/cache/stats retourne les metriques initiales a zero."""
+    database_path = tmp_path / "cache-stats-empty.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("QUERY_CACHE_ENABLED", "true")
+
+    database_port, _, app = _configure_api_modules(enable_query_cache=True)
+    database_port.create_schema()
+
+    client = cast(Any, TestClient(app))
+    response = cast(Response, client.get("/api/v1/internal/cache/stats"))
+    assert response.status_code == 200
+    data = cast(dict[str, Any], response.json())
+    assert data["hits"] == 0
+    assert data["misses"] == 0
+    assert data["stale_entries"] == 0
+    assert data["total_entries"] == 0
+    assert data["hit_ratio"] == 0.0
+
+
+def test_internal_cache_stats_after_search(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """T4b: GET /internal/cache/stats reflete les hits/misses apres usage."""
+    database_path = tmp_path / "cache-stats-used.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("QUERY_CACHE_ENABLED", "true")
+
+    database_port, cache_repository, app = _configure_api_modules(enable_query_cache=True)
+    database_port.create_schema()
+    _populate_cache_nominale(cache_repository)
+
+    client = cast(Any, TestClient(app))
+
+    # Premier appel: miss (cache vide)
+    response1 = cast(Response, client.get("/api/v1/search?q=mobilite"))
+    assert response1.status_code == 200
+
+    stats1 = cast(Response, client.get("/api/v1/internal/cache/stats"))
+    data1 = cast(dict[str, Any], stats1.json())
+    assert data1["total_entries"] >= 1, "Au moins une entree de cache creee"
+    assert data1["misses"] >= 1, "Premier appel = miss"
+
+    # Deuxieme appel identique: hit
+    response2 = cast(Response, client.get("/api/v1/search?q=mobilite"))
+    assert response2.status_code == 200
+
+    stats2 = cast(Response, client.get("/api/v1/internal/cache/stats"))
+    data2 = cast(dict[str, Any], stats2.json())
+    assert data2["hits"] >= 1, "Deuxieme appel = hit"
+    assert data2["hit_ratio"] > 0.0
+
+
+def test_internal_cache_reset_stats_endpoint(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """T4c: POST /internal/cache/reset-stats reinitialise les compteurs."""
+    database_path = tmp_path / "cache-reset.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("QUERY_CACHE_ENABLED", "true")
+
+    database_port, cache_repository, app = _configure_api_modules(enable_query_cache=True)
+    database_port.create_schema()
+    _populate_cache_nominale(cache_repository)
+
+    client = cast(Any, TestClient(app))
+
+    # Generer un hit
+    client.get("/api/v1/search?q=mobilite")
+    client.get("/api/v1/search?q=mobilite")
+
+    # Verifier que les compteurs sont non nuls
+    stats_before = cast(Response, client.get("/api/v1/internal/cache/stats"))
+    data_before = cast(dict[str, Any], stats_before.json())
+    assert data_before["hits"] >= 1
+
+    # Reset sans token (dev local, pas de INTERNAL_API_TOKEN defini)
+    reset_response = cast(Response, client.post("/api/v1/internal/cache/reset-stats"))
+    assert reset_response.status_code == 200
+    assert cast(dict[str, str], reset_response.json())["message"] == "Cache stats reset"
+
+    # Verifier que les compteurs sont a zero
+    stats_after = cast(Response, client.get("/api/v1/internal/cache/stats"))
+    data_after = cast(dict[str, Any], stats_after.json())
+    assert data_after["hits"] == 0
+    assert data_after["misses"] == 0
+    assert data_after["stale_entries"] == 0
+
+
+def test_internal_cache_reset_stats_requires_token_when_configured(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """T4d: POST /internal/cache/reset-stats refuse sans token si INTERNAL_API_TOKEN defini."""
+    database_path = tmp_path / "cache-reset-token.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    monkeypatch.setenv("QUERY_CACHE_ENABLED", "true")
+    monkeypatch.setenv("INTERNAL_API_TOKEN", "secret-token")
+
+    database_port, _, app = _configure_api_modules(enable_query_cache=True)
+    database_port.create_schema()
+
+    client = cast(Any, TestClient(app))
+
+    # Sans token → 401
+    response_no_token = cast(Response, client.post("/api/v1/internal/cache/reset-stats"))
+    assert response_no_token.status_code == 401
+
+    # Mauvais token → 401
+    response_bad_token = cast(
+        Response,
+        client.post(
+            "/api/v1/internal/cache/reset-stats",
+            headers={"X-Internal-Token": "wrong"},
+        ),
+    )
+    assert response_bad_token.status_code == 401
+
+    # Bon token → 200
+    response_ok = cast(
+        Response,
+        client.post(
+            "/api/v1/internal/cache/reset-stats",
+            headers={"X-Internal-Token": "secret-token"},
+        ),
+    )
+    assert response_ok.status_code == 200
+
+
+def test_query_cache_disabled_flag_turns_off_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """T5: QUERY_CACHE_ENABLED=false desactive le cache applicatif (pas de hit)."""
+    database_path = tmp_path / "cache-disabled.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+    # QUERY_CACHE_ENABLED n'est pas force → false par la fixture
+
+    database_port, cache_repository, app = _configure_api_modules(enable_query_cache=False)
+    database_port.create_schema()
+    _populate_cache_nominale(cache_repository)
+
+    client = cast(Any, TestClient(app))
+
+    # Premier appel
+    response1 = cast(Response, client.get("/api/v1/search?q=mobilite"))
+    assert response1.status_code == 200
+
+    # Deuxieme appel: sans cache, pas de hit
+    response2 = cast(Response, client.get("/api/v1/search?q=mobilite"))
+    assert response2.status_code == 200
+
+    # Les stats de cache devraient etre vides (pas d'ecriture cache)
+    stats = cast(Response, client.get("/api/v1/internal/cache/stats"))
+    data = cast(dict[str, Any], stats.json())
+    assert data["total_entries"] == 0, "Aucune entree de cache si flag OFF"
+    assert data["hits"] == 0, "Pas de hit si flag OFF"
+    assert data["misses"] == 0, "Pas de miss non plus si flag OFF (cache non utilise)"

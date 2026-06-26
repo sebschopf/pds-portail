@@ -7,7 +7,7 @@ invalidation ciblée par type d'endpoint.
 import logging
 from datetime import UTC, datetime
 
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 from app.application.ports.query_cache_repository import CacheStats
 from app.domain.cache_invalidation import CacheEndpointType, is_cache_stale
@@ -33,10 +33,12 @@ class SqlAlchemyQueryCacheRepository:
             row = session.get(QueryCacheModel, cache_key)
             if row is None:
                 self._record_miss(session)
+                session.commit()
                 return None
 
             if is_cache_stale(row.created_at, ttl_seconds):
                 self._record_stale(session)
+                session.commit()
                 # Ne pas supprimer automatiquement — l'invalidation est explicite
                 return None
 
@@ -122,36 +124,42 @@ class SqlAlchemyQueryCacheRepository:
 
     @staticmethod
     def _record_hit(session: object) -> None:
-        """Incrémente le compteur de hits (session déjà ouverte)."""
+        """Incrémente le compteur de hits de manière atomique (UPDATE SQL brut)."""
         from sqlalchemy.orm import Session as _Session
 
         assert isinstance(session, _Session)
-        stats = session.get(CacheHitStatsModel, 1)
-        if stats:
-            stats.hits += 1
-        else:
-            session.add(CacheHitStatsModel(id=1, hits=1, misses=0, stale_entries=0))
+        session.execute(
+            text(
+                "INSERT INTO cache_hit_stats (id, hits, misses, stale_entries) "
+                "VALUES (1, 1, 0, 0) "
+                "ON CONFLICT (id) DO UPDATE SET hits = hits + 1"
+            )
+        )
 
     @staticmethod
     def _record_miss(session: object) -> None:
-        """Incrémente le compteur de misses."""
+        """Incrémente le compteur de misses de manière atomique."""
         from sqlalchemy.orm import Session as _Session
 
         assert isinstance(session, _Session)
-        stats = session.get(CacheHitStatsModel, 1)
-        if stats:
-            stats.misses += 1
-        else:
-            session.add(CacheHitStatsModel(id=1, hits=0, misses=1, stale_entries=0))
+        session.execute(
+            text(
+                "INSERT INTO cache_hit_stats (id, hits, misses, stale_entries) "
+                "VALUES (1, 0, 1, 0) "
+                "ON CONFLICT (id) DO UPDATE SET misses = misses + 1"
+            )
+        )
 
     @staticmethod
     def _record_stale(session: object) -> None:
-        """Incrémente le compteur de stale entries."""
+        """Incrémente le compteur de stale entries de manière atomique."""
         from sqlalchemy.orm import Session as _Session
 
         assert isinstance(session, _Session)
-        stats = session.get(CacheHitStatsModel, 1)
-        if stats:
-            stats.stale_entries += 1
-        else:
-            session.add(CacheHitStatsModel(id=1, hits=0, misses=0, stale_entries=1))
+        session.execute(
+            text(
+                "INSERT INTO cache_hit_stats (id, hits, misses, stale_entries) "
+                "VALUES (1, 0, 0, 1) "
+                "ON CONFLICT (id) DO UPDATE SET stale_entries = stale_entries + 1"
+            )
+        )

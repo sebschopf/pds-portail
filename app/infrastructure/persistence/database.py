@@ -32,9 +32,11 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, futu
 
 def create_schema() -> None:
     from app.infrastructure.persistence.models import (
+        CacheHitStatsModel,
         DatasetModel,
         FacetsCacheModel,
         OrganizationModel,
+        QueryCacheModel,
         ResourceModel,
         SyncMetricsModel,
         SyncStateModel,
@@ -42,8 +44,10 @@ def create_schema() -> None:
 
     # Reference explicite pour enregistrement SQLAlchemy (side-effect obligatoire)
     _ = (
+        CacheHitStatsModel,
         DatasetModel,
         OrganizationModel,
+        QueryCacheModel,
         ResourceModel,
         SyncStateModel,
         FacetsCacheModel,

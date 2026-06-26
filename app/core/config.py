@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     ckan_sync_batch_delay_seconds: float = 1.0
     ckan_http_timeout_seconds: float = 30.0
     expose_api_docs: bool = True
+    query_cache_ttl_seconds: int = 86400  # 24h (ADR-007)
+    query_cache_enabled: bool = True  # Feature flag cache applicatif (PDS-46)
 
     model_config = SettingsConfigDict(
         env_file=".env",

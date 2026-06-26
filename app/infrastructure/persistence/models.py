@@ -105,3 +105,34 @@ class SyncMetricsModel(Base):
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     started_at: Mapped[str] = mapped_column(String, nullable=False)
     completed_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class QueryCacheModel(Base):
+    """Cache applicatif multi-niveaux avec TTL et invalidation fine (PDS-46).
+
+    Stocke les réponses d'endpoint sérialisées (JSON) indexées par une clé
+    versionnée. Supporte l'invalidation par type d'endpoint et par TTL.
+    """
+
+    __tablename__ = "query_cache"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    endpoint_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    response_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    hit_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class CacheHitStatsModel(Base):
+    """Compteurs hit/miss du cache applicatif pour instrumentation (PDS-46).
+
+    Une seule ligne (id=1) mise à jour atomiquement. Les compteurs sont
+    cumulatifs depuis le dernier redémarrage applicatif.
+    """
+
+    __tablename__ = "cache_hit_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    hits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    misses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stale_entries: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

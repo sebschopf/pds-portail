@@ -28,12 +28,25 @@ class CacheRepositoryPort(Protocol):
         """Persiste un lot normalise dans le cache local."""
 
 
-def _configure_api_modules() -> tuple[DatabaseModulePort, CacheRepositoryPort, FastAPI]:
-    """Recharge les modules relies a la DB pour les tests de lecture API."""
+def _configure_api_modules(
+    enable_query_cache: bool = False,
+) -> tuple[DatabaseModulePort, CacheRepositoryPort, FastAPI]:
+    """Recharge les modules relies a la DB pour les tests de lecture API.
+
+    Par defaut, le cache applicatif PDS-46 est desactive pour eviter de
+    polluer les assertions existantes. Les tests specifiques au cache
+    passent ``enable_query_cache=True``.
+    """
+
+    import os
 
     import app.core.config as config_module
 
     config_module.get_settings.cache_clear()
+
+    # Desactiver le cache applicatif PDS-46 pour les tests existants
+    if not enable_query_cache:
+        os.environ["QUERY_CACHE_ENABLED"] = "false"
 
     import app.application.use_cases.get_dataset_detail as dataset_detail_use_case_module
     import app.application.use_cases.get_resource_detail as resource_detail_use_case_module

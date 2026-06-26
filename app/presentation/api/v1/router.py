@@ -4,6 +4,8 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from app.application.use_cases.cached_get_dataset_detail import CachedGetDatasetDetailUseCase
+from app.application.use_cases.cached_search_datasets import CachedSearchDatasetsUseCase
 from app.application.use_cases.compare_datasets import (
     CompareDatasetsUseCase,
     InvalidCompareRequestError,
@@ -17,6 +19,7 @@ from app.core.config import get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
+from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.infrastructure.persistence.search_repository import SqlAlchemySearchRepository
 from app.presentation.api.v1.schemas import (
     CompareRequest,
@@ -117,6 +120,21 @@ def search(
         SearchResponse avec datasets pagines et facettes d'agregation
     """
 
+    settings = get_settings()
+    if settings.query_cache_enabled:
+        return CachedSearchDatasetsUseCase(
+            repository=SqlAlchemySearchRepository(),
+            cache=SqlAlchemyQueryCacheRepository(),
+            ttl_seconds=settings.query_cache_ttl_seconds,
+        ).execute(
+            query=q,
+            offset=offset,
+            limit=limit,
+            org_filter=org,
+            format_filter=fmt,
+            tag_filter=tag,
+            sort=sort,
+        )
     return SearchDatasetsUseCase(SqlAlchemySearchRepository()).execute(
         query=q,
         offset=offset,
@@ -142,7 +160,15 @@ def get_dataset(dataset_id: str) -> DatasetDetailResponse:
         DatasetDetailResponse avec detail complet ou 404 si non trouve
     """
 
-    detail = GetDatasetDetailUseCase(SqlAlchemySearchRepository()).execute(dataset_id)
+    settings = get_settings()
+    if settings.query_cache_enabled:
+        detail = CachedGetDatasetDetailUseCase(
+            repository=SqlAlchemySearchRepository(),
+            cache=SqlAlchemyQueryCacheRepository(),
+            ttl_seconds=settings.query_cache_ttl_seconds,
+        ).execute(dataset_id)
+    else:
+        detail = GetDatasetDetailUseCase(SqlAlchemySearchRepository()).execute(dataset_id)
     if not detail:
         raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
     return detail
@@ -294,5 +320,54 @@ def internal_sync_trigger() -> dict[str, str]:
         repository=SqlAlchemyCacheRepository(),
         settings=settings,
     )
-    use_case.execute()
+    metrics = use_case.execute()
+
+    # Invalidation du cache applicatif apres sync (PDS-46)
+    synced_count = int(metrics["synced_datasets"])
+    if settings.query_cache_enabled and synced_count > 0:
+        from app.domain.cache_invalidation import CacheEndpointType
+
+        cache = SqlAlchemyQueryCacheRepository()
+        cache.invalidate_by_endpoint_type(CacheEndpointType.SEARCH)
+        logger.info(
+            "Cache SEARCH invalide apres sync: %s datasets modifies",
+            metrics["synced_datasets"],
+        )
     return {"message": "Sync cycle completed", "triggered_at": datetime.now(UTC).isoformat()}
+
+
+class CacheStatsResponse(BaseModel):
+    """Statistiques de hit/miss du cache applicatif (PDS-46)."""
+
+    hits: int
+    misses: int
+    stale_entries: int
+    total_entries: int
+    hit_ratio: float
+
+
+@api_router.get("/internal/cache/stats", response_model=CacheStatsResponse)
+def internal_cache_stats() -> CacheStatsResponse:
+    """Retourne les statistiques hit/miss du cache applicatif (PDS-46).
+
+    Permet de mesurer le hit-ratio et les gains de latence du cache
+    multi-niveaux. Les compteurs sont cumulatifs depuis le dernier
+    redemarrage applicatif ou reset explicite.
+    """
+    cache = SqlAlchemyQueryCacheRepository()
+    stats = cache.get_stats()
+    return CacheStatsResponse(
+        hits=stats.hits,
+        misses=stats.misses,
+        stale_entries=stats.stale_entries,
+        total_entries=stats.total_entries,
+        hit_ratio=round(stats.hit_ratio, 4),
+    )
+
+
+@api_router.post("/internal/cache/reset-stats")
+def internal_cache_reset_stats() -> dict[str, str]:
+    """Reinitialise les compteurs hit/miss du cache applicatif (PDS-46)."""
+    cache = SqlAlchemyQueryCacheRepository()
+    cache.reset_stats()
+    return {"message": "Cache stats reset"}

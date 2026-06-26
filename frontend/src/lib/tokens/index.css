@@ -1,0 +1,11 @@
+/* Design Tokens — Point d'entrée central
+ *
+ * Importe tous les tokens de design dans l'ordre.
+ * À importer dans app.css.
+ *
+ * @see spec-004-ui-design-system.md
+ */
+
+@import './colors.css';
+@import './typography.css';
+@import './spacing.css';

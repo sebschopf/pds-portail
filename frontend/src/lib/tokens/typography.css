@@ -1,0 +1,32 @@
+/* Design Tokens — Typographie (Atkinson Hyperlegible, ADR-012)
+ *
+ * Polices : system-ui stack (RGPD, pas de CDN externe — ADR-014).
+ * Tailles : min 1rem body (WCAG 2.2 AA).
+ * Validation : frontend/scripts/validate-design-system.mjs
+ */
+
+:root {
+	/* Polices */
+	--font-text: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--font-display: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+	/* Tailles — échelle modulaire minimale */
+	--font-size-body: 1.125rem;          /* 18px — min WCAG AA */
+	--font-size-ui: 1rem;                /* 16px — contrôles */
+	--font-size-caption: 0.75rem;        /* 12px — légendes */
+	--font-size-heading-sm: 1rem;        /* 16px */
+	--font-size-heading-md: 1.1rem;      /* ~18px */
+	--font-size-heading-lg: 1.125rem;    /* 18px */
+	--font-size-heading-xl: 1.2rem;      /* ~19px */
+	--font-size-display-metric: 1.5rem;  /* 24px — métriques */
+
+	/* Hauteurs de ligne */
+	--line-height-body: 1.6;
+	--line-height-title: 1.3;
+	--line-height-compact: 1.2;
+	--line-height-relaxed: 1.35;
+	--line-height-detail: 1.45;
+
+	/* Paragraphes */
+	--paragraph-gap: 0.75em;
+}

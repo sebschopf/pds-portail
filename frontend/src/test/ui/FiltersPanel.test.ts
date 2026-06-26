@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'svelte/server';
 
-import FiltersPanel from '../../lib/ui/FiltersPanel.svelte';
+import FiltersPanel from '../../lib/ui/molecules/FiltersPanel.svelte';
 
 describe('FiltersPanel', () => {
 	it('affiche les options de tri et facettes attendues', () => {

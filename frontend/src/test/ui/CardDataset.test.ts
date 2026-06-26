@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 
-import CardDataset from '../../lib/ui/CardDataset.svelte';
+import CardDataset from '../../lib/ui/organisms/CardDataset.svelte';
 
 const BASE_DATASET = {
 	id: 'dataset-1',

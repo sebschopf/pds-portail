@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 
-import Breadcrumb from '../../lib/ui/Breadcrumb.svelte';
+import Breadcrumb from '../../lib/ui/molecules/Breadcrumb.svelte';
 
 describe('Breadcrumb', () => {
 	it('affiche les items intermediaires comme liens et le dernier item comme page courante', () => {

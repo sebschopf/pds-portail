@@ -1,13 +1,19 @@
-export { default as Button } from './ui/Button.svelte';
-export { default as Breadcrumb } from './ui/Breadcrumb.svelte';
-export { default as Card } from './ui/Card.svelte';
-export { default as CardDataset } from './ui/CardDataset.svelte';
-export { default as CompareBar } from './ui/CompareBar.svelte';
-export { default as FiltersPanel } from './ui/FiltersPanel.svelte';
-export { default as Input } from './ui/Input.svelte';
-export { default as QualityBlock } from './ui/QualityBlock.svelte';
-export { default as ResourceList } from './ui/ResourceList.svelte';
-export { default as StateBadge } from './ui/StateBadge.svelte';
-export { default as StructureBlock } from './ui/StructureBlock.svelte';
+// Point d'entrée central — ré-exporte tous les composants UI
+// depuis leur emplacement Atomic Design (spec-004-ui-design-system).
+//
+// Atoms
+export { default as Button } from './ui/atoms/Button.svelte';
+export { default as Input } from './ui/atoms/Input.svelte';
+export { default as StateBadge } from './ui/atoms/StateBadge.svelte';
 
-export { isDatasetDetailContract, isDatasetStructureContract } from './contracts/dataset-detail';
+// Molecules
+export { default as Breadcrumb } from './ui/molecules/Breadcrumb.svelte';
+export { default as CompareBar } from './ui/molecules/CompareBar.svelte';
+export { default as FiltersPanel } from './ui/molecules/FiltersPanel.svelte';
+export { default as QualityBlock } from './ui/molecules/QualityBlock.svelte';
+export { default as ResourceList } from './ui/molecules/ResourceList.svelte';
+export { default as StructureBlock } from './ui/molecules/StructureBlock.svelte';
+
+// Organisms
+export { default as Card } from './ui/organisms/Card.svelte';
+export { default as CardDataset } from './ui/organisms/CardDataset.svelte';

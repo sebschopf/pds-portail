@@ -5,7 +5,31 @@ import { parse } from 'culori';
 
 const FRONTEND_SRC_PATH = resolve(process.cwd(), 'src');
 const APP_CSS_PATH = resolve(FRONTEND_SRC_PATH, 'app.css');
-const appCss = readFileSync(APP_CSS_PATH, 'utf-8');
+
+/**
+ * Résout récursivement les @import CSS pour collecter tout le contenu.
+ * Supporte @import './lib/tokens/index.css' dans app.css.
+ */
+function resolveCssImports(filePath, visited = new Set()) {
+	const absPath = resolve(filePath);
+	if (visited.has(absPath)) return '';
+	visited.add(absPath);
+
+	const content = readFileSync(absPath, 'utf-8');
+	const importRegex = /@import\s+['"]([^'"]+)['"]\s*;/g;
+
+	let resolved = content;
+	let match;
+	while ((match = importRegex.exec(content)) !== null) {
+		const importPath = resolve(filePath, '..', match[1]);
+		const importedContent = resolveCssImports(importPath, visited);
+		resolved = resolved.replace(match[0], importedContent);
+	}
+
+	return resolved;
+}
+
+const appCss = resolveCssImports(APP_CSS_PATH);
 
 function collectSourceFiles(directoryPath, fileList = []) {
 	for (const entry of readdirSync(directoryPath, { withFileTypes: true })) {

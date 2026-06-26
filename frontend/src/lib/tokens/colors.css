@@ -1,0 +1,38 @@
+/* Design Tokens — Couleurs (OKLCH exclusivement, ADR-013)
+ *
+ * Palette sémantique Neo-Brutaliste.
+ * Règle : jamais de couleur seule pour véhiculer une information.
+ * Validation : frontend/scripts/validate-design-system.mjs
+ */
+
+:root {
+	/* Surfaces */
+	--color-bg: oklch(0.97 0.008 95);
+	--color-surface: oklch(0.995 0.004 95);
+	--color-surface-muted: oklch(0.965 0.012 95);
+	--color-border: oklch(0.86 0.02 90);
+
+	/* Sémantique */
+	--color-primary: oklch(0.5119 0.1301 239);
+	--color-secondary: oklch(0.512 0.13 329);
+	--color-tertiary: oklch(0.512 0.13 59);
+	--color-danger: oklch(0.57 0.2 29);
+	--color-success: oklch(0.62 0.16 145);
+	--color-warning: oklch(0.78 0.16 92);
+
+	/* Texte sur fonds */
+	--color-on-bg: oklch(0.22 0.01 260);
+	--color-on-surface: oklch(0.2 0.012 260);
+	--color-on-surface-muted: oklch(0.34 0.011 260);
+	--color-on-surface-subtle: oklch(0.31 0.011 260);
+	--color-on-surface-soft: oklch(0.28 0.012 260);
+
+	/* Texte sur couleurs sémantiques */
+	--color-on-primary: oklch(0.985 0.003 255);
+	--color-on-danger: oklch(0.985 0.003 255);
+	--color-on-success: oklch(0.14 0.01 260);
+	--color-on-warning: oklch(0.16 0.02 260);
+
+	/* Focus */
+	--color-focus-ring: oklch(0.7 0.15 92);
+}

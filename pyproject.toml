@@ -49,6 +49,13 @@ warn_unused_ignores = true
 check_untyped_defs = true
 disallow_untyped_defs = false
 plugins = ["sqlalchemy.ext.mypy.plugin"]
+exclude = [
+    # PDS-45/PDS-00 : les fixtures partagees et fakes dans tests/ declenchent
+    # "Source file found twice" quand le dossier parent manque de __init__.py.
+    # Les ajouter casserait la decouverte de pytest (qui ignore __init__.py).
+    "tests/unit/application/use_cases/fakes.py",
+    "tests/integration/api/_fixtures.py",
+]
 
 [tool.pytest.ini_options]
 addopts = "--cov=app --cov-fail-under=80 --cov-report=term-missing"

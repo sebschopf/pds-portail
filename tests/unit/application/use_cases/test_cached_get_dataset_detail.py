@@ -6,58 +6,11 @@ from typing import cast
 
 import pytest
 
-from app.application.ports.query_cache_repository import CacheStats
 from app.application.ports.search_repository import DatasetDetailRepositoryPort
 from app.application.use_cases.cached_get_dataset_detail import CachedGetDatasetDetailUseCase
-from app.domain.cache_invalidation import CacheEndpointType
 from app.presentation.api.v1.schemas import DatasetDetailResponse
 
-
-class _FakeCacheRepository:
-    """Fake in-memory pour QueryCacheRepositoryPort."""
-
-    def __init__(self) -> None:
-        self.store: dict[str, str] = {}
-        self.hits = 0
-        self.misses = 0
-        self.stale_count = 0
-        self.invalidated: list[CacheEndpointType] = []
-
-    def get(self, cache_key: str, ttl_seconds: int) -> str | None:  # noqa: ARG002
-        if cache_key in self.store:
-            self.hits += 1
-            return self.store[cache_key]
-        self.misses += 1
-        return None
-
-    def set(self, cache_key: str, endpoint_type: CacheEndpointType, response_json: str) -> None:
-        del endpoint_type  # unused in fake
-        self.store[cache_key] = response_json
-
-    def invalidate_by_endpoint_type(self, endpoint_type: CacheEndpointType) -> int:
-        self.invalidated.append(endpoint_type)
-        count = sum(1 for k in list(self.store) if f":{endpoint_type.value}:" in k)
-        self.store = {k: v for k, v in self.store.items() if f":{endpoint_type.value}:" not in k}
-        return count
-
-    def invalidate_by_key(self, cache_key: str) -> bool:
-        if cache_key in self.store:
-            del self.store[cache_key]
-            return True
-        return False
-
-    def reset_stats(self) -> None:
-        self.hits = 0
-        self.misses = 0
-        self.stale_count = 0
-
-    def get_stats(self) -> CacheStats:
-        return CacheStats(
-            hits=self.hits,
-            misses=self.misses,
-            stale_entries=self.stale_count,
-            total_entries=len(self.store),
-        )
+from .fakes import FakeCacheRepository
 
 
 class _FakeDetailRepository:
@@ -98,7 +51,7 @@ def test_cache_hit_returns_detail_and_skips_repository(
     sample_detail_response: DatasetDetailResponse,
 ) -> None:
     """T2e: Un cache hit detail retourne la valeur sans appeler le repository."""
-    fake_cache = _FakeCacheRepository()
+    fake_cache = FakeCacheRepository()
     fake_repo = _FakeDetailRepository(sample_detail_response)
 
     use_case = CachedGetDatasetDetailUseCase(
@@ -125,7 +78,7 @@ def test_cache_miss_calls_repository_and_writes_cache(
     sample_detail_response: DatasetDetailResponse,
 ) -> None:
     """T2f: Un cache miss appelle le repository et ecrit dans le cache."""
-    fake_cache = _FakeCacheRepository()
+    fake_cache = FakeCacheRepository()
     fake_repo = _FakeDetailRepository(sample_detail_response)
 
     use_case = CachedGetDatasetDetailUseCase(
@@ -143,7 +96,7 @@ def test_cache_miss_calls_repository_and_writes_cache(
 
 def test_not_found_returns_none_without_cache_write() -> None:
     """T2g: Un dataset inexistant retourne None et n'ecrit pas dans le cache."""
-    fake_cache = _FakeCacheRepository()
+    fake_cache = FakeCacheRepository()
     fake_repo = _FakeDetailRepository(None)  # Simule un dataset non trouve
 
     use_case = CachedGetDatasetDetailUseCase(
@@ -162,7 +115,7 @@ def test_json_decode_error_bypasses_to_repository(
     sample_detail_response: DatasetDetailResponse,
 ) -> None:
     """T2h: Un JSON invalide dans le cache provoque un bypass."""
-    fake_cache = _FakeCacheRepository()
+    fake_cache = FakeCacheRepository()
     fake_repo = _FakeDetailRepository(sample_detail_response)
 
     from app.domain.cache_invalidation import build_dataset_detail_cache_key

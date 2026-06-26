@@ -2,50 +2,28 @@
 
 from __future__ import annotations
 
-import importlib
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.domain.ckan_normalized import Dataset, NormalizedBatch, Organization, Resource
 
-
-def _configure_api_modules():
-    """Recharge les modules relies a la DB pour les tests de lecture API."""
-
-    import app.core.config as config_module
-
-    config_module.get_settings.cache_clear()
-
-    import app.application.use_cases.get_health_status as health_use_case_module
-    import app.infrastructure.persistence.cache_read_repository as cache_read_repository_module
-    import app.infrastructure.persistence.cache_repository as cache_repository_module
-    import app.infrastructure.persistence.database as database_module
-    import app.infrastructure.persistence.models as models_module
-    import app.main as main_module
-    import app.presentation.api.v1.router as router_module
-
-    database_module = importlib.reload(database_module)
-    models_module = importlib.reload(models_module)
-    cache_repository_module = importlib.reload(cache_repository_module)
-    cache_read_repository_module = importlib.reload(cache_read_repository_module)
-    health_use_case_module = importlib.reload(health_use_case_module)
-    router_module = importlib.reload(router_module)
-    main_module = importlib.reload(main_module)
-
-    return database_module, cache_repository_module, main_module
+from ._fixtures import configure_api_modules
 
 
-def test_health_and_internal_cache_with_empty_cache(monkeypatch, tmp_path: Path) -> None:
+def test_health_and_internal_cache_with_empty_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Expose un service ok avec cache vide et sans dernier sync."""
 
     database_path = tmp_path / "health-empty.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
 
-    database_module, _, main_module = _configure_api_modules()
-    database_module.create_schema()
+    database_port, _, app = configure_api_modules()
+    database_port.create_schema()
 
-    client = TestClient(main_module.app)
+    client = TestClient(app)
 
     health_response = client.get("/api/v1/health")
     assert health_response.status_code == 200
@@ -65,17 +43,18 @@ def test_health_and_internal_cache_with_empty_cache(monkeypatch, tmp_path: Path)
     }
 
 
-def test_health_and_internal_cache_with_populated_cache(monkeypatch, tmp_path: Path) -> None:
+def test_health_and_internal_cache_with_populated_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Expose le dernier sync et les compteurs quand le cache est peuple."""
 
     database_path = tmp_path / "health-populated.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
 
-    database_module, cache_repository_module, main_module = _configure_api_modules()
-    database_module.create_schema()
+    database_port, cache_repository, app = configure_api_modules()
+    database_port.create_schema()
 
-    repository = cache_repository_module.SqlAlchemyCacheRepository()
-    repository.upsert_normalized_batch(
+    cache_repository.upsert_normalized_batch(
         NormalizedBatch(
             organizations=[
                 Organization(
@@ -102,7 +81,7 @@ def test_health_and_internal_cache_with_populated_cache(monkeypatch, tmp_path: P
         )
     )
 
-    client = TestClient(main_module.app)
+    client = TestClient(app)
 
     health_response = client.get("/api/v1/health")
     assert health_response.status_code == 200

@@ -3,7 +3,7 @@
 	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
 
-	import { Button, Card, CardDataset, CompareBar, FiltersPanel, SkeletonCard, StateBadge } from '$lib';
+	import { Button, Card, CardDataset, CompareBar, EmptyState, FiltersPanel, SkeletonCard, StateBadge } from '$lib';
 	import { normalizeSearchContext } from '$lib/navigation/search-context';
 	import type { SearchDatasetItem, FacetItem, SearchResponse } from '$lib/types/search';
 
@@ -280,7 +280,11 @@
 			</ul>
 		</div>
 	{:else if errorMessage}
-		<p class="state state-danger" role="alert">Echec recherche: {errorMessage}</p>
+		<EmptyState
+			variant="error"
+			title="Impossible de lancer la recherche"
+			description="Verifiez votre connexion et reessayez. {errorMessage}"
+		/>
 	{:else if data && data.datasets.length > 0}
 		<p class="state state-success" tabindex="-1" bind:this={resultHeading}>
 			{data.total} resultats trouves.
@@ -319,7 +323,10 @@
 			/>
 		</nav>
 	{:else}
-		<p class="state">Aucun resultat charge pour le moment.</p>
+		<EmptyState
+			title="Aucun resultat pour cette recherche"
+			description="Essayez de modifier vos filtres ou votre terme de recherche."
+		/>
 	{/if}
 
 	<CompareBar
@@ -373,13 +380,6 @@
 		border: var(--border-thin) dashed var(--color-border);
 		border-radius: var(--radius-none);
 		color: var(--color-on-surface);
-	}
-
-	.state-danger {
-		background: var(--color-danger);
-		border-color: var(--color-danger);
-		color: var(--color-on-danger);
-		opacity: 1;
 	}
 
 	.state-success {

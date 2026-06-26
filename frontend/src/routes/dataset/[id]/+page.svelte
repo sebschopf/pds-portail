@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card, QualityBlock, ResourceList, StructureBlock } from '$lib';
+	import { Breadcrumb, Card, EmptyState, QualityBlock, ResourceList, StructureBlock } from '$lib';
 	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 
 	let { data } = $props();
@@ -37,20 +37,34 @@
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation dataset" />
 	<Card title="Fiche dataset" subtitle="Contrat backend endpoint dataset detail">
 		{#if data.status === 'error'}
-			<p class="state state-danger" role="alert">{data.errorMessage ?? 'Erreur inconnue'}</p>
-			<nav class="links" aria-label="Navigation retour">
-				<a href={searchHref}>Retour a la recherche</a>
-			</nav>
+			<EmptyState
+				variant="error"
+				title="Impossible de charger ce jeu de donnees"
+				description="Verifiez votre connexion et reessayez. {data.errorMessage ?? 'Erreur inconnue'}"
+			>
+				{#snippet action()}
+					<a href={searchHref}>Retour a la recherche</a>
+				{/snippet}
+			</EmptyState>
 		{:else if data.status === 'not-found'}
-			<p class="state" role="status">Dataset introuvable: {data.datasetId}</p>
-			<nav class="links" aria-label="Navigation retour">
-				<a href={searchHref}>Retour a la recherche</a>
-			</nav>
+			<EmptyState
+				title="Dataset introuvable"
+				description="Le jeu de donnees {data.datasetId} n'existe pas dans notre base. Verifiez l'URL ou retournez a la recherche."
+			>
+				{#snippet action()}
+					<a href={searchHref}>Retour a la recherche</a>
+				{/snippet}
+			</EmptyState>
 		{:else if data.status === 'contract-error'}
-			<p class="state state-danger" role="alert">Contrat dataset backend invalide</p>
-			<nav class="links" aria-label="Navigation retour">
-				<a href={searchHref}>Retour a la recherche</a>
-			</nav>
+			<EmptyState
+				variant="error"
+				title="Affichage impossible"
+				description="Ce jeu de donnees n'a pas pu etre affiche correctement. Reessayez ou retournez a la recherche."
+			>
+				{#snippet action()}
+					<a href={searchHref}>Retour a la recherche</a>
+				{/snippet}
+			</EmptyState>
 		{:else if dataset}
 			<h3 class="title">{dataset.title}</h3>
 
@@ -234,17 +248,4 @@
 		}
 	}
 
-	.state {
-		margin: 0;
-		padding: var(--space-3) var(--space-4);
-		background: var(--color-surface-muted);
-		border: var(--border-thin) dashed var(--color-border);
-		border-radius: var(--radius-none);
-	}
-
-	.state-danger {
-		background: var(--color-danger);
-		border-color: var(--color-danger);
-		color: var(--color-on-danger);
-	}
 </style>

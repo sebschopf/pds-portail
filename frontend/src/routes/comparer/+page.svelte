@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button } from '$lib';
+	import { Button, EmptyState } from '$lib';
 	import type { CompareItem } from '$lib/types/compare';
 
 	let { data }: { data: { error: string | null; items: CompareItem[] } } = $props();
@@ -53,15 +53,24 @@
 	</nav>
 
 	{#if error}
-		<div class="error-banner" role="alert">
-			<p>{error}</p>
-			<a href="/" class="back-link">Retour a la recherche</a>
-		</div>
+		<EmptyState
+			variant="error"
+			title="La comparaison a echoue"
+			description="Reessayez ou reduisez le nombre de jeux de donnees selectionnes. {error}"
+		>
+			{#snippet action()}
+				<a href="/" class="back-link">Retour a la recherche</a>
+			{/snippet}
+		</EmptyState>
 	{:else if items.length < 2}
-		<div class="error-banner" role="alert">
-			<p>Pas assez de datasets charges pour afficher une comparaison.</p>
-			<a href="/" class="back-link">Retour a la recherche</a>
-		</div>
+		<EmptyState
+			title="Aucun jeu de donnees a comparer"
+			description="Selectionnez au moins 2 jeux de donnees depuis les resultats de recherche."
+		>
+			{#snippet action()}
+				<a href="/" class="back-link">Retour a la recherche</a>
+			{/snippet}
+		</EmptyState>
 	{:else}
 		<!-- Desktop : tableau HTML semantique -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -222,23 +231,6 @@
 	.back-link {
 		font-weight: 600;
 		color: var(--color-primary);
-	}
-
-	.error-banner {
-		display: grid;
-		gap: var(--space-2);
-		padding: var(--space-4);
-		background: var(--color-danger);
-		color: var(--color-on-danger);
-		border: var(--border-thin) solid var(--color-danger);
-	}
-
-	.error-banner p {
-		margin: 0;
-	}
-
-	.error-banner .back-link {
-		color: var(--color-on-danger);
 	}
 
 	/* --- Tableau desktop --- */

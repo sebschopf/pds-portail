@@ -1,78 +1,29 @@
-"""Tests de resilience du use case de synchronisation CKAN.
+"""Tests de resilience du use case de synchronisation CKAN (PDS-45/PDS-52/PDS-53)."""
 
-Note : les classes de test (_SpyRepository, _TimeoutClient, etc.) sont
-volontairement inlinees plutot que factorisees dans un module partage.
-La tentative de factorisation (PDS-45) a revele des incompatibilites mypy
-(module trouve deux fois) sans `__init__.py`, et des imports impossibles
-(ModuleNotFoundError) avec `__init__.py`. Cf. Makefile pour la decision.
-"""
+from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import cast
 
 import pytest
 
-from app.application.errors.ingestion import CkanRateLimitError, CkanTimeoutError
 from app.application.ports.ckan_types import CkanPackageSearchResponse
 from app.application.use_cases.sync_ckan_batch import SyncCkanBatchUseCase
-from app.domain.ckan_normalized import NormalizedBatch
 
-
-class _TimeoutClient:
-    def fetch_packages_batch(self, start: int, rows: int = 100, modified_since: str | None = None):
-        _ = (start, rows, modified_since)
-        raise CkanTimeoutError("timeout")
-
-
-class _SpyRepository:
-    def __init__(self) -> None:
-        self.was_called = False
-        self.last_batch: NormalizedBatch | None = None
-        self._sync_states: dict[str, str] = {}
-        self.facets_rebuilt = False
-
-    def upsert_normalized_batch(self, batch: NormalizedBatch) -> None:
-        self.was_called = True
-        self.last_batch = batch
-
-    def get_sync_state(self, key: str) -> str | None:
-        return self._sync_states.get(key)
-
-    def set_sync_state(self, key: str, value: str) -> None:
-        self._sync_states[key] = value
-
-    def rebuild_facets(self) -> None:
-        self.facets_rebuilt = True
-
-    def add_sync_metrics(self, metrics: dict[str, int | str]) -> None:
-        pass
-
-    def get_sync_state_updated_at(self, _key: str) -> str | None:
-        return None
-
-
-class _RateLimitClient:
-    def fetch_packages_batch(self, start: int, rows: int = 100, modified_since: str | None = None):
-        _ = (start, rows, modified_since)
-        raise CkanRateLimitError("rate-limit")
-
-
-class _PayloadClient:
-    def __init__(self, payload: CkanPackageSearchResponse) -> None:
-        self._payload = payload
-
-    def fetch_packages_batch(
-        self, start: int, rows: int = 100, modified_since: str | None = None
-    ) -> CkanPackageSearchResponse:
-        _ = (start, rows, modified_since)
-        return self._payload
+from .fakes import (
+    FakeFixedPayloadClient,
+    FakeMinimalPayloadClient,
+    FakeRateLimitPayloadClient,
+    FakeSyncRepository,
+    FakeTimeoutPayloadClient,
+)
 
 
 def test_use_case_timeout_skips_batch_without_repository_write() -> None:
     """Un timeout lot est journalise/ignore sans interrompre le traitement global."""
 
-    repository = _SpyRepository()
-    use_case = SyncCkanBatchUseCase(client=_TimeoutClient(), repository=repository)
+    repository = FakeSyncRepository()
+    use_case = SyncCkanBatchUseCase(client=FakeTimeoutPayloadClient(), repository=repository)
 
     batch = use_case.execute(start=0, rows=100)
 
@@ -85,8 +36,8 @@ def test_use_case_timeout_skips_batch_without_repository_write() -> None:
 def test_use_case_rate_limit_skips_batch_without_repository_write() -> None:
     """Un rate limit persistant ignore le lot sans ecriture repository."""
 
-    repository = _SpyRepository()
-    use_case = SyncCkanBatchUseCase(client=_RateLimitClient(), repository=repository)
+    repository = FakeSyncRepository()
+    use_case = SyncCkanBatchUseCase(client=FakeRateLimitPayloadClient(), repository=repository)
 
     batch = use_case.execute(start=0, rows=100)
 
@@ -125,8 +76,8 @@ def test_use_case_logs_and_skips_invalid_dataset_and_resource(
         },
     )
 
-    repository = _SpyRepository()
-    use_case = SyncCkanBatchUseCase(client=_PayloadClient(payload), repository=repository)
+    repository = FakeSyncRepository()
+    use_case = SyncCkanBatchUseCase(client=FakeFixedPayloadClient(payload), repository=repository)
 
     with caplog.at_level("WARNING"):
         batch = use_case.execute(start=0, rows=100)
@@ -143,47 +94,13 @@ def test_use_case_logs_and_skips_invalid_dataset_and_resource(
 # ── Tests offset persisté (PDS-52) ───────────────────────────────────────
 
 
-class _MinimalDatasetPayloadClient:
-    """Retourne des datasets synthetiques pour tester l'offset sans parser CKAN reel."""
-
-    def __init__(self, count: int = 100) -> None:
-        self._count = count
-        self.last_start: int | None = None
-        self.last_modified_since: str | None = None
-
-    def fetch_packages_batch(
-        self, start: int, rows: int = 100, modified_since: str | None = None
-    ) -> CkanPackageSearchResponse:
-        self.last_start = start
-        self.last_modified_since = modified_since
-        _ = rows
-        results: list[dict[str, Any]] = []
-        for i in range(self._count):
-            results.append(
-                {
-                    "id": f"ds-{start + i}",
-                    "title": f"Dataset {start + i}",
-                    "organization": {"id": f"org-{i % 5}", "name": f"Org {i % 5}"},
-                    "resources": [{"id": f"res-{start + i}", "name": "CSV", "format": "CSV"}],
-                }
-            )
-        return cast(
-            CkanPackageSearchResponse,
-            {
-                "result": {
-                    "results": results,
-                }
-            },
-        )
-
-
 def test_sync_uses_persisted_offset_on_resume() -> None:
     """Le use case reprend au dernier offset persiste dans le repository."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("ckan_offset", "500")
 
-    client = _MinimalDatasetPayloadClient(count=100)
+    client = FakeMinimalPayloadClient(count=100)
     use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
     raw_offset = repository.get_sync_state("ckan_offset")
@@ -198,8 +115,8 @@ def test_sync_uses_persisted_offset_on_resume() -> None:
 def test_sync_starts_at_zero_when_no_offset_persisted() -> None:
     """Demarrage a froid : offset 0 si aucun etat persistant."""
 
-    repository = _SpyRepository()
-    client = _MinimalDatasetPayloadClient(count=100)
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=100)
     use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
     raw_offset = repository.get_sync_state("ckan_offset")
@@ -214,10 +131,10 @@ def test_sync_starts_at_zero_when_no_offset_persisted() -> None:
 def test_offset_resets_when_catalog_end_reached() -> None:
     """La fin du catalogue (batch partiel) reinitialise l'offset a 0."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("ckan_offset", "1000")
 
-    client = _MinimalDatasetPayloadClient(count=50)
+    client = FakeMinimalPayloadClient(count=50)
     use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
     raw_offset = repository.get_sync_state("ckan_offset")
@@ -236,10 +153,10 @@ def test_offset_resets_when_catalog_end_reached() -> None:
 def test_offset_advances_after_full_batch() -> None:
     """Apres un batch complet, l'offset avance de batch_rows."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("ckan_offset", "0")
 
-    client = _MinimalDatasetPayloadClient(count=100)
+    client = FakeMinimalPayloadClient(count=100)
     use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
     raw_offset = repository.get_sync_state("ckan_offset")
@@ -257,11 +174,11 @@ def test_offset_advances_after_full_batch() -> None:
 def test_offset_persisted_after_each_batch() -> None:
     """Chaque lot persiste son offset, pas seulement en fin de cycle."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("ckan_offset", "0")
 
     for expected_start in (0, 100, 200):
-        client = _MinimalDatasetPayloadClient(count=100)
+        client = FakeMinimalPayloadClient(count=100)
         use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
         raw_offset = repository.get_sync_state("ckan_offset")
@@ -283,11 +200,11 @@ def test_offset_persisted_after_each_batch() -> None:
 def test_differential_sync_uses_modified_since() -> None:
     """Le mode differentiel transmet le timestamp modified_since au client CKAN."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("last_full_sync", "2026-06-25T00:00:00+00:00")
     repository.set_sync_state("ckan_offset", "0")
 
-    client = _MinimalDatasetPayloadClient(count=5)
+    client = FakeMinimalPayloadClient(count=5)
     use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
     modified_since = repository.get_sync_state("last_full_sync")
@@ -301,11 +218,11 @@ def test_differential_sync_uses_modified_since() -> None:
 def test_differential_sync_persists_new_timestamp() -> None:
     """Apres un cycle differentiel, le timestamp last_full_sync est mis a jour."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("last_full_sync", "2026-06-25T00:00:00+00:00")
     repository.set_sync_state("ckan_offset", "0")
 
-    client = _MinimalDatasetPayloadClient(count=3)
+    client = FakeMinimalPayloadClient(count=3)
     use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
     modified_since = repository.get_sync_state("last_full_sync")
@@ -321,11 +238,11 @@ def test_differential_sync_persists_new_timestamp() -> None:
 def test_bootstrap_mode_does_not_use_modified_since() -> None:
     """En mode bootstrap (pas de last_full_sync), modified_since n'est pas passe."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     # Pas de last_full_sync → mode bootstrap
     repository.set_sync_state("ckan_offset", "0")
 
-    client = _MinimalDatasetPayloadClient(count=10)
+    client = FakeMinimalPayloadClient(count=10)
     use_case = SyncCkanBatchUseCase(client=client, repository=repository)
 
     modified_since = repository.get_sync_state("last_full_sync")

@@ -1,18 +1,18 @@
-"""Tests du use case RunSyncCycleUseCase (PDS-45) — cycle de sync CKAN avec metriques.
+"""Tests du use case RunSyncCycleUseCase (PDS-45) — cycle de sync CKAN avec metriques."""
 
-Note : les classes de test (_SpyRepository, _MinimalPayloadClient, etc.) sont
-volontairement inlinees plutot que factorisees dans un module partage.
-La tentative de factorisation (PDS-45) a revele des incompatibilites mypy
-(module trouve deux fois) sans __init__.py, et des imports impossibles
-(ModuleNotFoundError) avec __init__.py. Cf. Makefile note PDS-45.
-"""
+from __future__ import annotations
 
 from typing import Any, cast
 
-from app.application.errors.ingestion import CkanTimeoutError
 from app.application.ports.ckan_types import CkanPackageSearchResponse
 from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
-from app.core.config import Settings
+
+from .fakes import (
+    FakeMinimalPayloadClient,
+    FakeSyncRepository,
+    FakeTimeoutPayloadClient,
+    SyncCycleTestSettings,
+)
 
 
 def _int(value: int | str) -> int:
@@ -22,102 +22,15 @@ def _int(value: int | str) -> int:
     return int(value)
 
 
-class _CycleSettings(Settings):
-    """Settings minimaux pour les tests du cycle de sync."""
-
-    ckan_sync_batch_rows: int = 100
-    ckan_sync_max_batches_per_run: int = 3
-    ckan_sync_batch_delay_seconds: float = 0.0
-    ckan_sync_interval_minutes: int = 60
-    ckan_sync_bootstrap_if_empty: bool = False
-    enable_ckan_sync: bool = True
-
-
-class _MinimalPayloadClient:
-    """Client CKAN de test qui retourne des datasets synthetiques."""
-
-    def __init__(self, count: int = 100) -> None:
-        self._count = count
-        self.last_start: int | None = None
-        self.last_modified_since: str | None = None
-
-    def fetch_packages_batch(
-        self, start: int, rows: int = 100, modified_since: str | None = None
-    ) -> CkanPackageSearchResponse:
-        self.last_start = start
-        self.last_modified_since = modified_since
-        _ = rows
-        results: list[dict[str, Any]] = []
-        for i in range(self._count):
-            results.append(
-                {
-                    "id": f"ds-{start + i}",
-                    "title": f"Dataset {start + i}",
-                    "tags": [],
-                    "organization": {"id": f"org-{i % 5}", "name": f"Org {i % 5}"},
-                    "resources": [
-                        {
-                            "id": f"res-{start + i}",
-                            "name": "CSV",
-                            "format": "CSV",
-                        }
-                    ],
-                }
-            )
-        return cast(
-            CkanPackageSearchResponse,
-            {"result": {"results": results}},
-        )
-
-
-class _TimeoutPayloadClient:
-    """Client qui leve un timeout au premier appel (pour tester les metriques d'erreur)."""
-
-    def fetch_packages_batch(
-        self, start: int, rows: int = 100, modified_since: str | None = None
-    ) -> CkanPackageSearchResponse:
-        _ = (start, rows, modified_since)
-        raise CkanTimeoutError("timeout test")
-
-
-class _SpyRepository:
-    """Repository de test avec suivi d'appels."""
-
-    def __init__(self) -> None:
-        self._sync_states: dict[str, str] = {}
-        self.upsert_calls: list[Any] = []
-        self.metrics_calls: list[dict[str, int | str]] = []
-        self.facets_rebuilt = False
-
-    def upsert_normalized_batch(self, batch: Any) -> None:
-        self.upsert_calls.append(batch)
-
-    def get_sync_state(self, key: str) -> str | None:
-        return self._sync_states.get(key)
-
-    def set_sync_state(self, key: str, value: str) -> None:
-        self._sync_states[key] = value
-
-    def rebuild_facets(self) -> None:
-        self.facets_rebuilt = True
-
-    def add_sync_metrics(self, metrics: dict[str, int | str]) -> None:
-        self.metrics_calls.append(metrics)
-
-    def get_sync_state_updated_at(self, _key: str) -> str | None:
-        """Retourne None pour les tests (pas de tracking d'horodatage)."""
-        return None
-
-
 # ── Tests bootstrap ────────────────────────────────────────────────────────
 
 
 def test_cycle_bootstrap_stores_metrics() -> None:
     """Un cycle bootstrap persiste les metriques (synced_datasets, mode, duree)."""
 
-    repository = _SpyRepository()
-    client = _MinimalPayloadClient(count=100)
-    settings = _CycleSettings(ckan_sync_max_batches_per_run=1)
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=100)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=1)
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()
@@ -140,9 +53,9 @@ def test_cycle_bootstrap_stores_metrics() -> None:
 def test_cycle_bootstrap_advances_offset() -> None:
     """Apres un batch complet, l'offset est persiste et avance."""
 
-    repository = _SpyRepository()
-    client = _MinimalPayloadClient(count=100)
-    settings = _CycleSettings(ckan_sync_max_batches_per_run=1)
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=100)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=1)
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     use_case.execute()
@@ -180,9 +93,9 @@ def test_cycle_bootstrap_detects_catalog_end() -> None:
                 {"result": {"results": results}},
             )
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     client = _TwoStepClient()
-    settings = _CycleSettings(ckan_sync_max_batches_per_run=2)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=2)
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()
@@ -200,9 +113,9 @@ def test_cycle_bootstrap_detects_catalog_end() -> None:
 def test_cycle_bootstrap_respects_max_batches() -> None:
     """Le cycle ne depasse pas ckan_sync_max_batches_per_run."""
 
-    repository = _SpyRepository()
-    client = _MinimalPayloadClient(count=100)
-    settings = _CycleSettings(ckan_sync_max_batches_per_run=3)
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=100)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=3)
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()
@@ -214,9 +127,9 @@ def test_cycle_bootstrap_respects_max_batches() -> None:
 def test_cycle_bootstrap_no_dataset_triggers_no_facets() -> None:
     """Un batch vide ne declenche pas la reconstruction des facettes."""
 
-    repository = _SpyRepository()
-    client = _MinimalPayloadClient(count=0)
-    settings = _CycleSettings(ckan_sync_max_batches_per_run=1)
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=0)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=1)
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()
@@ -233,12 +146,12 @@ def test_cycle_bootstrap_no_dataset_triggers_no_facets() -> None:
 def test_cycle_differential_mode_stores_metrics() -> None:
     """En mode differentiel, les metriques sont persiste avec mode='differential'."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("last_full_sync", "2026-06-25T00:00:00+00:00")
     repository.set_sync_state("ckan_offset", "0")
 
-    client = _MinimalPayloadClient(count=3)
-    settings = _CycleSettings()
+    client = FakeMinimalPayloadClient(count=3)
+    settings = SyncCycleTestSettings()
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()
@@ -261,12 +174,12 @@ def test_cycle_differential_handles_timeout_gracefully() -> None:
     proprement et persiste ses metriques.
     """
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("last_full_sync", "2026-06-25T00:00:00+00:00")
     repository.set_sync_state("ckan_offset", "0")
 
-    client = _TimeoutPayloadClient()
-    settings = _CycleSettings()
+    client = FakeTimeoutPayloadClient()
+    settings = SyncCycleTestSettings()
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()
@@ -281,7 +194,7 @@ def test_cycle_differential_handles_timeout_gracefully() -> None:
 def test_cycle_bootstrap_with_partial_final_batch_resets_offset() -> None:
     """Un batch partiel en fin de bootstrap reinitialise offset et enregistre last_full_sync."""
 
-    repository = _SpyRepository()
+    repository = FakeSyncRepository()
     repository.set_sync_state("ckan_offset", "0")
 
     # 1 batch complet puis 1 partiel
@@ -312,7 +225,7 @@ def test_cycle_bootstrap_with_partial_final_batch_resets_offset() -> None:
             )
 
     client = _TwoStepClient()
-    settings = _CycleSettings(ckan_sync_max_batches_per_run=3)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=3)
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()
@@ -328,9 +241,9 @@ def test_cycle_bootstrap_with_partial_final_batch_resets_offset() -> None:
 def test_metrics_aggregate_across_multiple_batches() -> None:
     """Les metriques totalisent synced_datasets sur tous les batchs du cycle."""
 
-    repository = _SpyRepository()
-    client = _MinimalPayloadClient(count=100)
-    settings = _CycleSettings(ckan_sync_max_batches_per_run=5)
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=100)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=5)
 
     use_case = RunSyncCycleUseCase(client=client, repository=repository, settings=settings)
     result = use_case.execute()

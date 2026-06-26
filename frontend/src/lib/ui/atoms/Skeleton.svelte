@@ -57,8 +57,8 @@
 		background: linear-gradient(
 			90deg,
 			transparent 0%,
-			oklch(0.995 0.004 95 / 0.6) 40%,
-			oklch(0.995 0.004 95 / 0.6) 60%,
+			color-mix(in oklch, var(--color-surface) 60%, transparent) 40%,
+			color-mix(in oklch, var(--color-surface) 60%, transparent) 60%,
 			transparent 100%
 		);
 		transform: translateX(-100%);
@@ -75,6 +75,10 @@
 		border-radius: var(--radius-none);
 	}
 
+	/* Pattern d'accessibilité standard : masque visuellement le contenu
+	   tout en le conservant pour les lecteurs d'écran (clip technique).
+	   Les valeurs absolues (1px, -1px, 0) sont délibérées : ce sont
+	   des constantes du pattern, pas du design visuel. */
 	.sr-only {
 		position: absolute;
 		width: 1px;

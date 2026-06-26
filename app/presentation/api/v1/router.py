@@ -28,6 +28,8 @@ from app.presentation.api.v1.schemas import (
     DatasetDetailResponse,
     ResourceDetailResponse,
     SearchResponse,
+    TopQueriesResponse,
+    ZeroResultsResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -378,3 +380,58 @@ def internal_cache_reset_stats(
     cache = SqlAlchemyQueryCacheRepository()
     cache.reset_stats()
     return {"message": "Cache stats reset"}
+
+
+# --- Métriques d'usage (PDS-58) ---
+
+
+def _verify_internal_token(x_internal_token: str | None) -> None:
+    """Verifie le token interne optionnel pour les endpoints /internal/*.
+
+    Si INTERNAL_API_TOKEN est configuré, le header X-Internal-Token
+    doit correspondre. Sans token configuré, l'endpoint reste ouvert.
+    """
+    settings = get_settings()
+    if settings.internal_api_token and (
+        not x_internal_token or x_internal_token != settings.internal_api_token
+    ):
+        raise HTTPException(status_code=401, detail="Invalid or missing internal token")
+
+
+@api_router.get("/internal/metrics/top-queries", response_model=TopQueriesResponse)
+def internal_metrics_top_queries(
+    limit: int = Query(20, ge=1, le=100, description="Nombre de requetes a retourner"),
+    x_internal_token: str | None = Header(None, alias="X-Internal-Token"),
+) -> TopQueriesResponse:
+    """Retourne les N requetes les plus frequentes, triees par hit_count decroissant (PDS-58).
+
+    Exploite la table query_cache existante (PDS-46) sans infrastructure supplementaire.
+    Chaque entree expose la cle de cache, le type d'endpoint, le nombre de hits
+    et la date de derniere mise en cache.
+
+    Query params:
+        limit: Nombre de requetes a retourner (1-100, defaut 20)
+    """
+    _verify_internal_token(x_internal_token)
+    cache = SqlAlchemyQueryCacheRepository()
+    rows = cache.get_top_queries(limit=limit)
+    from app.presentation.api.v1.schemas import TopQueryItem
+
+    return TopQueriesResponse(queries=[TopQueryItem(**row) for row in rows])
+
+
+@api_router.get("/internal/metrics/zero-results", response_model=ZeroResultsResponse)
+def internal_metrics_zero_results(
+    x_internal_token: str | None = Header(None, alias="X-Internal-Token"),
+) -> ZeroResultsResponse:
+    """Retourne les requetes dont le response_json contient total=0 (PDS-58).
+
+    Permet d'identifier les recherches infructueuses et les lacunes du catalogue.
+    Les entrees avec response_json non parsable sont ignorees.
+    """
+    _verify_internal_token(x_internal_token)
+    cache = SqlAlchemyQueryCacheRepository()
+    rows = cache.get_zero_result_queries()
+    from app.presentation.api.v1.schemas import ZeroResultItem
+
+    return ZeroResultsResponse(queries=[ZeroResultItem(**row) for row in rows], count=len(rows))

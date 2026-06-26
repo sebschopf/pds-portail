@@ -159,3 +159,37 @@ class CompareResponse(BaseModel):
     """Reponse de comparaison : liste de datasets comparables."""
 
     items: list[CompareItem] = Field(description="Datasets comparables (2 a 4)")
+
+
+# --- Schemas pour les metriques d'usage (PDS-58) ---
+
+
+class TopQueryItem(BaseModel):
+    """Requete la plus frequente dans le cache applicatif."""
+
+    query_key: str = Field(description="Cle de cache (contient les parametres de requete)")
+    endpoint_type: str = Field(description="Type d'endpoint (search, dataset_detail)")
+    hit_count: int = Field(description="Nombre de hits cumules")
+    created_at: str = Field(description="Date de derniere mise en cache")
+
+
+class TopQueriesResponse(BaseModel):
+    """Liste des N requetes les plus frequentes."""
+
+    queries: list[TopQueryItem] = Field(description="Requetes triees par hit_count decroissant")
+
+
+class ZeroResultItem(BaseModel):
+    """Requete n'ayant retourne aucun resultat."""
+
+    query_key: str = Field(description="Cle de cache")
+    endpoint_type: str = Field(description="Type d'endpoint (search, dataset_detail)")
+    created_at: str = Field(description="Date de mise en cache")
+    response_total: int = Field(0, description="Valeur du champ total dans la reponse")
+
+
+class ZeroResultsResponse(BaseModel):
+    """Liste des requetes sans resultat (total=0)."""
+
+    queries: list[ZeroResultItem] = Field(description="Requetes avec total=0 dans le response_json")
+    count: int = Field(description="Nombre total de requetes sans resultat")

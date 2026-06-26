@@ -6,6 +6,7 @@ invalidation ciblée par type d'endpoint.
 
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import func, text
 
@@ -119,6 +120,68 @@ class SqlAlchemyQueryCacheRepository:
                 stale_entries=stats.stale_entries,
                 total_entries=int(total),
             )
+
+    # --- Métriques d'usage (PDS-58) ---
+
+    def get_top_queries(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Retourne les N requêtes les plus hitées, triées par hit_count décroissant.
+
+        Colonnes retournées : query_key, endpoint_type, hit_count, created_at.
+        """
+        with SessionLocal() as session:
+            rows = (
+                session.query(
+                    QueryCacheModel.key,
+                    QueryCacheModel.endpoint_type,
+                    QueryCacheModel.hit_count,
+                    QueryCacheModel.created_at,
+                )
+                .order_by(QueryCacheModel.hit_count.desc())
+                .limit(limit)
+                .all()
+            )
+            return [
+                {
+                    "query_key": row.key,
+                    "endpoint_type": row.endpoint_type,
+                    "hit_count": row.hit_count,
+                    "created_at": row.created_at,
+                }
+                for row in rows
+            ]
+
+    def get_zero_result_queries(self) -> list[dict[str, Any]]:
+        """Retourne les requêtes dont le response_json contient total=0.
+
+        Parse le JSON stocké dans response_json pour extraire le champ total.
+        Les requêtes avec response_json non parsable sont ignorées.
+        """
+        import json
+
+        with SessionLocal() as session:
+            rows = session.query(
+                QueryCacheModel.key,
+                QueryCacheModel.endpoint_type,
+                QueryCacheModel.response_json,
+                QueryCacheModel.created_at,
+            ).all()
+            results: list[dict[str, Any]] = []
+            for row in rows:
+                try:
+                    payload = json.loads(row.response_json)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                total = payload.get("total")
+                if total == 0:
+                    results.append(
+                        {
+                            "query_key": row.key,
+                            "endpoint_type": row.endpoint_type,
+                            "created_at": row.created_at,
+                            "response_total": 0,
+                        }
+                    )
+            return results
 
     # --- Helpers privés ---
 

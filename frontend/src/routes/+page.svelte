@@ -355,7 +355,7 @@
 				<section>
 					<h3>Organisations</h3>
 					<ul>
-						{#each data.facets.organizations.slice(0, 5) as facet (facet.name)}
+						{#each data.facets.organizations.slice(0, 5) as facet, idx (`${facet.name}-${idx}`)}
 							<li>{facet.display_name ?? facet.name} ({facet.count})</li>
 						{/each}
 					</ul>
@@ -363,7 +363,7 @@
 				<section>
 					<h3>Formats</h3>
 					<ul>
-						{#each data.facets.formats.slice(0, 5) as facet (facet.name)}
+						{#each data.facets.formats.slice(0, 5) as facet, idx (`${facet.name}-${idx}`)}
 							<li>{facet.name} ({facet.count})</li>
 						{/each}
 					</ul>

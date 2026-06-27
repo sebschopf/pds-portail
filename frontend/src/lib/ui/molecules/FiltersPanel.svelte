@@ -81,10 +81,18 @@
 	}
 
 	function optionList(items: FacetItem[], selectedValue: string): FacetItem[] {
-		if (!selectedValue || items.some((item) => item.name === selectedValue)) {
-			return items;
+		// Dedoublonne par nom pour eviter each_key_duplicate
+		const seen = new Set<string>();
+		const deduped = items.filter((item) => {
+			if (seen.has(item.name)) return false;
+			seen.add(item.name);
+			return true;
+		});
+
+		if (!selectedValue || seen.has(selectedValue)) {
+			return deduped;
 		}
-		return [{ name: selectedValue, count: 0, display_name: selectedValue }, ...items];
+		return [{ name: selectedValue, count: 0, display_name: selectedValue }, ...deduped];
 	}
 </script>
 

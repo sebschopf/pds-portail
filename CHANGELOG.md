@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-06-27
+### Fixed
+- PDS-70 : Timeout recherche 3+ termes — l'expansion multilingue générait une explosion combinatoire de clauses LIKE (50+ termes → 200+ LIKE → timeout SQLite). Ajout d'une limite `MAX_EXPANSION_TERMS=12` dans `search_repository.py`, les termes originaux de l'utilisateur étant prioritaires (placés en tête de `all_terms`).
+- PDS-70 : Index FTS5 migré vers `tokenize='unicode61 remove_diacritics 2'` (suppression automatique des accents FR/DE/IT), ajout de triggers AFTER INSERT/UPDATE/DELETE sur `datasets` pour maintenir l'index FTS5, et backfill initial au `create_schema()`.
+- PDS-70 : Recherche instantanée sans bouton — le champ texte déclenche automatiquement la recherche après 400ms d'arrêt de frappe (debounce), comme sur Galaxus. Le bouton "Rechercher" est conservé en fallback (submit formulaire). `Input.svelte` forwarde désormais `oninput` et `...restProps`.
+
 ## [1.1.1] - 2026-06-27
 ### Fixed
 - each_key_duplicate : dédoublonnage des facettes dans `optionList()` (Set) et clés indexées dans `+page.svelte` (`facet.name-idx`)

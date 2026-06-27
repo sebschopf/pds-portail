@@ -22,6 +22,7 @@
 		onSubmit,
 		onSortChange,
 		onFacetChange,
+		onQueryChange,
 		onClearQuery,
 		onClearFilters
 	}: {
@@ -38,6 +39,7 @@
 		onSubmit: (event: SubmitEvent) => Promise<void> | void;
 		onSortChange: (event: Event) => Promise<void> | void;
 		onFacetChange: (event: Event, facet: 'org' | 'fmt' | 'tag') => Promise<void> | void;
+		onQueryChange: (value: string) => Promise<void> | void;
 		onClearQuery: () => Promise<void> | void;
 		onClearFilters: () => Promise<void> | void;
 	} = $props();
@@ -80,6 +82,21 @@
 		}, 300);
 	}
 
+	// Debounce pour le champ texte : declenche la recherche automatiquement
+	// apres l'arret de la frappe (comportement type recherche instantanee)
+	const queryTimer: { current: ReturnType<typeof setTimeout> | null } = { current: null };
+
+	function handleQueryInput(event: Event): void {
+		const target = event.currentTarget as HTMLInputElement;
+		const value = target.value;
+		query = value;
+
+		if (queryTimer.current) clearTimeout(queryTimer.current);
+		queryTimer.current = setTimeout(() => {
+			onQueryChange(value);
+		}, 400);
+	}
+
 	function optionList(items: FacetItem[], selectedValue: string): FacetItem[] {
 		// Dedoublonne par nom pour eviter each_key_duplicate
 		const seen = new Set<string>();
@@ -97,7 +114,7 @@
 </script>
 
 <form class="search" onsubmit={onSubmit}>
-	<Input id="q" label="Rechercher" bind:value={query} placeholder="ex: mobilite, geographie" />
+	<Input id="q" label="Rechercher" bind:value={query} oninput={handleQueryInput} placeholder="ex: mobilite, geographie" />
 
 	<fieldset class="facets-toolbar">
 		<legend>Filtres facettes</legend>

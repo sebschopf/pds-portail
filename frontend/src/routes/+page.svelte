@@ -200,6 +200,12 @@
 		await runSearch();
 	}
 
+	async function handleQueryChange(newQuery: string): Promise<void> {
+		query = newQuery;
+		currentPage = 1;
+		await runSearch();
+	}
+
 	async function changeSort(event: Event): Promise<void> {
 		sort = (event.currentTarget as HTMLSelectElement).value as SortValue;
 		currentPage = 1;
@@ -272,6 +278,7 @@
 				onSubmit={submitSearch}
 				onSortChange={changeSort}
 				onFacetChange={changeFacet}
+				onQueryChange={handleQueryChange}
 				onClearQuery={async () => {
 					query = '';
 					currentPage = 1;

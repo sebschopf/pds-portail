@@ -39,6 +39,11 @@ class SqlAlchemySearchRepository:
     """Implemente les requetes de recherche et detail sur cache SQLite."""
 
     ORGANIZATION_FACET_LIMIT = 20
+    # Limite le nombre de termes d'expansion pour eviter l'explosion
+    # combinatoire des clauses LIKE (timeout SQLite quand > ~100 LIKE).
+    # Au-dela de ce seuil, seuls les N premiers termes sont conserves
+    # pour la recherche (les plus pertinents : originaux puis synonymes).
+    MAX_EXPANSION_TERMS = 12
 
     def search(
         self,
@@ -69,8 +74,11 @@ class SqlAlchemySearchRepository:
             base_filters: list[ColumnElement[bool]] = []
             if query and expansion and expansion.all_terms:
                 # Construire un LIKE pour chaque terme etendu (OR logique)
+                # Limiter le nombre de termes pour eviter l'explosion combinatoire
+                # (chaque terme genere 4 LIKE, un trop grand nombre sature SQLite)
+                terms = expansion.all_terms[: self.MAX_EXPANSION_TERMS]
                 term_clauses: list[ColumnElement[bool]] = []
-                for term in expansion.all_terms:
+                for term in terms:
                     term_clauses.append(self._search_like_clause(term))
                 base_filters.append(or_(*term_clauses))
             elif query:

@@ -23,6 +23,7 @@ describe('FiltersPanel', () => {
 				onSubmit: vi.fn(),
 				onSortChange: vi.fn(),
 				onFacetChange: vi.fn(),
+				onQueryChange: vi.fn(),
 				onClearQuery: vi.fn(),
 				onClearFilters: vi.fn()
 			}
@@ -46,6 +47,7 @@ describe('FiltersPanel', () => {
 				onSubmit: vi.fn(),
 				onSortChange: vi.fn(),
 				onFacetChange: vi.fn(),
+				onQueryChange: vi.fn(),
 				onClearQuery: vi.fn(),
 				onClearFilters: vi.fn()
 			}

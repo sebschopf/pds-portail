@@ -4,19 +4,23 @@
 		label,
 		placeholder = '',
 		value = $bindable(''),
-		required = false
+		required = false,
+		oninput,
+		...restProps
 	}: {
 		id: string;
 		label: string;
 		placeholder?: string;
 		value?: string;
 		required?: boolean;
+		oninput?: (event: Event) => void;
+		[key: string]: unknown;
 	} = $props();
 </script>
 
 <label class="field" for={id}>
 	<span>{label}</span>
-	<input {id} {placeholder} bind:value {required} />
+	<input {id} {placeholder} bind:value {required} {oninput} {...restProps} />
 </label>
 
 <style>

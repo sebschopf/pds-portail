@@ -20,7 +20,5 @@
 	aria-label={label}
 	role="img"
 >
-	<polygon points="2,4 14,14 14,22 10,20 10,14 2,4" />
-	<line x1="18" y1="8" x2="22" y2="8" />
-	<line x1="20" y1="6" x2="20" y2="10" />
+	<path d="M2 2H22V6L15 14V22H9V14L2 6V2Z" />
 </svg>

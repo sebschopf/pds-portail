@@ -8,6 +8,8 @@
 		display_name?: string;
 	};
 
+	const DEBOUNCE_MS = 300;
+
 	let {
 		query = $bindable(''),
 		sort = $bindable('modified_desc'),
@@ -42,6 +44,22 @@
 		onClearFilters: () => Promise<void> | void;
 	} = $props();
 
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function debouncedFacetChange(event: Event, facet: 'org' | 'fmt' | 'tag'): void {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			onFacetChange(event, facet);
+		}, DEBOUNCE_MS);
+	}
+
+	function debouncedSortChange(event: Event): void {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => {
+			onSortChange(event);
+		}, DEBOUNCE_MS);
+	}
+
 	function optionList(items: FacetItem[], selectedValue: string): FacetItem[] {
 		if (!selectedValue || items.some((item) => item.name === selectedValue)) {
 			return items;
@@ -57,7 +75,7 @@
 		<legend>Filtres facettes</legend>
 		<label class="select-field" for="facet-org">
 			<span>Organisation</span>
-			<select id="facet-org" value={selectedOrg} onchange={(event) => onFacetChange(event, 'org')}>
+			<select id="facet-org" value={selectedOrg} onchange={(event) => debouncedFacetChange(event, 'org')}>
 				<option value="">Toutes</option>
 				{#each optionList(organizations, selectedOrg) as facet (facet.name)}
 					<option value={facet.name}>{facet.display_name ?? facet.name} ({facet.count})</option>
@@ -67,7 +85,7 @@
 
 		<label class="select-field" for="facet-format">
 			<span>Format</span>
-			<select id="facet-format" value={selectedFormat} onchange={(event) => onFacetChange(event, 'fmt')}>
+			<select id="facet-format" value={selectedFormat} onchange={(event) => debouncedFacetChange(event, 'fmt')}>
 				<option value="">Tous</option>
 				{#each optionList(formats, selectedFormat) as facet (facet.name)}
 					<option value={facet.name}>{facet.name} ({facet.count})</option>
@@ -77,7 +95,7 @@
 
 		<label class="select-field" for="facet-tag">
 			<span>Categorie / tag</span>
-			<select id="facet-tag" value={selectedTag} onchange={(event) => onFacetChange(event, 'tag')}>
+			<select id="facet-tag" value={selectedTag} onchange={(event) => debouncedFacetChange(event, 'tag')}>
 				<option value="">Tous</option>
 				{#each optionList(tags, selectedTag) as facet (facet.name)}
 					<option value={facet.name}>{facet.name} ({facet.count})</option>
@@ -90,7 +108,7 @@
 
 	<label class="select-field" for="sort">
 		<span>Tri</span>
-		<select id="sort" value={sort} onchange={onSortChange}>
+		<select id="sort" value={sort} onchange={(event) => debouncedSortChange(event)}>
 			{#each sortOptions as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}

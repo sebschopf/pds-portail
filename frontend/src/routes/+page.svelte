@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
-	import { Button, Card, CardDataset, CompareBar, EmptyState, FiltersPanel, SkeletonCard, StateBadge } from '$lib';
+	import { Button, Card, CardDataset, CompareBar, EmptyState, FiltersPanel, PageLayout, SkeletonCard, StateBadge } from '$lib';
 	import { normalizeSearchContext } from '$lib/navigation/search-context';
 	import type { SearchDatasetItem, FacetItem, SearchResponse } from '$lib/types/search';
 
@@ -241,7 +241,7 @@
 	<title>Recherche - PDS Portail</title>
 </svelte:head>
 
-<section class="stack">
+<PageLayout>
 	<Card title="Recherche datasets" subtitle="Appels reels sur le contrat backend PDS-6bis">
 		<div class="badges" aria-label="Etats interface">
 			<StateBadge label="Pret" variant="info" />
@@ -363,14 +363,9 @@
 			</div>
 		</Card>
 	{/if}
-</section>
+</PageLayout>
 
 <style>
-	.stack {
-		display: grid;
-		gap: var(--space-4);
-	}
-
 
 	.badges {
 		display: flex;

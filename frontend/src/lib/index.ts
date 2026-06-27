@@ -20,6 +20,7 @@ export { default as StructureBlock } from './ui/molecules/StructureBlock.svelte'
 export { default as Card } from './ui/organisms/Card.svelte';
 export { default as CardDataset } from './ui/organisms/CardDataset.svelte';
 export { default as EmptyState } from './ui/organisms/EmptyState.svelte';
+export { default as PageLayout } from './ui/organisms/PageLayout.svelte';
 
 // Icônes SVG néo-brutalistes (PDS-67)
 export { default as SearchIcon } from './assets/icons/SearchIcon.svelte';

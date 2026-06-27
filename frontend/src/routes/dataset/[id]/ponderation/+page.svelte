@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card } from '$lib';
+	import { Breadcrumb, Card, PageLayout } from '$lib';
 
 	let { data } = $props();
 
@@ -15,7 +15,7 @@
 	<title>Pondération - PDS Portail</title>
 </svelte:head>
 
-<section class="stack">
+<PageLayout>
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ponderation" />
 	<Card title="Comment le score de pertinence est calcule" subtitle="Les trois criteres qui determinent l'ordre des resultats">
 
@@ -102,15 +102,9 @@
 			<a href="/">Retour a la recherche</a>
 		</nav>
 	</Card>
-</section>
+</PageLayout>
 
-<style>
-	.stack {
-		display: grid;
-		gap: var(--space-4);
-	}
-
-	.panel {
+<style>	.panel {
 		display: grid;
 		gap: var(--space-2);
 		padding: var(--space-3);

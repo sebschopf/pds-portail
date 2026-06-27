@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card, EmptyState } from '$lib';
+	import { Breadcrumb, Card, EmptyState, PageLayout } from '$lib';
 	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 	import { getSafeExternalUrl } from '$lib/security/external-url';
 
@@ -44,7 +44,7 @@
 	<title>{pageTitle}</title>
 </svelte:head>
 
-<section class="stack">
+<PageLayout>
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ressource" />
 	<Card title="Fiche ressource" subtitle="Contrat backend endpoint resource detail">
 		{#if data.status === 'error'}
@@ -126,15 +126,9 @@
 			</nav>
 		{/if}
 	</Card>
-</section>
+</PageLayout>
 
-<style>
-	.stack {
-		display: grid;
-		gap: var(--space-4);
-	}
-
-	h3.title {
+<style>	h3.title {
 		margin: 0;
 		line-height: var(--line-height-title);
 		font-size: clamp(1.2rem, 1.2vw + 1rem, 1.7rem);

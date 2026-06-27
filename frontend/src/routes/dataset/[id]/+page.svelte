@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card, EmptyState, QualityBlock, ResourceList, StructureBlock } from '$lib';
+	import { Breadcrumb, Card, EmptyState, PageLayout, QualityBlock, ResourceList, StructureBlock } from '$lib';
 	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 
 	let { data } = $props();
@@ -33,7 +33,7 @@
 	<title>{pageTitle}</title>
 </svelte:head>
 
-<section class="stack">
+<PageLayout>
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation dataset" />
 	<Card title="Fiche dataset" subtitle="Contrat backend endpoint dataset detail">
 		{#if data.status === 'error'}
@@ -147,14 +147,9 @@
 			</nav>
 		{/if}
 	</Card>
-</section>
+</PageLayout>
 
 <style>
-	.stack {
-		display: grid;
-		gap: var(--space-4);
-	}
-
 	h3.title {
 		margin: 0;
 		line-height: var(--line-height-title);

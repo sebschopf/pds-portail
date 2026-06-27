@@ -184,7 +184,7 @@ class SqlAlchemySearchRepository:
                 search_items = search_items[offset : offset + limit]
 
             # Agreger les facettes
-            facets = self._aggregate_facets(session, base_filters)
+            facets = self._aggregate_facets(session, base_filters, fmt_filter)
 
             return SearchResponse(
                 total=total,
@@ -438,16 +438,20 @@ class SqlAlchemySearchRepository:
     def _aggregate_facets(
         session: Session,
         base_filters: list[ColumnElement[bool]],
+        format_filter: str | None = None,
     ) -> SearchFacets:
         """Lit les facettes depuis le cache pre-calcule, avec fallback direct (PDS-44).
 
-        Si la table facets_cache est peuplee (cas de production apres ingestion),
+        Si la table facets_cache est peuplee et qu'aucun filtre n'est actif,
         les facettes sont lues directement sans agregation SQL couteuse.
-        Sinon, fallback sur l'agregation directe (cas des tests ou premier demarrage).
+        Des qu'un filtre (base_filters ou format_filter) est actif, on utilise
+        l'agregation directe pour garantir des compteurs coherents avec les filtres.
         """
+        has_active_filters = bool(base_filters) or format_filter is not None
         cache_count = session.query(FacetsCacheModel).count()
-        if cache_count > 0:
-            # Cache hit : lecture directe
+
+        if cache_count > 0 and not has_active_filters:
+            # Cache hit : lecture directe (pas de filtres actifs)
             cached_org_rows = (
                 session.query(FacetsCacheModel)
                 .filter(FacetsCacheModel.facet_type == "org")
@@ -469,7 +473,7 @@ class SqlAlchemySearchRepository:
             cached_tags = SqlAlchemySearchRepository._aggregate_tags(session, base_filters)
             return SearchFacets(organizations=cached_orgs, formats=cached_formats, tags=cached_tags)
 
-        # Fallback : agregation directe (cache non encore peuple)
+        # Fallback : agregation directe (cache vide ou filtres actifs)
         org_query = (
             select(
                 OrganizationModel.id,
@@ -484,6 +488,9 @@ class SqlAlchemySearchRepository:
             )
             .limit(SqlAlchemySearchRepository.ORGANIZATION_FACET_LIMIT)
         )
+        if format_filter is not None:
+            org_query = org_query.join(ResourceModel, ResourceModel.dataset_id == DatasetModel.id)
+            org_query = org_query.where(func.upper(ResourceModel.format) == format_filter.upper())
         if base_filters:
             org_query = org_query.where(and_(*base_filters))
 
@@ -516,7 +523,9 @@ class SqlAlchemySearchRepository:
             if format_name:
                 formats.append(FacetItem(name=str(format_name), count=int(count)))
 
-        tags = SqlAlchemySearchRepository._aggregate_tags(session, base_filters)
+        tags = SqlAlchemySearchRepository._aggregate_tags_with_format(
+            session, base_filters, format_filter
+        )
 
         return SearchFacets(organizations=orgs, formats=formats, tags=tags)
 
@@ -526,9 +535,23 @@ class SqlAlchemySearchRepository:
         base_filters: list[ColumnElement[bool]],
     ) -> list[FacetItem]:
         """Agrege les tags depuis les datasets (toujours depuis la DB, pas en cache)."""
+        return SqlAlchemySearchRepository._aggregate_tags_with_format(
+            session, base_filters, format_filter=None
+        )
+
+    @staticmethod
+    def _aggregate_tags_with_format(
+        session: Session,
+        base_filters: list[ColumnElement[bool]],
+        format_filter: str | None,
+    ) -> list[FacetItem]:
+        """Agrege les tags depuis les datasets, avec filtre format optionnel."""
         from collections import Counter
 
         tag_query = select(DatasetModel.tags).select_from(DatasetModel).join(OrganizationModel)
+        if format_filter is not None:
+            tag_query = tag_query.join(ResourceModel, ResourceModel.dataset_id == DatasetModel.id)
+            tag_query = tag_query.where(func.upper(ResourceModel.format) == format_filter.upper())
         if base_filters:
             tag_query = tag_query.where(and_(*base_filters))
         tag_counter: Counter[str] = Counter()

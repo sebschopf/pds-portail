@@ -8,8 +8,6 @@
 		display_name?: string;
 	};
 
-	const DEBOUNCE_MS = 300;
-
 	let {
 		query = $bindable(''),
 		sort = $bindable('modified_desc'),
@@ -44,25 +42,42 @@
 		onClearFilters: () => Promise<void> | void;
 	} = $props();
 
-	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+	/**
+	 * Met a jour immediatement la variable bindable ET notifie le parent.
+	 * Chaque facette a son propre timer pour permettre les changements rapides
+	 * sans perdre de selection (ex: changer Org puis Format avant debounce).
+	 */
+	const facetTimers: Record<string, ReturnType<typeof setTimeout> | null> = {};
 
-	function debouncedFacetChange(event: Event, facet: 'org' | 'fmt' | 'tag'): void {
-		if (debounceTimer) clearTimeout(debounceTimer);
-		// Capturer la valeur immediatement : l'event Svelte est recycle apres le handler
+	function immediateFacetChange(event: Event, facet: 'org' | 'fmt' | 'tag'): void {
 		const target = event.currentTarget as HTMLSelectElement;
 		const value = target.value;
-		debounceTimer = setTimeout(() => {
+
+		// Mise a jour immediate de la variable bindable locale
+		if (facet === 'org') selectedOrg = value;
+		if (facet === 'fmt') selectedFormat = value;
+		if (facet === 'tag') selectedTag = value;
+
+		// Debounce independant par facette pour eviter les appels API en rafale
+		if (facetTimers[facet]) clearTimeout(facetTimers[facet]!);
+		facetTimers[facet] = setTimeout(() => {
 			onFacetChange({ currentTarget: { value } } as unknown as Event, facet);
-		}, DEBOUNCE_MS);
+		}, 300);
 	}
 
-	function debouncedSortChange(event: Event): void {
-		if (debounceTimer) clearTimeout(debounceTimer);
+	const sortTimer: { current: ReturnType<typeof setTimeout> | null } = { current: null };
+
+	function immediateSortChange(event: Event): void {
 		const target = event.currentTarget as HTMLSelectElement;
 		const value = target.value;
-		debounceTimer = setTimeout(() => {
+
+		// Mise a jour immediate
+		sort = value;
+
+		if (sortTimer.current) clearTimeout(sortTimer.current);
+		sortTimer.current = setTimeout(() => {
 			onSortChange({ currentTarget: { value } } as unknown as Event);
-		}, DEBOUNCE_MS);
+		}, 300);
 	}
 
 	function optionList(items: FacetItem[], selectedValue: string): FacetItem[] {
@@ -80,7 +95,7 @@
 		<legend>Filtres facettes</legend>
 		<label class="select-field" for="facet-org">
 			<span>Organisation</span>
-			<select id="facet-org" value={selectedOrg} onchange={(event) => debouncedFacetChange(event, 'org')}>
+			<select id="facet-org" value={selectedOrg} onchange={(event) => immediateFacetChange(event, 'org')}>
 				<option value="">Toutes</option>
 				{#each optionList(organizations, selectedOrg) as facet (facet.name)}
 					<option value={facet.name}>{facet.display_name ?? facet.name} ({facet.count})</option>
@@ -90,7 +105,7 @@
 
 		<label class="select-field" for="facet-format">
 			<span>Format</span>
-			<select id="facet-format" value={selectedFormat} onchange={(event) => debouncedFacetChange(event, 'fmt')}>
+			<select id="facet-format" value={selectedFormat} onchange={(event) => immediateFacetChange(event, 'fmt')}>
 				<option value="">Tous</option>
 				{#each optionList(formats, selectedFormat) as facet (facet.name)}
 					<option value={facet.name}>{facet.name} ({facet.count})</option>
@@ -100,7 +115,7 @@
 
 		<label class="select-field" for="facet-tag">
 			<span>Categorie / tag</span>
-			<select id="facet-tag" value={selectedTag} onchange={(event) => debouncedFacetChange(event, 'tag')}>
+			<select id="facet-tag" value={selectedTag} onchange={(event) => immediateFacetChange(event, 'tag')}>
 				<option value="">Tous</option>
 				{#each optionList(tags, selectedTag) as facet (facet.name)}
 					<option value={facet.name}>{facet.name} ({facet.count})</option>
@@ -113,7 +128,7 @@
 
 	<label class="select-field" for="sort">
 		<span>Tri</span>
-		<select id="sort" value={sort} onchange={(event) => debouncedSortChange(event)}>
+		<select id="sort" value={sort} onchange={(event) => immediateSortChange(event)}>
 			{#each sortOptions as option (option.value)}
 				<option value={option.value}>{option.label}</option>
 			{/each}

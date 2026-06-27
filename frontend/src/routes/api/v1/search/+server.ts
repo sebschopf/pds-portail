@@ -57,6 +57,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const query = (url.searchParams.get('q') ?? '').trim();
 	const org = (url.searchParams.get('org') ?? '').trim();
 	const format = (url.searchParams.get('fmt') ?? '').trim();
+	const tag = (url.searchParams.get('tag') ?? '').trim();
 	const sort = (url.searchParams.get('sort') ?? 'modified_desc') as SortValue;
 	const offset = toInteger(url.searchParams.get('offset'), 0);
 	const limit = Math.max(1, toInteger(url.searchParams.get('limit'), 10));
@@ -65,12 +66,19 @@ export const GET: RequestHandler = async ({ url }) => {
 	const records = buildSearchRecords(terms);
 
 	const filtered = records.filter((dataset) => {
-		if (org && dataset.id !== org && dataset.org_name !== org) {
+		// Filtre par organisation : comparer sur org_id (present dans l'objet construit par buildSearchRecords)
+		if (org && (dataset as Record<string, unknown>).org_id !== org && dataset.org_name !== org) {
 			return false;
 		}
-		if (format && !dataset.resource_formats.includes(format)) {
+		// Filtre par format de ressource (match exact insensible a la casse)
+		if (format && !dataset.resource_formats.some((fmt) => fmt.toUpperCase() === format.toUpperCase())) {
 			return false;
 		}
+		// Filtre par tag (match exact insensible a la casse)
+		if (tag && !dataset.tags.some((t) => t.toUpperCase() === tag.toUpperCase())) {
+			return false;
+		}
+		// Pas de terme textuel : on garde le dataset (filtres uniquement)
 		if (terms.length === 0) {
 			return true;
 		}

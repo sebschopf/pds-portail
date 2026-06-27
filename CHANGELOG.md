@@ -4,6 +4,9 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] (En cours - Milestones M6, M7, M8, M9)
+### Fixed (Corrections)
+- Audit recherche combinée tag/format/org : le mock API ignorait le filtre `tag` (paramètre parsé mais jamais appliqué), le filtre `org` comparait sur `dataset.id` au lieu de `dataset.org_id`, et le debounce partagé entre facettes pouvait perdre une sélection lors de changements rapides. Les 3 filtres sont désormais cumulables et indépendants, chacun avec son propre timer 300ms. 16 nouveaux tests unitaires ajoutés (`search-api.test.ts`). (M9)
+
 ### Added (Ajouts)
 - PDS-64 : Nettoyage et fondations UI — bits-ui retiré (~50KB économisés, 0 import), PageLayout factorise `.stack` (4 pages), debounce 300ms sur facets+sort dans FiltersPanel. (M9)
 - PDS-63 : Transitions et micro-interactions — fade+fly entre les pages via `{#key page.url.pathname}` dans `+layout.svelte` (in:fly 8px/300ms, out:fade 150ms), slide fluide du `CompareBar` (300ms), crossfade des résultats de recherche via `{#key resultsKey}` (in:fade 300ms, out:fade 150ms). Toutes les durées respectent les tokens `--duration-fast` (150ms) / `--duration-normal` (300ms) / `--duration-slow` (500ms). `prefers-reduced-motion` forcé à 0ms via `motion.css`. Zéro librairie externe, transitions Svelte natives uniquement. (M9)

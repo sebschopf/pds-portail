@@ -454,7 +454,9 @@ class SqlAlchemySearchRepository:
                 .all()
             )
             cached_formats = [FacetItem(name=row.name, count=row.count) for row in cached_fmt_rows]
-            return SearchFacets(organizations=cached_orgs, formats=cached_formats, tags=[])
+
+            cached_tags = SqlAlchemySearchRepository._aggregate_tags(session, base_filters)
+            return SearchFacets(organizations=cached_orgs, formats=cached_formats, tags=cached_tags)
 
         # Fallback : agregation directe (cache non encore peuple)
         org_query = (
@@ -503,7 +505,16 @@ class SqlAlchemySearchRepository:
             if format_name:
                 formats.append(FacetItem(name=str(format_name), count=int(count)))
 
-        # Tags : agregation directe depuis les donnees (dernier recours)
+        tags = SqlAlchemySearchRepository._aggregate_tags(session, base_filters)
+
+        return SearchFacets(organizations=orgs, formats=formats, tags=tags)
+
+    @staticmethod
+    def _aggregate_tags(
+        session: Session,
+        base_filters: list[ColumnElement[bool]],
+    ) -> list[FacetItem]:
+        """Agrege les tags depuis les datasets (toujours depuis la DB, pas en cache)."""
         from collections import Counter
 
         tag_query = select(DatasetModel.tags).select_from(DatasetModel).join(OrganizationModel)
@@ -516,9 +527,7 @@ class SqlAlchemySearchRepository:
             for tag in SqlAlchemySearchRepository._parse_tags(tags_str):
                 if tag:
                     tag_counter[tag] += 1
-        tags = [FacetItem(name=name, count=count) for name, count in tag_counter.most_common()]
-
-        return SearchFacets(organizations=orgs, formats=formats, tags=tags)
+        return [FacetItem(name=name, count=count) for name, count in tag_counter.most_common()]
 
     @staticmethod
     def _order_by_for_sort(sort: str) -> tuple[ColumnElement[object], ...]:

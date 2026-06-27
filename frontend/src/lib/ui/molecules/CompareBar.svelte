@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { Button } from '$lib';
+	import CompareIcon from '../../assets/icons/CompareIcon.svelte';
 
 	let {
 		compareIds,
@@ -21,7 +22,10 @@
 
 {#if count > 0}
 	<div transition:slide={{ duration: 300 }} class="compare-bar" role="status" aria-live="polite" aria-label="Barre de comparaison">
-		<p class="compare-label">{label}</p>
+		<p class="compare-label">
+			<CompareIcon size="var(--icon-size-sm)" label="Comparer" />
+			{label}
+		</p>
 		<div class="compare-actions">
 			<Button
 				label="Comparer"
@@ -57,6 +61,9 @@
 		margin: 0;
 		font-weight: 600;
 		font-size: var(--font-size-heading-sm);
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
 	}
 
 	.compare-actions {

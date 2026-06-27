@@ -4,6 +4,9 @@ Toutes les modifications notables de ce projet seront documentées dans ce fichi
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.1.2] - 2026-06-27
+### Added
+- PDS-69 : Polish cosmétique Frontend — intégration des 6 icônes SVG néo-brutalistes (PDS-67) dans les composants : SearchIcon+FilterIcon dans FiltersPanel, DatasetIcon+CompareIcon dans CardDataset, CompareIcon dans CompareBar. Espacements aérés (`--space-*` +25%, `--line-height-body` 1.6→1.7, `--paragraph-gap` 0.75em→1em). Correction overflow texte des `<select>` dans FiltersPanel (`text-overflow: ellipsis`). Pied de page avec lien "Sébastien Schopfer" vers schopfer.moustik.site.
+
 ### Fixed
 - PDS-70 : Timeout recherche 3+ termes — l'expansion multilingue générait une explosion combinatoire de clauses LIKE (50+ termes → 200+ LIKE → timeout SQLite). Ajout d'une limite `MAX_EXPANSION_TERMS=12` dans `search_repository.py`, les termes originaux de l'utilisateur étant prioritaires (placés en tête de `all_terms`).
 - PDS-70 : Index FTS5 migré vers `tokenize='unicode61 remove_diacritics 2'` (suppression automatique des accents FR/DE/IT), ajout de triggers AFTER INSERT/UPDATE/DELETE sur `datasets` pour maintenir l'index FTS5, et backfill initial au `create_schema()`.

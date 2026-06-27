@@ -58,6 +58,14 @@
 			</div>
 		{/key}
 	</main>
+
+	<footer class="site-footer">
+		<p>
+			<a href="https://schopfer.moustik.site" target="_blank" rel="noopener noreferrer">
+				Sébastien Schopfer
+			</a>
+		</p>
+	</footer>
 </div>
 
 <style>
@@ -123,6 +131,28 @@
 
 	main:focus {
 		outline: none;
+	}
+
+	.site-footer {
+		margin-top: var(--space-7);
+		padding-top: var(--space-4);
+		border-top: var(--border-thin) solid var(--color-border);
+		text-align: center;
+	}
+
+	.site-footer p {
+		margin: 0;
+		font-size: var(--font-size-ui);
+		color: var(--color-on-surface-subtle);
+	}
+
+	.site-footer a {
+		font-weight: 650;
+		text-decoration-thickness: 2px;
+	}
+
+	.site-footer a:hover {
+		color: var(--color-primary);
 	}
 
 	@media (max-width: 40rem) {

@@ -2,6 +2,8 @@
 	import { appendSearchContext } from '$lib/navigation/search-context';
 	import type { RankingSignals } from '$lib/types/ranking';
 	import type { SearchDatasetItem } from '$lib/types/search';
+	import DatasetIcon from '../../assets/icons/DatasetIcon.svelte';
+	import CompareIcon from '../../assets/icons/CompareIcon.svelte';
 
 	let {
 		dataset,
@@ -65,7 +67,10 @@
 <article class="dataset-card" aria-labelledby={`dataset-title-${dataset.id}`}>
 	<header class="dataset-head">
 		<div class="title-row">
-			<h3 id={`dataset-title-${dataset.id}`}>{dataset.title}</h3>
+			<div class="title-icon-group">
+				<DatasetIcon size="var(--icon-size-md)" label="Jeu de données" />
+				<h3 id={`dataset-title-${dataset.id}`}>{dataset.title}</h3>
+			</div>
 			<label class="compare-check">
 				<input
 					type="checkbox"
@@ -74,6 +79,7 @@
 					onchange={() => onToggleCompare(dataset.id)}
 					aria-label={isCompared ? `Retirer ${dataset.title} de la comparaison` : `Ajouter ${dataset.title} a la comparaison`}
 				/>
+				<CompareIcon size="var(--icon-size-sm)" label="Comparer" />
 				<span>Comparer</span>
 			</label>
 		</div>
@@ -162,6 +168,14 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: var(--space-2);
+	}
+
+	.title-icon-group {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-2);
+		color: var(--color-on-surface-subtle);
+		flex-shrink: 0;
 	}
 
 	.compare-check {

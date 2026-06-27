@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Button from '../atoms/Button.svelte';
 	import Input from '../atoms/Input.svelte';
+	import SearchIcon from '../../assets/icons/SearchIcon.svelte';
+	import FilterIcon from '../../assets/icons/FilterIcon.svelte';
 
 	export type FacetItem = {
 		name: string;
@@ -114,10 +116,18 @@
 </script>
 
 <form class="search" onsubmit={onSubmit}>
-	<Input id="q" label="Rechercher" bind:value={query} oninput={handleQueryInput} placeholder="ex: mobilite, geographie" />
+	<div class="search-field">
+		<Input id="q" label="Rechercher" bind:value={query} oninput={handleQueryInput} placeholder="ex: mobilite, geographie" />
+		<div class="search-icon" aria-hidden="true">
+			<SearchIcon size="var(--icon-size-md)" label="Rechercher" />
+		</div>
+	</div>
 
 	<fieldset class="facets-toolbar">
-		<legend>Filtres facettes</legend>
+		<legend class="facets-legend">
+			<FilterIcon size="var(--icon-size-sm)" label="Filtrer" />
+			Filtres facettes
+		</legend>
 		<label class="select-field" for="facet-org">
 			<span>Organisation</span>
 			<select id="facet-org" value={selectedOrg} onchange={(event) => immediateFacetChange(event, 'org')}>
@@ -178,6 +188,21 @@
 		gap: var(--space-3);
 	}
 
+	.search-field {
+		position: relative;
+	}
+
+	.search-icon {
+		position: absolute;
+		right: var(--space-3);
+		top: 50%;
+		transform: translateY(-50%);
+		color: var(--color-on-surface-subtle);
+		pointer-events: none;
+		display: flex;
+		align-items: center;
+	}
+
 	.facets-toolbar {
 		display: grid;
 		gap: var(--space-3);
@@ -187,10 +212,14 @@
 		border: 0;
 	}
 
-	.facets-toolbar legend {
+	.facets-legend {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
 		font-weight: 700;
 		font-size: var(--font-size-ui);
 		margin-bottom: var(--space-1);
+		color: var(--color-on-surface-soft);
 	}
 
 	.filters-meta {
@@ -217,6 +246,10 @@
 		padding: var(--space-3) var(--space-4);
 		min-height: var(--size-control-md);
 		color: var(--color-on-surface);
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.select-field select:focus-visible {

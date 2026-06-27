@@ -172,10 +172,14 @@
 
 	.title-icon-group {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: var(--space-2);
 		color: var(--color-on-surface-subtle);
 		min-width: 0;
+	}
+
+	.title-icon-group :global(svg) {
+		flex-shrink: 0;
 	}
 
 	.compare-check {

@@ -3,6 +3,10 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-27
+### Fixed
+- each_key_duplicate : dédoublonnage des facettes dans `optionList()` (Set) et clés indexées dans `+page.svelte` (`facet.name-idx`)
+
 ## [1.1.0] - 2026-06-27 (Milestones M6, M7, M8, M9)
 ### Fixed (Corrections)
 - PDS-69 : Audit recherche combinée tag/format/org — le mock API ignorait le filtre `tag` (paramètre parsé mais jamais appliqué), le filtre `org` comparait sur `dataset.id` au lieu de `dataset.org_id`, et le debounce partagé entre facettes pouvait perdre une sélection lors de changements rapides. Les 3 filtres sont désormais cumulables et indépendants, chacun avec son propre timer 300ms. 16 nouveaux tests unitaires ajoutés (`search-api.test.ts`). (M9)

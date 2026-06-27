@@ -290,7 +290,7 @@
 	{:else if data && data.datasets.length > 0}
 		{#key resultsKey}
 			<div class="results-wrapper" in:fade={{ duration: 300 }} out:fade={{ duration: 150 }}>
-				<p class="state state-success" tabindex="-1" bind:this={resultHeading}>
+				<p class="results-summary" tabindex="-1" bind:this={resultHeading}>
 					{data.total} resultats trouves.
 				</p>
 				<ul class="results" aria-label="Resultats de recherche">
@@ -379,20 +379,14 @@
 		margin-bottom: var(--space-3);
 	}
 
-	.state {
+	.results-summary {
 		margin: 0;
 		padding: var(--space-3) var(--space-4);
-		background: var(--color-surface-muted);
-		border: var(--border-thin) dashed var(--color-border);
-		border-radius: var(--radius-none);
-		color: var(--color-on-surface);
-	}
-
-	.state-success {
 		background: var(--color-success);
-		border-color: var(--color-success);
+		border: var(--border-thin) solid var(--color-success);
+		border-radius: var(--radius-none);
 		color: var(--color-on-success);
-		opacity: 1;
+		font-weight: 600;
 	}
 
 	.results {

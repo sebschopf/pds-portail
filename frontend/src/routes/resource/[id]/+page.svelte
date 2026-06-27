@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card } from '$lib';
+	import { Breadcrumb, Card, EmptyState } from '$lib';
 	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 	import { getSafeExternalUrl } from '$lib/security/external-url';
 
@@ -48,20 +48,34 @@
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ressource" />
 	<Card title="Fiche ressource" subtitle="Contrat backend endpoint resource detail">
 		{#if data.status === 'error'}
-			<p class="state state-danger" role="alert">{data.errorMessage ?? 'Erreur inconnue'}</p>
-			<nav class="links" aria-label="Navigation retour ressource">
-				<a href={searchHref}>Retour a la recherche</a>
-			</nav>
+			<EmptyState
+				variant="error"
+				title="Erreur lors du chargement de la ressource"
+				description={data.errorMessage ?? 'Verifiez votre connexion et reessayez.'}
+			>
+				{#snippet action()}
+					<a href={searchHref}>Retour a la recherche</a>
+				{/snippet}
+			</EmptyState>
 		{:else if data.status === 'not-found'}
-			<p class="state" role="status">Ressource introuvable: {data.resourceId}</p>
-			<nav class="links" aria-label="Navigation retour ressource">
-				<a href={searchHref}>Retour a la recherche</a>
-			</nav>
+			<EmptyState
+				title="Ressource introuvable"
+				description="La ressource {data.resourceId} n'existe pas dans notre base. Verifiez l'URL ou retournez a la recherche."
+			>
+				{#snippet action()}
+					<a href={searchHref}>Retour a la recherche</a>
+				{/snippet}
+			</EmptyState>
 		{:else if data.status === 'contract-error'}
-			<p class="state state-danger" role="alert">Contrat ressource backend invalide</p>
-			<nav class="links" aria-label="Navigation retour ressource">
-				<a href={searchHref}>Retour a la recherche</a>
-			</nav>
+			<EmptyState
+				variant="error"
+				title="Affichage impossible"
+				description="Cette ressource n'a pas pu etre affichee correctement. Reessayez ou retournez a la recherche."
+			>
+				{#snippet action()}
+					<a href={searchHref}>Retour a la recherche</a>
+				{/snippet}
+			</EmptyState>
 		{:else if resource}
 			<h3 class="title">{resource.name}</h3>
 
@@ -194,19 +208,5 @@
 			display: grid;
 			gap: var(--space-3);
 		}
-	}
-
-	.state {
-		margin: 0;
-		padding: var(--space-3) var(--space-4);
-		background: var(--color-surface-muted);
-		border: var(--border-thin) dashed var(--color-border);
-		border-radius: var(--radius-none);
-	}
-
-	.state-danger {
-		background: var(--color-danger);
-		border-color: var(--color-danger);
-		color: var(--color-on-danger);
 	}
 </style>

@@ -106,7 +106,8 @@ describe('resource/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Ressource introuvable: introuvable');
+		expect(view.body).toContain('Ressource introuvable');
+		expect(view.body).toContain("n'existe pas dans notre base");
 		expect(view.body).toContain('Retour a la recherche');
 	});
 

@@ -397,6 +397,7 @@
 		border-radius: var(--radius-none);
 		color: var(--color-on-success);
 		font-weight: 600;
+		max-width: none;
 	}
 
 	.results {

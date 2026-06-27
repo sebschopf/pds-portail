@@ -116,12 +116,21 @@
 </script>
 
 <form class="search" onsubmit={onSubmit}>
-	<div class="search-field">
-		<Input id="q" label="Rechercher" bind:value={query} oninput={handleQueryInput} placeholder="ex: mobilite, geographie" />
-		<div class="search-icon" aria-hidden="true">
-			<SearchIcon size="var(--icon-size-md)" label="Rechercher" />
+	<label class="search-field" for="q">
+		<span class="search-label">Rechercher</span>
+		<div class="search-input-wrap">
+			<input
+				id="q"
+				type="text"
+				bind:value={query}
+				oninput={handleQueryInput}
+				placeholder="ex: mobilite, geographie"
+			/>
+			<span class="search-icon" aria-hidden="true">
+				<SearchIcon size="var(--icon-size-md)" label="Rechercher" />
+			</span>
 		</div>
-	</div>
+	</label>
 
 	<fieldset class="facets-toolbar">
 		<legend class="facets-legend">
@@ -189,7 +198,36 @@
 	}
 
 	.search-field {
+		display: grid;
+		gap: var(--space-2);
+		font-size: var(--font-size-ui);
+	}
+
+	.search-label {
+		font-weight: 600;
+		color: var(--color-on-surface-subtle);
+	}
+
+	.search-input-wrap {
 		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.search-input-wrap input {
+		border: var(--border-thin) solid var(--color-border);
+		background: var(--color-surface);
+		border-radius: var(--radius-none);
+		padding: var(--space-3) var(--space-7) var(--space-3) var(--space-4);
+		min-height: var(--size-control-md);
+		color: var(--color-on-surface);
+		width: 100%;
+		font-size: var(--font-size-ui);
+	}
+
+	.search-input-wrap input:focus-visible {
+		outline: var(--outline-focus) solid var(--color-focus-ring);
+		outline-offset: var(--outline-offset);
 	}
 
 	.search-icon {

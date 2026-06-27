@@ -151,13 +151,13 @@
 
 <style>
 	h3.title {
-		margin: 0;
+		margin: 0 0 var(--space-5);
 		line-height: var(--line-height-title);
 		font-size: clamp(1.2rem, 1.2vw + 1rem, 1.7rem);
 	}
 
 	.access-modes {
-		margin-top: var(--space-4);
+		margin-top: var(--space-5);
 		padding: var(--space-3);
 		border: var(--border-thin) solid var(--color-border);
 		border-radius: var(--radius-none);
@@ -202,7 +202,7 @@
 	.details {
 		display: grid;
 		gap: var(--space-4);
-		margin: var(--space-4) 0 0;
+		margin: var(--space-5) 0 0;
 	}
 
 	.details div {
@@ -227,7 +227,7 @@
 		display: flex;
 		gap: var(--space-4);
 		flex-wrap: wrap;
-		margin-top: var(--space-4);
+		margin-top: var(--space-5);
 	}
 
 	.links a {

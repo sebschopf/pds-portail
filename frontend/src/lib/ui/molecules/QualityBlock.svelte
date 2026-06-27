@@ -109,7 +109,7 @@
 
 <style>
 	.quality-block {
-		margin-top: 0;
+		margin-top: var(--space-5);
 	}
 
 	.quality-heading {

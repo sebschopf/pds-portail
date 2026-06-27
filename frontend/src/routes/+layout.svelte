@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { page, navigating } from '$app/state';
+	import { fade, fly } from 'svelte/transition';
 	import favicon from '$lib/assets/favicon.svg';
 	import { Skeleton } from '$lib';
 	import '../app.css';
-	import { navigating } from '$app/state';
 
 	let { children } = $props();
 	let readableMode = $state(false);
 	let initialized = $state(false);
+	const routeKey = $derived(page.url.pathname);
 
 	function toggleReadableMode(): void {
 		readableMode = !readableMode;
@@ -50,7 +52,11 @@
 	{/if}
 
 	<main id="main-content" tabindex="-1">
-		{@render children()}
+		{#key routeKey}
+			<div class="page-transition" in:fly={{ y: 8, duration: 300 }} out:fade={{ duration: 150 }}>
+				{@render children()}
+			</div>
+		{/key}
 	</main>
 </div>
 

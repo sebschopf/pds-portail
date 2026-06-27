@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { slide } from 'svelte/transition';
 	import { Button } from '$lib';
 
 	let {
@@ -19,7 +20,7 @@
 </script>
 
 {#if count > 0}
-	<aside class="compare-bar" role="status" aria-live="polite" aria-label="Barre de comparaison">
+	<div transition:slide={{ duration: 300 }} class="compare-bar" role="status" aria-live="polite" aria-label="Barre de comparaison">
 		<p class="compare-label">{label}</p>
 		<div class="compare-actions">
 			<Button
@@ -34,7 +35,7 @@
 				onclick={onClear}
 			/>
 		</div>
-	</aside>
+	</div>
 {/if}
 
 <style>

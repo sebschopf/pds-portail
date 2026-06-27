@@ -2,6 +2,7 @@
 	import { env } from '$env/dynamic/public';
 	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 
 	import { Button, Card, CardDataset, CompareBar, EmptyState, FiltersPanel, SkeletonCard, StateBadge } from '$lib';
 	import { normalizeSearchContext } from '$lib/navigation/search-context';
@@ -82,6 +83,7 @@
 	const useMockApi = env.PUBLIC_USE_MOCK_API === '1';
 	const apiBase = useMockApi ? '' : (env.PUBLIC_API_BASE_URL || '');
 	const searchContext = $derived.by(() => normalizeSearchContext(buildSearchStateParams().toString()));
+	const resultsKey = $derived(`${query}|${sort}|${selectedOrg}|${selectedFormat}|${selectedTag}|${currentPage}`);
 
 	function safeTrim(value: string): string {
 		return value.trim();
@@ -286,22 +288,26 @@
 			description="Verifiez votre connexion et reessayez. {errorMessage}"
 		/>
 	{:else if data && data.datasets.length > 0}
-		<p class="state state-success" tabindex="-1" bind:this={resultHeading}>
-			{data.total} resultats trouves.
-		</p>
-		<ul class="results" aria-label="Resultats de recherche">
-			{#each data.datasets as dataset (dataset.id)}
-				<li>
-					<CardDataset
-						{dataset}
-						{searchContext}
-						isCompared={compareIds.includes(dataset.id)}
-						compareDisabled={compareDisabled}
-						onToggleCompare={toggleCompare}
-					/>
-				</li>
-			{/each}
-		</ul>
+		{#key resultsKey}
+			<div class="results-wrapper" in:fade={{ duration: 300 }} out:fade={{ duration: 150 }}>
+				<p class="state state-success" tabindex="-1" bind:this={resultHeading}>
+					{data.total} resultats trouves.
+				</p>
+				<ul class="results" aria-label="Resultats de recherche">
+					{#each data.datasets as dataset (dataset.id)}
+						<li>
+							<CardDataset
+								{dataset}
+								{searchContext}
+								isCompared={compareIds.includes(dataset.id)}
+								compareDisabled={compareDisabled}
+								onToggleCompare={toggleCompare}
+							/>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		{/key}
 
 		<nav class="pagination" aria-label="Pagination resultats">
 			<Button

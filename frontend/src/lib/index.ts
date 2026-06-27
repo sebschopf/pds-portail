@@ -28,3 +28,6 @@ export { default as DatasetIcon } from './assets/icons/DatasetIcon.svelte';
 export { default as CompareIcon } from './assets/icons/CompareIcon.svelte';
 export { default as EmptyIcon } from './assets/icons/EmptyIcon.svelte';
 export { default as ErrorIcon } from './assets/icons/ErrorIcon.svelte';
+
+// Assets SVG (PDS-62)
+export { default as SwissCantonsMap } from './assets/SwissCantonsMap.svelte';

@@ -84,14 +84,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Uniquement les features reconnues par defaut (pas de flag experimental)
         if self._enable_permissions_policy:
             headers_to_set["Permissions-Policy"] = (
-                "accelerometer=(), autoplay=(), camera=(), "
-                "cross-origin-isolated=(), display-capture=(), "
-                "encrypted-media=(), fullscreen=(), geolocation=(), "
-                "gyroscope=(), keyboard-map=(), magnetometer=(), "
-                "microphone=(), midi=(), payment=(), "
-                "picture-in-picture=(), publickey-credentials-get=(), "
-                "screen-wake-lock=(), sync-xhr=(), usb=(), "
-                "xr-spatial-tracking=()"
+                "accelerometer=(), autoplay=(), browsing-topics=(), "
+                "camera=(), cross-origin-isolated=(), "
+                "display-capture=(), encrypted-media=(), "
+                "fullscreen=(), geolocation=(), gyroscope=(), "
+                "keyboard-map=(), magnetometer=(), microphone=(), "
+                "midi=(), payment=(), picture-in-picture=(), "
+                "publickey-credentials-get=(), screen-wake-lock=(), "
+                "sync-xhr=(), usb=(), xr-spatial-tracking=()"
             )
 
         for header_name, header_value in headers_to_set.items():

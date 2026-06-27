@@ -48,15 +48,20 @@
 
 	function debouncedFacetChange(event: Event, facet: 'org' | 'fmt' | 'tag'): void {
 		if (debounceTimer) clearTimeout(debounceTimer);
+		// Capturer la valeur immediatement : l'event Svelte est recycle apres le handler
+		const target = event.currentTarget as HTMLSelectElement;
+		const value = target.value;
 		debounceTimer = setTimeout(() => {
-			onFacetChange(event, facet);
+			onFacetChange({ currentTarget: { value } } as unknown as Event, facet);
 		}, DEBOUNCE_MS);
 	}
 
 	function debouncedSortChange(event: Event): void {
 		if (debounceTimer) clearTimeout(debounceTimer);
+		const target = event.currentTarget as HTMLSelectElement;
+		const value = target.value;
 		debounceTimer = setTimeout(() => {
-			onSortChange(event);
+			onSortChange({ currentTarget: { value } } as unknown as Event);
 		}, DEBOUNCE_MS);
 	}
 

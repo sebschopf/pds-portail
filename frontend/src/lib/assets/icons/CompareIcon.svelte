@@ -20,8 +20,6 @@
 	aria-label={label}
 	role="img"
 >
-	<path d="M2,3h5v12H2z M4,5h1v8H4z" />
-	<path d="M17,9v12h5V9H17z M20,11h1v8h-1z" />
-	<path d="M12,3l4,4l-4,4V8H9V6h3V3z" />
-	<path d="M12,16h3v2h-3v3l-4-4l4-4V16z" />
+	<path d="M16,11 l2,2 5.2-5.2L18,2.6 15.5,4.5 18.2,7H3v2.1h14.7Z" />
+	<path d="M8.8,13.5 l-2-2L1.6,17.2 6.4,22.5l2-2L6.2,18.3H21v-2.1H6.2Z" />
 </svg>

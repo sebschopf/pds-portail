@@ -48,7 +48,7 @@
 
   {#if hasResources}
     <div class="resource-list">
-      {#each resources as resource (resource.id)}
+      {#each resources as resource, idx (`${resource.id}-${idx}`)}
         <article class="resource-item">
           <div class="resource-header">
             <div class="resource-ident">

@@ -105,7 +105,7 @@
 			<span>Organisation</span>
 			<select id="facet-org" value={selectedOrg} onchange={(event) => immediateFacetChange(event, 'org')}>
 				<option value="">Toutes</option>
-				{#each optionList(organizations, selectedOrg) as facet (facet.name)}
+				{#each optionList(organizations, selectedOrg) as facet, idx (`org-${facet.name}-${idx}`)}
 					<option value={facet.name}>{facet.display_name ?? facet.name} ({facet.count})</option>
 				{/each}
 			</select>
@@ -115,7 +115,7 @@
 			<span>Format</span>
 			<select id="facet-format" value={selectedFormat} onchange={(event) => immediateFacetChange(event, 'fmt')}>
 				<option value="">Tous</option>
-				{#each optionList(formats, selectedFormat) as facet (facet.name)}
+				{#each optionList(formats, selectedFormat) as facet, idx (`fmt-${facet.name}-${idx}`)}
 					<option value={facet.name}>{facet.name} ({facet.count})</option>
 				{/each}
 			</select>
@@ -125,7 +125,7 @@
 			<span>Categorie / tag</span>
 			<select id="facet-tag" value={selectedTag} onchange={(event) => immediateFacetChange(event, 'tag')}>
 				<option value="">Tous</option>
-				{#each optionList(tags, selectedTag) as facet (facet.name)}
+				{#each optionList(tags, selectedTag) as facet, idx (`tag-${facet.name}-${idx}`)}
 					<option value={facet.name}>{facet.name} ({facet.count})</option>
 				{/each}
 			</select>

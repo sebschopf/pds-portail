@@ -40,7 +40,7 @@
 					<h4 class="item-title">Champs disponibles</h4>
 					<p class="item-count">{fieldLabel}</p>
 					<ul class="field-list" aria-label="Liste des champs">
-						{#each structure.fields as field (field)}
+						{#each structure.fields as field, idx (`${field}-${idx}`)}
 							<li>{field}</li>
 						{/each}
 					</ul>
@@ -52,7 +52,7 @@
 					<article class="meta-item" aria-label="Formats disponibles">
 						<h4 class="meta-title">Formats de fichier</h4>
 						<ul class="format-list">
-							{#each structure.formats as fmt (fmt)}
+							{#each structure.formats as fmt, idx (`${fmt}-${idx}`)}
 								<li class="format-badge">{fmt}</li>
 							{/each}
 						</ul>

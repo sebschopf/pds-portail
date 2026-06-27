@@ -115,7 +115,7 @@
 		<section class="ranking" aria-label="Pourquoi ce resultat">
 			<h4>Score de pertinence : {percentLabel(dataset.ranking_signals.hybrid_score)}</h4>
 			<ol class="ranking-reasons">
-				{#each rankingReasons as reason (reason.label)}
+				{#each rankingReasons as reason, idx (`${reason.label}-${idx}`)}
 					<li>
 						<span class="reason-bar" style="width: {Math.round(reason.contribution * 100)}%"></span>
 						<span class="reason-text">{reason.label} ({percentLabel(reason.contribution)})</span>

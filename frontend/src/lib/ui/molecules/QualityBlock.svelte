@@ -10,10 +10,10 @@
 	} = $props();
 
 	const qualityLabel = $derived.by(() => {
-		if (quality_score === null) return 'Non renseigne';
-		if (quality_score >= 70) return 'Bonne qualite';
-		if (quality_score >= 40) return 'Qualite moyenne';
-		return 'Qualite faible';
+		if (quality_score === null) return 'Non renseigné';
+		if (quality_score >= 70) return 'Bonne qualité';
+		if (quality_score >= 40) return 'Qualité moyenne';
+		return 'Qualité faible';
 	});
 
 	const qualityVariant = $derived.by(() => {
@@ -24,16 +24,16 @@
 	});
 
 	const freshnessText = $derived.by(() => {
-		if (freshness_days === null) return 'Non renseignee';
+		if (freshness_days === null) return 'Non renseignée';
 		if (freshness_days === 1) return '1 jour';
 		return `${freshness_days} jours`;
 	});
 
 	const freshnessLabel = $derived.by(() => {
 		if (freshness_days === null) return 'Alerte';
-		if (freshness_days <= 30) return 'Mise a jour recente';
-		if (freshness_days <= 180) return 'Mise a jour moderee';
-		return 'Donnees anciennes';
+		if (freshness_days <= 30) return 'Mise à jour récente';
+		if (freshness_days <= 180) return 'Mise à jour modérée';
+		return 'Données anciennes';
 	});
 
 	const freshnessVariant = $derived.by(() => {
@@ -44,10 +44,10 @@
 	});
 
 	const completenessLabel = $derived.by(() => {
-		if (completeness === null) return 'Non renseignee';
-		if (completeness >= 80) return 'Complete';
-		if (completeness >= 40) return 'Partiellement complete';
-		return 'Peu complete';
+		if (completeness === null) return 'Non renseignée';
+		if (completeness >= 80) return 'Complète';
+		if (completeness >= 40) return 'Partiellement complète';
+		return 'Peu complète';
 	});
 
 	const completenessVariant = $derived.by(() => {
@@ -58,29 +58,29 @@
 	});
 </script>
 
-<section class="quality-block" aria-label="Indicateurs qualite du dataset">
-	<h3 class="quality-heading">Qualite du dataset</h3>
+<section class="quality-block" aria-label="Indicateurs qualité du dataset">
+	<h3 class="quality-heading">Qualité du dataset</h3>
 
 	<div class="quality-grid">
-		<article class="quality-item {qualityVariant === 'low' ? 'quality-low' : qualityVariant === 'medium' ? 'quality-medium' : qualityVariant === 'good' ? 'quality-good' : ''}" aria-label="Score qualite: {qualityLabel}">
-			<h4 class="item-title">Score qualite</h4>
+		<article class="quality-item {qualityVariant === 'low' ? 'quality-low' : qualityVariant === 'medium' ? 'quality-medium' : qualityVariant === 'good' ? 'quality-good' : ''}" aria-label="Score qualité: {qualityLabel}">
+			<h4 class="item-title">Score qualité</h4>
 			<p class="item-value">{quality_score ?? 'N/R'}</p>
 			<p class="item-label">{qualityLabel}</p>
 		</article>
 
-		<article class="quality-item {completenessVariant === 'low' ? 'quality-low' : completenessVariant === 'medium' ? 'quality-medium' : completenessVariant === 'good' ? 'quality-good' : ''}" aria-label="Completude: {completenessLabel}">
-			<h4 class="item-title">Completude</h4>
+		<article class="quality-item {completenessVariant === 'low' ? 'quality-low' : completenessVariant === 'medium' ? 'quality-medium' : completenessVariant === 'good' ? 'quality-good' : ''}" aria-label="Complétude: {completenessLabel}">
+			<h4 class="item-title">Complétude</h4>
 			<p class="item-value">{completeness !== null ? `${completeness}/100` : 'N/R'}</p>
 			<p class="item-label">{completenessLabel}</p>
 		</article>
 
-		<article class="quality-item {freshnessVariant === 'low' ? 'quality-low' : freshnessVariant === 'medium' ? 'quality-medium' : freshnessVariant === 'good' ? 'quality-good' : ''}" aria-label="Fraicheur: {freshnessLabel}">
-			<h4 class="item-title">Fraicheur</h4>
+		<article class="quality-item {freshnessVariant === 'low' ? 'quality-low' : freshnessVariant === 'medium' ? 'quality-medium' : freshnessVariant === 'good' ? 'quality-good' : ''}" aria-label="Fraîcheur: {freshnessLabel}">
+			<h4 class="item-title">Fraîcheur</h4>
 			<p class="item-value">{freshnessText}</p>
 			<p class="item-label">{freshnessLabel}</p>
 			{#if freshness_days !== null}
 				<p class="item-detail">
-					Derniere mise a jour il y a {freshnessText}
+					Dernière mise à jour il y a {freshnessText}
 				</p>
 			{/if}
 		</article>
@@ -91,16 +91,16 @@
 			<summary>Pourquoi ce score ?</summary>
 			<dl class="details-list">
 				<div>
-					<dt>Score qualite</dt>
-					<dd>Calcule sur 5 dimensions (completude, fraicheur, formats standards, signal geo-temporel, nombre de ressources). Chaque dimension vaut 0, 0.5 ou 1, multiplie par 20.</dd>
+					<dt>Score qualité</dt>
+					<dd>Calculé sur 5 dimensions (completude, fraicheur, formats standards, signal geo-temporel, nombre de ressources). Chaque dimension vaut 0, 0.5 ou 1, multiplie par 20.</dd>
 				</div>
 				<div>
-					<dt>Completude</dt>
-					<dd>Verification de 5 champs: description renseignee, tags non vides, date de creation, date de modification, au moins 1 ressource.</dd>
+					<dt>Complétude</dt>
+					<dd>Vérification de 5 champs: description renseignée, tags non vides, date de création, date de modification, au moins 1 ressource.</dd>
 				</div>
 				<div>
-					<dt>Fraicheur</dt>
-					<dd>Jours ecoules depuis la derniere mise a jour CKAN. Recent: moins de 30 jours, modere: moins de 180 jours, ancien: plus de 180 jours.</dd>
+					<dt>Fraîcheur</dt>
+					<dd>Jours écoulés depuis la dernière mise à jour CKAN. Recent: moins de 30 jours, modere: moins de 180 jours, ancien: plus de 180 jours.</dd>
 				</div>
 			</dl>
 		</details>

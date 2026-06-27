@@ -6,7 +6,7 @@
 
 	let {
 		items,
-		ariaLabel = 'Fil d Ariane'
+		ariaLabel = "Fil d'Ariane"
 	}: {
 		items: BreadcrumbItem[];
 		ariaLabel?: string;

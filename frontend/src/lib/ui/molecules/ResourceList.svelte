@@ -43,8 +43,8 @@
   }
 </script>
 
-<section class="resource-block" aria-label="Ressources associees">
-  <h3 class="resource-heading">Ressources associees</h3>
+<section class="resource-block" aria-label="Ressources associées">
+  <h3 class="resource-heading">Ressources associées</h3>
 
   {#if hasResources}
     <div class="resource-list">
@@ -60,7 +60,7 @@
             <span class="resource-format">{resource.format ?? 'Inconnu'}</span>
           </div>
 
-          <dl class="resource-meta" aria-label={`Meta ressource ${resource.name}`}>
+          <dl class="resource-meta" aria-label={`Méta ressource ${resource.name}`}>
             {#if resource.size_bytes !== null}
               <div>
                 <dt>Taille</dt>
@@ -69,13 +69,13 @@
             {/if}
             {#if resource.created}
               <div>
-                <dt>Creation</dt>
+                <dt>Création</dt>
                 <dd>{formatDate(resource.created)}</dd>
               </div>
             {/if}
             {#if resource.last_modified}
               <div>
-                <dt>Derniere modification</dt>
+                <dt>Dernière modification</dt>
                 <dd>{formatDate(resource.last_modified)}</dd>
               </div>
             {/if}
@@ -87,7 +87,7 @@
             >
             {#if getSafeExternalUrl(resource.url)}
               <a href={getSafeExternalUrl(resource.url)} target="_blank" rel="noreferrer noopener"
-                >Ouvrir l URL source</a
+                >Ouvrir l'URL source</a
               >
             {:else if resource.url}
               <span class="resource-link-disabled" role="status">URL source non conforme</span>
@@ -97,7 +97,7 @@
       {/each}
     </div>
   {:else}
-    <p class="resource-empty" role="status">Aucune ressource associee disponible</p>
+    <p class="resource-empty" role="status">Aucune ressource associée disponible</p>
   {/if}
 </section>
 

@@ -15,7 +15,7 @@
 
 	const count = $derived(compareIds.length);
 	const label = $derived(
-		count === 1 ? '1 dataset selectionne' : `${count} datasets selectionnes`
+		count === 1 ? '1 dataset sélectionné' : `${count} datasets sélectionnés`
 	);
 	const canCompare = $derived(count >= 2);
 </script>

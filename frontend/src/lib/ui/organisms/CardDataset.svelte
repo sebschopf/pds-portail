@@ -22,7 +22,7 @@
 	const MAX_TAGS = 5;
 
 	function metricOrUnknown(value: number | null): string {
-		return value === null ? 'Non renseigne' : `${value}`;
+		return value === null ? 'Non renseigné' : `${value}`;
 	}
 
 	function percentLabel(value: number): string {
@@ -31,8 +31,8 @@
 
 	/**
 	 * Traduit les signaux bruts du ranking hybride en raisons lisibles,
-	 * triees par contribution decroissante. Chaque raison est ponderee
-	 * (ex: text_score * weight_text) pour refleter son poids reel dans le score.
+	 * triées par contribution décroissante. Chaque raison est pondérée
+	 * (ex: text_score * weight_text) pour refléter son poids reel dans le score.
 	 * Les composantes nulles sont omises pour ne pas encombrer l'affichage.
 	 * Limite a 4 raisons maximum.
 	 */
@@ -42,10 +42,10 @@
 			reasons.push({ label: 'Mots de la recherche dans le titre ou la description', contribution: rs.text_score * rs.weight_text });
 		}
 		if (rs.quality_normalized > 0) {
-			reasons.push({ label: 'Qualite technique des metadonnees', contribution: rs.quality_normalized * rs.weight_quality });
+			reasons.push({ label: 'Qualité technique des métadonnées', contribution: rs.quality_normalized * rs.weight_quality });
 		}
 		if (rs.freshness_component > 0) {
-			reasons.push({ label: 'Fraicheur des donnees', contribution: rs.freshness_component * rs.weight_freshness });
+			reasons.push({ label: 'Fraîcheur des données', contribution: rs.freshness_component * rs.weight_freshness });
 		}
 		reasons.sort((a, b) => b.contribution - a.contribution);
 		return reasons.slice(0, 4);
@@ -53,7 +53,7 @@
 
 	const visibleTags = $derived(dataset.tags.slice(0, MAX_TAGS));
 	const hasMoreTags = $derived(dataset.tags.length > MAX_TAGS);
-	const safeFormats = $derived(dataset.resource_formats.length > 0 ? dataset.resource_formats : ['Non renseigne']);
+	const safeFormats = $derived(dataset.resource_formats.length > 0 ? dataset.resource_formats : ['Non renseigné']);
 	const datasetLink = $derived(
 		appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}`, searchContext)
 	);
@@ -77,28 +77,28 @@
 					checked={isCompared}
 					disabled={compareDisabled && !isCompared}
 					onchange={() => onToggleCompare(dataset.id)}
-					aria-label={isCompared ? `Retirer ${dataset.title} de la comparaison` : `Ajouter ${dataset.title} a la comparaison`}
+					aria-label={isCompared ? `Retirer ${dataset.title} de la comparaison` : `Ajouter à ${dataset.title} a la comparaison`}
 				/>
 				<CompareIcon size="var(--icon-size-md)" label="Comparer" />
 				<span>Comparer</span>
 			</label>
 		</div>
-		<p class="meta">Organisation: {dataset.org_name ?? 'Non renseignee'}</p>
+		<p class="meta">Organisation: {dataset.org_name ?? 'Non renseignée'}</p>
 	</header>
 
 	<p>{dataset.description ?? 'Description non disponible.'}</p>
 
 	<dl class="metrics" aria-label="Indicateurs dataset">
 		<div>
-			<dt>Qualite</dt>
+			<dt>Qualité</dt>
 			<dd>{metricOrUnknown(dataset.quality_score)}</dd>
 		</div>
 		<div>
-			<dt>Completude</dt>
+			<dt>Complétude</dt>
 			<dd>{metricOrUnknown(dataset.completeness)}</dd>
 		</div>
 		<div>
-			<dt>Fraicheur (jours)</dt>
+			<dt>Fraîcheur (jours)</dt>
 			<dd>{metricOrUnknown(dataset.freshness_days)}</dd>
 		</div>
 		<div>
@@ -111,14 +111,14 @@
 	<p class="meta">
 		<strong>Tags:</strong>
 		{#if dataset.tags.length === 0}
-			Non renseignes
+			Non renseignés
 		{:else}
-			{visibleTags.join(', ')}{hasMoreTags ? ', ' : ''}{#if hasMoreTags}<span aria-hidden="true">...</span><span class="sr-only">et d autres tags</span>{/if}
+			{visibleTags.join(', ')}{hasMoreTags ? ', ' : ''}{#if hasMoreTags}<span aria-hidden="true">...</span><span class="sr-only">et d'autres tags</span>{/if}
 		{/if}
 	</p>
 
 	{#if dataset.ranking_signals}
-		<section class="ranking" aria-label="Pourquoi ce resultat">
+		<section class="ranking" aria-label="Pourquoi ce résultat">
 			<h4>Score de pertinence : {percentLabel(dataset.ranking_signals.hybrid_score)}</h4>
 			<ol class="ranking-reasons">
 				{#each rankingReasons as reason, idx (`${reason.label}-${idx}`)}
@@ -142,8 +142,8 @@
 
 	<p class="links">
 		<a href={datasetApiLink} target="_blank" rel="noopener noreferrer">
-			Voir le detail API dataset
-			<span class="sr-only">(nouvelle fenetre)</span>
+			Voir le détail API dataset
+			<span class="sr-only">(nouvelle fenêtre)</span>
 		</a>
 	</p>
 </article>

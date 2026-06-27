@@ -23,14 +23,14 @@
 		}
 
 		if ((resource.format ?? '').toLowerCase() === 'csv') {
-			return 'Apercu CSV: en-tetes detectes, quelques lignes de donnees et separateur standard attendus.';
+			return 'Apercu CSV: en-têtes détectés, quelques lignes de données et séparateur standard attendus.';
 		}
 
 		if ((resource.format ?? '').toLowerCase() === 'json') {
-			return 'Apercu JSON: structure objet/tableau attendue avec cles principales et echantillon de valeurs.';
+			return 'Apercu JSON: structure objet/tableau attendue avec clés principales et échantillon de valeurs.';
 		}
 
-		return 'Apercu texte: extrait court de contenu brut pour verification rapide du format.';
+		return 'Apercu texte: extrait court de contenu brut pour vérification rapide du format.';
 	});
 	const breadcrumbItems = $derived([
 		{ label: 'Recherche', href: searchHref },
@@ -51,29 +51,29 @@
 			<EmptyState
 				variant="error"
 				title="Erreur lors du chargement de la ressource"
-				description={data.errorMessage ?? 'Verifiez votre connexion et reessayez.'}
+				description={data.errorMessage ?? 'Vérifiez votre connexion et réessayez.'}
 			>
 				{#snippet action()}
-					<a href={searchHref}>Retour a la recherche</a>
+					<a href={searchHref}>Retour à la recherche</a>
 				{/snippet}
 			</EmptyState>
 		{:else if data.status === 'not-found'}
 			<EmptyState
 				title="Ressource introuvable"
-				description="La ressource {data.resourceId} n'existe pas dans notre base. Verifiez l'URL ou retournez a la recherche."
+				description="La ressource {data.resourceId} n'existe pas dans notre base. Vérifiez l'URL ou retournez à la recherche."
 			>
 				{#snippet action()}
-					<a href={searchHref}>Retour a la recherche</a>
+					<a href={searchHref}>Retour à la recherche</a>
 				{/snippet}
 			</EmptyState>
 		{:else if data.status === 'contract-error'}
 			<EmptyState
 				variant="error"
 				title="Affichage impossible"
-				description="Cette ressource n'a pas pu etre affichee correctement. Reessayez ou retournez a la recherche."
+				description="Cette ressource n'a pas pu être affichée correctement. Réessayez ou retournez à la recherche."
 			>
 				{#snippet action()}
-					<a href={searchHref}>Retour a la recherche</a>
+					<a href={searchHref}>Retour à la recherche</a>
 				{/snippet}
 			</EmptyState>
 		{:else if resource}
@@ -82,44 +82,44 @@
 			<dl class="details" aria-label="Informations ressource">
 				<div>
 					<dt>Format</dt>
-					<dd>{resource.format ?? 'Non renseigne'}</dd>
+					<dd>{resource.format ?? 'Non renseigné'}</dd>
 				</div>
 				<div>
 					<dt>Taille</dt>
-					<dd>{resource.size_bytes ?? 'Non renseignee'}</dd>
+					<dd>{resource.size_bytes ?? 'Non renseignée'}</dd>
 				</div>
 				<div>
 					<dt>Creation</dt>
-					<dd>{resource.created ?? 'Non renseignee'}</dd>
+					<dd>{resource.created ?? 'Non renseignée'}</dd>
 				</div>
 				<div>
 					<dt>Derniere modification</dt>
-					<dd>{resource.last_modified ?? 'Non renseignee'}</dd>
+					<dd>{resource.last_modified ?? 'Non renseignée'}</dd>
 				</div>
 				<div>
 					<dt>Dataset parent</dt>
-					<dd>{resource.dataset_title ?? 'Non renseigne'}</dd>
+					<dd>{resource.dataset_title ?? 'Non renseigné'}</dd>
 				</div>
 			</dl>
 
-			<section class="preview" aria-label="Previsualisation ressource">
-				<h4 class="preview-title">Previsualisation courte</h4>
+			<section class="preview" aria-label="Prévisualisation ressource">
+				<h4 class="preview-title">Prévisualisation courte</h4>
 				{#if isPreviewCompatible}
 					<p class="preview-text">{previewText}</p>
 				{:else}
 					<p class="preview-text" role="status">
-						Previsualisation non disponible pour le format {resource.format ?? 'inconnu'}.
+						Prévisualisation non disponible pour le format {resource.format ?? 'inconnu'}.
 					</p>
 				{/if}
 			</section>
 
 			<nav class="links" aria-label="Navigation ressource">
-				<a href={searchHref}>Retour a la recherche</a>
+				<a href={searchHref}>Retour à la recherche</a>
 				{#if datasetLink}
-					<a href={datasetLink}>Retour a la fiche dataset</a>
+					<a href={datasetLink}>Retour à la fiche dataset</a>
 				{/if}
 				{#if safeSourceUrl}
-					<a href={safeSourceUrl} target="_blank" rel="noreferrer noopener">Ouvrir l URL source</a>
+					<a href={safeSourceUrl} target="_blank" rel="noreferrer noopener">Ouvrir l'URL source</a>
 				{:else if resource.url}
 					<span class="link-disabled" role="status">URL source non conforme</span>
 				{/if}

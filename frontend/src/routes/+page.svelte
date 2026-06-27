@@ -19,10 +19,10 @@
 
 	const PAGE_SIZE = 10;
 	const sortLabels: Record<SortValue, string> = {
-		modified_desc: 'Date (plus recent)',
+		modified_desc: 'Date (plus récent)',
 		modified_asc: 'Date (plus ancien)',
-		quality_desc: 'Qualite (meilleure)',
-		quality_asc: 'Qualite (moins bonne)',
+		quality_desc: 'Qualité (meilleure)',
+		quality_asc: 'Qualité (moins bonne)',
 		hybrid: 'Pertinence (hybride)',
 		title_asc: 'Nom (A-Z)',
 		title_desc: 'Nom (Z-A)'
@@ -76,9 +76,9 @@
 		(selectedOrg ? 1 : 0) + (selectedFormat ? 1 : 0) + (selectedTag ? 1 : 0)
 	);
 
-	// Badges d'etat refletant l'etat reel de l'interface
+	// Badges d'état reflétant l'état réel de l'interface
 	const readyState = $derived(errorMessage ? 'danger' : isLoading ? 'warning' : 'success');
-	const readyLabel = $derived(errorMessage ? 'Erreur' : isLoading ? 'Recherche en cours…' : 'Pret');
+	const readyLabel = $derived(errorMessage ? 'Erreur' : isLoading ? 'Recherche en cours…' : 'Prêt');
 	const sortLabel = $derived(sortLabels[sort] ?? 'Tri');
 	const pageLabel = $derived(`Page ${currentPage}/${totalPages}`);
 
@@ -289,7 +289,7 @@
 	</Card>
 
 	{#if isLoading}
-		<div role="status" aria-live="polite" aria-label="Chargement des resultats">
+		<div role="status" aria-live="polite" aria-label="Chargement des résultats">
 			<ul class="results">
 				{#each Array(3) as _}
 					<li><SkeletonCard /></li>
@@ -306,9 +306,9 @@
 		{#key resultsKey}
 			<div class="results-wrapper" in:fade={{ duration: 300 }} out:fade={{ duration: 150 }}>
 				<p class="results-summary" tabindex="-1" bind:this={resultHeading}>
-					{data.total} resultats trouves.
+					{data.total} résultats trouvés.
 				</p>
-				<ul class="results" aria-label="Resultats de recherche">
+				<ul class="results" aria-label="Résultats de recherche">
 					{#each data.datasets as dataset (dataset.id)}
 						<li>
 							<CardDataset
@@ -324,9 +324,9 @@
 			</div>
 		{/key}
 
-		<nav class="pagination" aria-label="Pagination resultats">
+		<nav class="pagination" aria-label="Pagination résultats">
 			<Button
-				label="Precedent"
+				label="Précédent"
 				variant="ghost"
 				disabled={!canGoPrev}
 				onclick={async () => {
@@ -345,7 +345,7 @@
 		</nav>
 	{:else}
 		<EmptyState
-			title="Aucun resultat pour cette recherche"
+			title="Aucun résultat pour cette recherche"
 			description="Essayez de modifier vos filtres ou votre terme de recherche."
 		/>
 	{/if}
@@ -357,7 +357,7 @@
 	/>
 
 	{#if data?.facets}
-		<Card title="Facettes" subtitle="Aide a la navigation des resultats">
+		<Card title="Facettes" subtitle="Aide à la navigation des résultats">
 			<div class="facets-grid">
 				<section>
 					<h3>Organisations</h3>

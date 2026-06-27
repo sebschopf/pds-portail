@@ -16,9 +16,9 @@
 			? appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}`, searchContext)
 			: null
 	);
-	const ponderationLink = $derived(
+	const pondérationLink = $derived(
 		dataset?.id
-			? appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}/ponderation`, searchContext)
+			? appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}/pondération`, searchContext)
 			: null
 	);
 	const datasetApiLink = $derived(dataset?.id ? `/api/v1/dataset/${encodeURIComponent(dataset.id)}` : null);
@@ -39,50 +39,50 @@
 		{#if data.status === 'error'}
 			<EmptyState
 				variant="error"
-				title="Impossible de charger ce jeu de donnees"
-				description="Verifiez votre connexion et reessayez. {data.errorMessage ?? 'Erreur inconnue'}"
+				title="Impossible de charger ce jeu de données"
+				description="Vérifiez votre connexion et réessayez. {data.errorMessage ?? 'Erreur inconnue'}"
 			>
 				{#snippet action()}
-					<a href={searchHref}>Retour a la recherche</a>
+					<a href={searchHref}>Retour à la recherche</a>
 				{/snippet}
 			</EmptyState>
 		{:else if data.status === 'not-found'}
 			<EmptyState
 				title="Dataset introuvable"
-				description="Le jeu de donnees {data.datasetId} n'existe pas dans notre base. Verifiez l'URL ou retournez a la recherche."
+				description="Le jeu de données {data.datasetId} n'existe pas dans notre base. Vérifiez l'URL ou retournez a la recherche."
 			>
 				{#snippet action()}
-					<a href={searchHref}>Retour a la recherche</a>
+					<a href={searchHref}>Retour à la recherche</a>
 				{/snippet}
 			</EmptyState>
 		{:else if data.status === 'contract-error'}
 			<EmptyState
 				variant="error"
 				title="Affichage impossible"
-				description="Ce jeu de donnees n'a pas pu etre affiche correctement. Reessayez ou retournez a la recherche."
+				description="Ce jeu de données n'a pas pu être affiché correctement. Reessayez ou retournez a la recherche."
 			>
 				{#snippet action()}
-					<a href={searchHref}>Retour a la recherche</a>
+					<a href={searchHref}>Retour à la recherche</a>
 				{/snippet}
 			</EmptyState>
 		{:else if dataset}
 			<h3 class="title">{dataset.title}</h3>
 
-			<section class="access-modes" aria-label="Modes d acces du dataset">
-				<h4 class="access-title">Modes d acces</h4>
+			<section class="access-modes" aria-label="Modes d'accès du dataset">
+				<h4 class="access-title">Modes d'accès</h4>
 				<dl class="access-list">
 					<div>
 						<dt>Explication du score qualite</dt>
 						<dd>
-							{#if ponderationLink}
-								<a href={ponderationLink}>Comprendre la ponderation du score qualite</a>
+							{#if pondérationLink}
+								<a href={pondérationLink}>Comprendre la pondération du score qualite</a>
 							{:else}
 								Non disponible
 							{/if}
 						</dd>
 					</div>
 					<div>
-						<dt>Acces direct (URL)</dt>
+						<dt>Accès direct (URL)</dt>
 						<dd>
 							{#if datasetDirectLink}
 								<a href={datasetDirectLink}>Ouvrir directement cette fiche dataset</a>
@@ -92,13 +92,13 @@
 						</dd>
 					</div>
 					<div>
-						<dt>Exploration guidee</dt>
+						<dt>Exploration guidée</dt>
 						<dd>
-							Naviguer via la recherche puis les ressources associees.
+							Naviguer via la recherche puis les ressources associées.
 						</dd>
 					</div>
 					<div>
-						<dt>Acces API (developpement)</dt>
+						<dt>Acces API (développement)</dt>
 						<dd>
 							{#if datasetApiLink}
 								<a href={datasetApiLink}>Consulter le endpoint dataset interne</a>
@@ -113,15 +113,15 @@
 			<dl class="details" aria-label="Informations principales dataset">
 				<div>
 					<dt>Organisation</dt>
-					<dd>{dataset.org_name ?? 'Non renseignee'}</dd>
+					<dd>{dataset.org_name ?? 'Non renseignée'}</dd>
 				</div>
 				<div>
 					<dt>Description</dt>
-					<dd>{dataset.description ?? 'Non renseignee'}</dd>
+					<dd>{dataset.description ?? 'Non renseignée'}</dd>
 				</div>
 				<div>
 					<dt>Licence</dt>
-					<dd>{dataset.license ?? 'Non renseignee'}</dd>
+					<dd>{dataset.license ?? 'Non renseignée'}</dd>
 				</div>
 			</dl>
 
@@ -140,7 +140,7 @@
 			<ResourceList resources={dataset.resources} {searchContext} />
 
 			<nav class="links" aria-label="Navigation dataset">
-				<a href={searchHref}>Retour a la recherche</a>
+				<a href={searchHref}>Retour à la recherche</a>
 				{#if orgFilterLink}
 					<a href={orgFilterLink}>Voir les datasets de cette organisation</a>
 				{/if}

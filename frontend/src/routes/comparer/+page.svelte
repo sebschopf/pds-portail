@@ -26,12 +26,12 @@
 	}
 
 	function metricLabel(value: number | null, suffix: string = ''): string {
-		return value === null ? 'Non renseigne' : `${value}${suffix}`;
+		return value === null ? 'Non renseigné' : `${value}${suffix}`;
 	}
 
-	/** Formats pour affichage (liste triee, fallback si vide). */
+	/** Formats pour affichage (liste triée, fallback si vide). */
 	function formatsLabel(formats: string[]): string {
-		return formats.length > 0 ? formats.sort().join(', ') : 'Non renseignes';
+		return formats.length > 0 ? formats.sort().join(', ') : 'Non renseignés';
 	}
 
 	function tagsLabel(tags: string[]): string {
@@ -47,42 +47,42 @@
 	<h1>Comparaison de datasets</h1>
 
 	<nav class="back-nav">
-		<a href="/" class="back-link" aria-label="Retour aux resultats de recherche">
-			← Retour aux resultats
+		<a href="/" class="back-link" aria-label="Retour aux résultats de recherche">
+			← Retour aux résultats
 		</a>
 	</nav>
 
 	{#if error}
 		<EmptyState
 			variant="error"
-			title="La comparaison a echoue"
-			description="Reessayez ou reduisez le nombre de jeux de donnees selectionnes. {error}"
+			title="La comparaison a échoué"
+			description="Réessayez ou réduisez le nombre de jeux de données sélectionnés. {error}"
 		>
 			{#snippet action()}
-				<a href="/" class="back-link">Retour a la recherche</a>
+				<a href="/" class="back-link">Retour à la recherche</a>
 			{/snippet}
 		</EmptyState>
 	{:else if items.length < 2}
 		<EmptyState
-			title="Aucun jeu de donnees a comparer"
-			description="Selectionnez au moins 2 jeux de donnees depuis les resultats de recherche."
+			title="Aucun jeu de données à comparer"
+			description="Sélectionnez au moins 2 jeux de données depuis les résultats de recherche."
 		>
 			{#snippet action()}
-				<a href="/" class="back-link">Retour a la recherche</a>
+				<a href="/" class="back-link">Retour à la recherche</a>
 			{/snippet}
 		</EmptyState>
 	{:else}
 		<!-- Desktop : tableau HTML semantique -->
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-		<div class="table-wrapper" role="region" aria-label="Tableau comparatif — defiler horizontalement si necessaire" tabindex="0">
+		<div class="table-wrapper" role="region" aria-label="Tableau comparatif — défiler horizontalement si nécessaire" tabindex="0">
 			<table class="compare-table" aria-label="Tableau comparatif de datasets">
 				<caption class="sr-only">
-					Comparaison de {items.length} datasets sur 9 criteres. Les colonnes
-					representent les datasets, les lignes les criteres de comparaison.
+					Comparaison de {items.length} datasets sur 9 critères. Les colonnes
+					représentent les datasets, les lignes les critères de comparaison.
 				</caption>
 				<thead>
 					<tr>
-						<th scope="col" class="compare-label-col">Critere</th>
+						<th scope="col" class="compare-label-col">Critère</th>
 						{#each items as item (item.id)}
 							<th scope="col" class="compare-col">
 								<a href="/dataset/{encodeURIComponent(item.id)}">{item.title}</a>
@@ -94,17 +94,17 @@
 					<tr>
 						<th scope="row" class="compare-label-col">Organisation</th>
 						{#each items as item (item.id)}
-							<td class="compare-col">{item.org_name ?? 'Non renseignee'}</td>
+							<td class="compare-col">{item.org_name ?? 'Non renseignée'}</td>
 						{/each}
 					</tr>
 					<tr>
 						<th scope="row" class="compare-label-col">Licence</th>
 						{#each items as item (item.id)}
-							<td class="compare-col">{item.license ?? 'Non renseignee'}</td>
+							<td class="compare-col">{item.license ?? 'Non renseignée'}</td>
 						{/each}
 					</tr>
 					<tr>
-						<th scope="row" class="compare-label-col">Score qualite</th>
+						<th scope="row" class="compare-label-col">Score qualité</th>
 						{#each items as item (item.id)}
 							<td class="compare-col">
 								<span class="metric-badge {qualityClass(item.quality_score)}">
@@ -114,7 +114,7 @@
 						{/each}
 					</tr>
 					<tr>
-						<th scope="row" class="compare-label-col">Completude</th>
+						<th scope="row" class="compare-label-col">Complétude</th>
 						{#each items as item (item.id)}
 							<td class="compare-col">
 								<span class="metric-badge {qualityClass(item.completeness)}">
@@ -124,12 +124,12 @@
 						{/each}
 					</tr>
 					<tr>
-						<th scope="row" class="compare-label-col">Fraicheur</th>
+						<th scope="row" class="compare-label-col">Fraîcheur</th>
 						{#each items as item (item.id)}
 							<td class="compare-col">
 								<span class="metric-badge {freshnessClass(item.freshness_days)}">
 									{item.freshness_days === null
-										? 'Non renseigne'
+										? 'Non renseigné'
 										: `${item.freshness_days} jours`}
 								</span>
 							</td>
@@ -174,26 +174,26 @@
 					</h3>
 					<dl>
 						<dt>Organisation</dt>
-						<dd>{item.org_name ?? 'Non renseignee'}</dd>
+						<dd>{item.org_name ?? 'Non renseignée'}</dd>
 						<dt>Licence</dt>
-						<dd>{item.license ?? 'Non renseignee'}</dd>
-						<dt>Score qualite</dt>
+						<dd>{item.license ?? 'Non renseignée'}</dd>
+						<dt>Score qualité</dt>
 						<dd>
 							<span class="metric-badge {qualityClass(item.quality_score)}">
 								{metricLabel(item.quality_score, '/100')}
 							</span>
 						</dd>
-						<dt>Completude</dt>
+						<dt>Complétude</dt>
 						<dd>
 							<span class="metric-badge {qualityClass(item.completeness)}">
 								{metricLabel(item.completeness, '%')}
 							</span>
 						</dd>
-						<dt>Fraicheur</dt>
+						<dt>Fraîcheur</dt>
 						<dd>
 							<span class="metric-badge {freshnessClass(item.freshness_days)}">
 								{item.freshness_days === null
-									? 'Non renseigne'
+									? 'Non renseigné'
 									: `${item.freshness_days} jours`}
 							</span>
 						</dd>

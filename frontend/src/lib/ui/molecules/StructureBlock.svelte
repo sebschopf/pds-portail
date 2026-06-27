@@ -18,7 +18,7 @@
 	const formatCount = $derived(structure.formats.length);
 
 	const fieldLabel = $derived.by(() => {
-		if (fieldCount === 0) return 'Aucun champ decrit';
+		if (fieldCount === 0) return 'Aucun champ décrit';
 		if (fieldCount === 1) return '1 champ';
 		return `${fieldCount} champs`;
 	});
@@ -31,7 +31,7 @@
 </script>
 
 <section class="structure-block" aria-label="Structure du dataset">
-	<h3 class="structure-heading">Structure du jeu de donnees</h3>
+	<h3 class="structure-heading">Structure du jeu de données</h3>
 
 	{#if hasData}
 		<div class="structure-grid">
@@ -60,22 +60,22 @@
 				{/if}
 
 				{#if structure.update_frequency}
-					<article class="meta-item" aria-label="Frequence de mise a jour">
-						<h4 class="meta-title">Frequence de mise a jour</h4>
+					<article class="meta-item" aria-label="Fréquence de mise à jour">
+						<h4 class="meta-title">Fréquence de mise à jour</h4>
 						<p class="meta-value">{structure.update_frequency}</p>
 					</article>
 				{/if}
 
 				{#if structure.last_updated}
-					<article class="meta-item" aria-label="Derniere mise a jour">
-						<h4 class="meta-title">Derniere mise a jour</h4>
+					<article class="meta-item" aria-label="Dernière mise à jour">
+						<h4 class="meta-title">Dernière mise à jour</h4>
 						<p class="meta-value">{structure.last_updated}</p>
 					</article>
 				{/if}
 			</div>
 		</div>
 	{:else}
-		<p class="structure-empty" role="status">Structure du dataset non renseignee</p>
+		<p class="structure-empty" role="status">Structure du dataset non renseignée</p>
 	{/if}
 </section>
 

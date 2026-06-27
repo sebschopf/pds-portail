@@ -84,18 +84,22 @@ class SqlAlchemySearchRepository:
                 base_filters.append(DatasetModel.tags.collate("NOCASE").like(tag_term))
 
             filters = list(base_filters)
-            if format_filter:
-                format_exists = (
-                    select(ResourceModel.id)
-                    .where(ResourceModel.dataset_id == DatasetModel.id)
-                    .where(func.upper(ResourceModel.format) == format_filter.upper())
-                    .exists()
-                )
-                filters.append(format_exists)
+            fmt_filter: str | None = format_filter
 
             # Compter les resultats totaux
-            where_clause = and_(*filters) if filters else None
-            total_query = select(func.count()).select_from(DatasetModel).join(OrganizationModel)
+            where_clause: ColumnElement[bool] | None = and_(*filters) if filters else None
+            total_query = (
+                select(func.count(func.distinct(DatasetModel.id)))
+                .select_from(DatasetModel)
+                .join(OrganizationModel)
+            )
+            if fmt_filter is not None:
+                total_query = total_query.join(
+                    ResourceModel, ResourceModel.dataset_id == DatasetModel.id
+                )
+                total_query = total_query.where(
+                    func.upper(ResourceModel.format) == fmt_filter.upper()
+                )
             if where_clause is not None:
                 total_query = total_query.where(where_clause)
             total = session.scalar(total_query) or 0
@@ -116,6 +120,13 @@ class SqlAlchemySearchRepository:
                     .order_by(*self._order_by_for_sort(sort))
                     .offset(offset)
                     .limit(limit)
+                )
+            if fmt_filter is not None:
+                dataset_query = dataset_query.join(
+                    ResourceModel, ResourceModel.dataset_id == DatasetModel.id
+                )
+                dataset_query = dataset_query.where(
+                    func.upper(ResourceModel.format) == fmt_filter.upper()
                 )
             if where_clause is not None:
                 dataset_query = dataset_query.where(where_clause)

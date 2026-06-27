@@ -6,6 +6,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [1.1.2] - 2026-06-27
 ### Added
 - PDS-69 : Polish cosmétique Frontend — intégration des 6 icônes SVG néo-brutalistes (PDS-67) dans les composants : SearchIcon+FilterIcon dans FiltersPanel, DatasetIcon+CompareIcon dans CardDataset, CompareIcon dans CompareBar. Espacements aérés (`--space-*` +25%, `--line-height-body` 1.6→1.7, `--paragraph-gap` 0.75em→1em). Correction overflow texte des `<select>` dans FiltersPanel (`text-overflow: ellipsis`). Pied de page avec lien "Sébastien Schopfer" vers schopfer.moustik.site.
+- Favicon « cube de données » — SVG 32×32 trois panneaux OKLCH (bleu primaire, jaune, rouge) évoquant une pile de données structurées. Remplace le logo Svelte par défaut.
+- Footer enrichi — identité du portail, source opendata.swiss, lien manuel d'utilisation, crédits auteur, mentions accessibilité WCAG 2.2 AA et RGPD.
+- Page `/manuel` — manuel d'utilisation complet en 6 sections (rechercher, comprendre, personnaliser, comparer, ressources, accessibilité). Lien dans le header et le footer.
 
 ### Fixed
 - PDS-70 : Timeout recherche 3+ termes — l'expansion multilingue générait une explosion combinatoire de clauses LIKE (50+ termes → 200+ LIKE → timeout SQLite). Ajout d'une limite `MAX_EXPANSION_TERMS=12` dans `search_repository.py`, les termes originaux de l'utilisateur étant prioritaires (placés en tête de `all_terms`).

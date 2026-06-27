@@ -72,13 +72,13 @@ describe('dataset/[id] page', () => {
 		expect(view.body).toContain('href="/"');
 		expect(view.body).toContain('org-1');
 		expect(view.body).toContain('page=1');
-		expect(view.body).toContain('Modes d acces');
-		expect(view.body).toContain('Explication du score qualite');
-		expect(view.body).toContain('Comprendre la ponderation du score qualite');
+		expect(view.body).toContain("Modes d'accès");
+		expect(view.body).toContain('Explication du score qualité');
+		expect(view.body).toContain('Comprendre la pondération du score qualité');
 		expect(view.body).toContain('href="/dataset/dataset-1/ponderation"');
-		expect(view.body).toContain('Acces direct (URL)');
-		expect(view.body).toContain('Exploration guidee');
-		expect(view.body).toContain('Acces API (developpement)');
+		expect(view.body).toContain('Accès direct (URL)');
+		expect(view.body).toContain('Exploration guidée');
+		expect(view.body).toContain('Accès API (développement)');
 		expect(view.body).toContain('href="/dataset/dataset-1"');
 		expect(view.body).toContain('href="/api/v1/dataset/dataset-1"');
 	});
@@ -112,7 +112,7 @@ describe('dataset/[id] page', () => {
 		});
 
 		expect(view.body).toContain('5 jours');
-		expect(view.body).toContain('Mise a jour recente');
+		expect(view.body).toContain('Mise à jour récente');
 	});
 
 	it('affiche le message fraicheur pour dataset modere (30-180 jours)', () => {
@@ -127,7 +127,7 @@ describe('dataset/[id] page', () => {
 		});
 
 		expect(view.body).toContain('90 jours');
-		expect(view.body).toContain('Mise a jour moderee');
+		expect(view.body).toContain('Mise à jour modérée');
 	});
 
 	it('affiche le message fraicheur pour dataset ancien (> 180 jours)', () => {
@@ -142,7 +142,7 @@ describe('dataset/[id] page', () => {
 		});
 
 		expect(view.body).toContain('250 jours');
-		expect(view.body).toContain('Donnees anciennes');
+		expect(view.body).toContain('Données anciennes');
 	});
 
 	it('affiche un signal pour fraicheur non renseignee', () => {
@@ -156,7 +156,7 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Non renseignee');
+		expect(view.body).toContain('Non renseignée');
 	});
 
 	it('affiche la completude avec le detail des 5 checks', () => {
@@ -171,7 +171,7 @@ describe('dataset/[id] page', () => {
 		});
 
 		expect(view.body).toContain('80/100');
-		expect(view.body).toContain('Qualite');
+		expect(view.body).toContain('Qualité');
 		expect(view.body).toContain('85');
 	});
 
@@ -202,7 +202,7 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Structure du jeu de donnees');
+		expect(view.body).toContain('Structure du jeu de données');
 		expect(view.body).toContain('Champs disponibles');
 		expect(view.body).toContain('Nom');
 		expect(view.body).toContain('Prenom');
@@ -212,9 +212,9 @@ describe('dataset/[id] page', () => {
 		expect(view.body).toContain('Formats de fichier');
 		expect(view.body).toContain('CSV');
 		expect(view.body).toContain('JSON');
-		expect(view.body).toContain('Frequence de mise a jour');
+		expect(view.body).toContain('Fréquence de mise à jour');
 		expect(view.body).toContain('Annuelle');
-		expect(view.body).toContain('Derniere mise a jour');
+		expect(view.body).toContain('Dernière mise à jour');
 		expect(view.body).toContain('2026-01-15');
 	});
 
@@ -229,7 +229,7 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Ressources associees');
+		expect(view.body).toContain('Ressources associées');
 		expect(view.body).toContain('Population communale');
 		expect(view.body).toContain('https://example.com/population.csv');
 		expect(view.body).toContain('/resource/resource-1');
@@ -269,8 +269,8 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Structure du jeu de donnees');
-		expect(view.body).toContain('Structure du dataset non renseignee');
+		expect(view.body).toContain('Structure du jeu de données');
+		expect(view.body).toContain('Structure du dataset non renseignée');
 		expect(view.body).not.toContain('Champs disponibles');
 		expect(view.body).not.toContain('Formats de fichier');
 	});
@@ -286,8 +286,8 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Ressources associees');
-		expect(view.body).toContain('Aucune ressource associee disponible');
+		expect(view.body).toContain('Ressources associées');
+		expect(view.body).toContain('Aucune ressource associée disponible');
 	});
 
 	it('porte les labels ARIA attendus pour les zones de navigation de la fiche', () => {
@@ -303,7 +303,7 @@ describe('dataset/[id] page', () => {
 
 		expect(view.body).toContain('aria-label="Fil de navigation dataset"');
 		expect(view.body).toContain('aria-label="Navigation dataset"');
-		expect(view.body).toContain('aria-label="Ressources associees"');
+		expect(view.body).toContain('aria-label="Ressources associées"');
 		expect(view.body).toContain('aria-label="Structure du dataset"');
 	});
 
@@ -346,7 +346,7 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Retour a la recherche');
+		expect(view.body).toContain('Retour à la recherche');
 		expect(view.body).not.toContain('<h3 class="title');
 	});
 
@@ -361,9 +361,9 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Non renseignee');
+		expect(view.body).toContain('Non renseignée');
 		expect(view.body).not.toContain('Voir les datasets de cette organisation');
-		expect(view.body).toContain('Comprendre la ponderation du score qualite');
+		expect(view.body).toContain('Comprendre la pondération du score qualité');
 		expect(view.body).toContain('href="/dataset/dataset-2/ponderation"');
 	});
 
@@ -378,7 +378,7 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Non renseignee');
+		expect(view.body).toContain('Non renseignée');
 	});
 
 	it('affiche les alertes pour valeurs manquantes', () => {
@@ -392,6 +392,6 @@ describe('dataset/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Non renseignee');
+		expect(view.body).toContain('Non renseignée');
 	});
 });

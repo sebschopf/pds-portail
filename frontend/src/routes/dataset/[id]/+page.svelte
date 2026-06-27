@@ -18,7 +18,7 @@
 	);
 	const pondérationLink = $derived(
 		dataset?.id
-			? appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}/pondération`, searchContext)
+			? appendSearchContext(`/dataset/${encodeURIComponent(dataset.id)}/ponderation`, searchContext)
 			: null
 	);
 	const datasetApiLink = $derived(dataset?.id ? `/api/v1/dataset/${encodeURIComponent(dataset.id)}` : null);
@@ -72,10 +72,10 @@
 				<h4 class="access-title">Modes d'accès</h4>
 				<dl class="access-list">
 					<div>
-						<dt>Explication du score qualite</dt>
+						<dt>Explication du score qualité</dt>
 						<dd>
 							{#if pondérationLink}
-								<a href={pondérationLink}>Comprendre la pondération du score qualite</a>
+								<a href={pondérationLink}>Comprendre la pondération du score qualité</a>
 							{:else}
 								Non disponible
 							{/if}
@@ -98,7 +98,7 @@
 						</dd>
 					</div>
 					<div>
-						<dt>Acces API (développement)</dt>
+						<dt>Accès API (développement)</dt>
 						<dd>
 							{#if datasetApiLink}
 								<a href={datasetApiLink}>Consulter le endpoint dataset interne</a>

@@ -67,7 +67,7 @@ describe('CardDataset', () => {
 			props: { dataset: { ...BASE_DATASET, org_name: null } }
 		});
 
-		expect(view.body).toContain('Non renseignee');
+		expect(view.body).toContain('Non renseignée');
 	});
 
 	it('affiche le fallback description quand description est null', () => {
@@ -83,7 +83,7 @@ describe('CardDataset', () => {
 			props: { dataset: { ...BASE_DATASET, resource_formats: [] } }
 		});
 
-		expect(view.body).toContain('Non renseigne');
+		expect(view.body).toContain('Non renseigné');
 	});
 
 	it('affiche le fallback tags quand tags est vide', () => {
@@ -91,7 +91,7 @@ describe('CardDataset', () => {
 			props: { dataset: { ...BASE_DATASET, tags: [] } }
 		});
 
-		expect(view.body).toContain('Non renseignes');
+		expect(view.body).toContain('Non renseignés');
 	});
 
 	it('affiche les metriques null avec le fallback Non renseigne', () => {
@@ -106,7 +106,7 @@ describe('CardDataset', () => {
 			}
 		});
 
-		expect(view.body.match(/Non renseigne/g)?.length).toBeGreaterThanOrEqual(3);
+		expect(view.body.match(/Non renseigné/g)?.length).toBeGreaterThanOrEqual(3);
 	});
 
 	it('tronque les tags au-dela de 5 avec une ellipse visuellement masquee et un libelle accessible', () => {
@@ -120,7 +120,7 @@ describe('CardDataset', () => {
 		});
 
 		expect(view.body).toContain('aria-hidden="true"');
-		expect(view.body).toContain('et d autres tags');
+		expect(view.body).toContain('et d\'autres tags');
 		expect(view.body).not.toContain('tag6');
 	});
 
@@ -156,8 +156,8 @@ describe('CardDataset', () => {
 		});
 
 		expect(view.body).toContain('Mots de la recherche dans le titre ou la description');
-		expect(view.body).toContain('Qualite technique des metadonnees');
-		expect(view.body).toContain('Fraicheur des donnees');
+		expect(view.body).toContain('Qualité technique des métadonnées');
+		expect(view.body).toContain('Fraîcheur des données');
 	});
 
 	it('affiche le lien vers la page ponderation quand ranking_signals est fourni', () => {
@@ -183,7 +183,7 @@ describe('CardDataset', () => {
 		});
 
 		expect(view.body).not.toContain('Mots de la recherche');
-		expect(view.body).not.toContain('Fraicheur des donnees');
-		expect(view.body).toContain('Qualite technique des metadonnees');
+		expect(view.body).not.toContain('Fraîcheur des données');
+		expect(view.body).toContain('Qualité technique des métadonnées');
 	});
 });

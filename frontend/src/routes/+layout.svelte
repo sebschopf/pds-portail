@@ -42,9 +42,12 @@
 	<header>
 		<p class="kicker">PDS Portail</p>
 		<h1>Explorateur Open Data Suisse</h1>
-		<button type="button" class="readable-toggle" onclick={toggleReadableMode}>
-			{readableMode ? 'Mode lecture: actif' : 'Mode lecture: inactif'}
-		</button>
+		<nav class="header-actions" aria-label="Navigation secondaire">
+			<a href="/manuel" class="header-link">Manuel</a>
+			<button type="button" class="readable-toggle" onclick={toggleReadableMode}>
+				{readableMode ? 'Mode lecture: actif' : 'Mode lecture: inactif'}
+			</button>
+		</nav>
 	</header>
 
 	{#if navigating.to}
@@ -60,11 +63,19 @@
 	</main>
 
 	<footer class="site-footer">
-		<p>
-			<a href="https://schopfer.moustik.site" target="_blank" rel="noopener noreferrer">
-				Sébastien Schopfer
-			</a>
-		</p>
+		<div class="footer-content">
+			<div class="footer-identity">
+				<p class="footer-name">PDS Portail — Explorateur Open Data Suisse</p>
+				<p class="footer-source">Données issues d’<a href="https://opendata.swiss" target="_blank" rel="noopener noreferrer">opendata.swiss</a> (CKAN, OGD Suisse)</p>
+			</div>
+			<nav class="footer-links" aria-label="Liens du pied de page">
+				<a href="/manuel">Manuel d’utilisation</a>
+			</nav>
+		</div>
+		<div class="footer-meta">
+			<p>Conçu par <a href="https://schopfer.moustik.site" target="_blank" rel="noopener noreferrer">Sébastien Schopfer</a></p>
+			<p>Accessibilité WCAG 2.2 AA · Conforme RGPD</p>
+		</div>
 	</footer>
 </div>
 
@@ -133,6 +144,35 @@
 		outline: none;
 	}
 
+	.header-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		margin-top: var(--space-3);
+	}
+
+	.header-link {
+		font-size: var(--font-size-ui);
+		font-weight: 650;
+		color: var(--color-primary);
+		text-decoration-thickness: 2px;
+		padding: var(--space-2) var(--space-3);
+		min-height: var(--size-control-md);
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.header-link:hover {
+		color: var(--color-on-surface);
+	}
+
+	.header-link:focus-visible {
+		outline: var(--outline-focus) solid var(--color-focus-ring);
+		outline-offset: var(--outline-offset);
+	}
+
+	/* ── Footer ─────────────────────────────── */
+
 	.site-footer {
 		margin-top: var(--space-7);
 		padding-top: var(--space-4);
@@ -140,9 +180,58 @@
 		text-align: center;
 	}
 
-	.site-footer p {
+	.footer-content {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		align-items: baseline;
+		gap: var(--space-4);
+		margin-bottom: var(--space-3);
+	}
+
+	.footer-identity {
+		text-align: left;
+	}
+
+	.footer-name {
 		margin: 0;
 		font-size: var(--font-size-ui);
+		font-weight: 700;
+		color: var(--color-on-surface);
+	}
+
+	.footer-source {
+		margin: 0;
+		font-size: var(--font-size-caption);
+		color: var(--color-on-surface-subtle);
+	}
+
+	.footer-links {
+		display: flex;
+		gap: var(--space-3);
+	}
+
+	.footer-links a {
+		font-size: var(--font-size-ui);
+		font-weight: 650;
+		color: var(--color-primary);
+		text-decoration-thickness: 2px;
+	}
+
+	.footer-links a:hover {
+		color: var(--color-on-surface);
+	}
+
+	.footer-meta {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: var(--space-3);
+	}
+
+	.footer-meta p {
+		margin: 0;
+		font-size: var(--font-size-caption);
 		color: var(--color-on-surface-subtle);
 	}
 

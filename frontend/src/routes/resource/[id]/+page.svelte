@@ -23,14 +23,14 @@
 		}
 
 		if ((resource.format ?? '').toLowerCase() === 'csv') {
-			return 'Apercu CSV: en-têtes détectés, quelques lignes de données et séparateur standard attendus.';
+			return 'Aperçu CSV: en-têtes détectés, quelques lignes de données et séparateur standard attendus.';
 		}
 
 		if ((resource.format ?? '').toLowerCase() === 'json') {
-			return 'Apercu JSON: structure objet/tableau attendue avec clés principales et échantillon de valeurs.';
+			return 'Aperçu JSON: structure objet/tableau attendue avec clés principales et échantillon de valeurs.';
 		}
 
-		return 'Apercu texte: extrait court de contenu brut pour vérification rapide du format.';
+		return 'Aperçu texte: extrait court de contenu brut pour vérification rapide du format.';
 	});
 	const breadcrumbItems = $derived([
 		{ label: 'Recherche', href: searchHref },
@@ -89,11 +89,11 @@
 					<dd>{resource.size_bytes ?? 'Non renseignée'}</dd>
 				</div>
 				<div>
-					<dt>Creation</dt>
+					<dt>Création</dt>
 					<dd>{resource.created ?? 'Non renseignée'}</dd>
 				</div>
 				<div>
-					<dt>Derniere modification</dt>
+					<dt>Dernière modification</dt>
 					<dd>{resource.last_modified ?? 'Non renseignée'}</dd>
 				</div>
 				<div>

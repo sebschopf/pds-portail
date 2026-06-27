@@ -30,10 +30,10 @@ describe('resource/[id] page', () => {
 		expect(view.body).toContain('Ressource mobilite communale');
 		expect(view.body).toContain('Dataset mobilite');
 		expect(view.body).toContain('href="/dataset/dataset-1"');
-		expect(view.body).toContain('Ouvrir l URL source');
+		expect(view.body).toContain("Ouvrir l\'URL source");
 		expect(view.body).toContain('href="/"');
-		expect(view.body).toContain('Previsualisation courte');
-		expect(view.body).toContain('Apercu CSV');
+		expect(view.body).toContain('Prévisualisation courte');
+		expect(view.body).toContain('Aperçu CSV');
 	});
 
 	it('affiche les fallbacks non renseigne quand les valeurs sont absentes', () => {
@@ -56,11 +56,11 @@ describe('resource/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Non renseigne');
-		expect(view.body).toContain('Non renseignee');
+		expect(view.body).toContain('Non renseigné');
+		expect(view.body).toContain('Non renseignée');
 		expect(view.body).not.toContain('Retour a la fiche dataset');
-		expect(view.body).not.toContain('Ouvrir l URL source');
-		expect(view.body).toContain('Previsualisation non disponible pour le format inconnu');
+		expect(view.body).not.toContain("Ouvrir l\'URL source");
+		expect(view.body).toContain('Prévisualisation non disponible pour le format inconnu');
 	});
 
 	it('affiche une previsualisation non disponible pour un format non compatible', () => {
@@ -77,8 +77,8 @@ describe('resource/[id] page', () => {
 			}
 		});
 
-		expect(view.body).toContain('Previsualisation courte');
-		expect(view.body).toContain('Previsualisation non disponible pour le format XLSX');
+		expect(view.body).toContain('Prévisualisation courte');
+		expect(view.body).toContain('Prévisualisation non disponible pour le format XLSX');
 	});
 
 	it('garde un message explicite en cas d erreur backend', () => {
@@ -93,7 +93,7 @@ describe('resource/[id] page', () => {
 		});
 
 		expect(view.body).toContain('Erreur API 500');
-		expect(view.body).toContain('Retour a la recherche');
+		expect(view.body).toContain('Retour à la recherche');
 	});
 
 	it('propose une sortie claire quand la ressource est introuvable', () => {
@@ -108,7 +108,7 @@ describe('resource/[id] page', () => {
 
 		expect(view.body).toContain('Ressource introuvable');
 		expect(view.body).toContain("n'existe pas dans notre base");
-		expect(view.body).toContain('Retour a la recherche');
+		expect(view.body).toContain('Retour à la recherche');
 	});
 
 	it('preserve le contexte de recherche sur les liens de retour', () => {

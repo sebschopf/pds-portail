@@ -76,6 +76,12 @@
 		(selectedOrg ? 1 : 0) + (selectedFormat ? 1 : 0) + (selectedTag ? 1 : 0)
 	);
 
+	// Badges d'etat refletant l'etat reel de l'interface
+	const readyState = $derived(errorMessage ? 'danger' : isLoading ? 'warning' : 'success');
+	const readyLabel = $derived(errorMessage ? 'Erreur' : isLoading ? 'Recherche en cours…' : 'Pret');
+	const sortLabel = $derived(sortLabels[sort] ?? 'Tri');
+	const pageLabel = $derived(`Page ${currentPage}/${totalPages}`);
+
 	const organizations = $derived.by(() => data?.facets?.organizations ?? []);
 	const formats = $derived.by(() => data?.facets?.formats ?? []);
 	const tags = $derived.by(() => data?.facets?.tags ?? []);
@@ -243,11 +249,13 @@
 
 <PageLayout>
 	<Card title="Recherche datasets" subtitle="Appels reels sur le contrat backend PDS-6bis">
-		<div class="badges" aria-label="Etats interface">
-			<StateBadge label="Pret" variant="info" />
-			<StateBadge label="Tri actif" variant="success" />
-			<StateBadge label="Pagination" variant="warning" />
-			<StateBadge label="Erreur" variant="danger" />
+		<div class="badges" aria-label="Etats de l'interface" role="status" aria-live="polite">
+			<StateBadge label={readyLabel} variant={readyState} />
+			<StateBadge label={sortLabel} variant="info" />
+			<StateBadge label={pageLabel} variant="warning" />
+			{#if errorMessage}
+				<StateBadge label={errorMessage} variant="danger" />
+			{/if}
 		</div>
 
 		<FiltersPanel

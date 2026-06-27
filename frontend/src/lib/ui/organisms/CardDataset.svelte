@@ -175,7 +175,7 @@
 		align-items: center;
 		gap: var(--space-2);
 		color: var(--color-on-surface-subtle);
-		flex-shrink: 0;
+		min-width: 0;
 	}
 
 	.compare-check {

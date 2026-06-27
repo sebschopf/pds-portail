@@ -20,8 +20,9 @@
 	aria-label={label}
 	role="img"
 >
-	<rect x="2" y="3" width="20" height="5" />
-	<rect x="2" y="10" width="20" height="5" />
-	<rect x="2" y="17" width="20" height="5" />
-	<line x1="6" y1="3" x2="6" y2="22" />
+	<path d="M4 2h16v20H4z" />
+	<line x1="8" y1="7" x2="18" y2="7" />
+	<line x1="8" y1="11" x2="18" y2="11" />
+	<line x1="8" y1="15" x2="18" y2="15" />
+	<line x1="8" y1="19" x2="16" y2="19" />
 </svg>

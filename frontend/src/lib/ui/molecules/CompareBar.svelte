@@ -23,7 +23,7 @@
 {#if count > 0}
 	<div transition:slide={{ duration: 300 }} class="compare-bar" role="status" aria-live="polite" aria-label="Barre de comparaison">
 		<p class="compare-label">
-			<CompareIcon size="var(--icon-size-sm)" label="Comparer" />
+			<CompareIcon size="var(--icon-size-md)" label="Comparer" />
 			{label}
 		</p>
 		<div class="compare-actions">

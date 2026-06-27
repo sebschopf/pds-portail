@@ -79,7 +79,7 @@
 					onchange={() => onToggleCompare(dataset.id)}
 					aria-label={isCompared ? `Retirer ${dataset.title} de la comparaison` : `Ajouter ${dataset.title} a la comparaison`}
 				/>
-				<CompareIcon size="var(--icon-size-sm)" label="Comparer" />
+				<CompareIcon size="var(--icon-size-md)" label="Comparer" />
 				<span>Comparer</span>
 			</label>
 		</div>
@@ -172,7 +172,7 @@
 
 	.title-icon-group {
 		display: flex;
-		align-items: flex-start;
+		align-items: center;
 		gap: var(--space-2);
 		color: var(--color-on-surface-subtle);
 		flex-shrink: 0;

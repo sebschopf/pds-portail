@@ -36,7 +36,7 @@
 	--outline-offset: 2px;
 
 	/* Icônes */
-	--icon-size-sm: 1rem;
-	--icon-size-md: 1.25rem;
-	--icon-size-lg: 1.5rem;
+	--icon-size-sm: 1.125rem;
+	--icon-size-md: 1.5rem;
+	--icon-size-lg: 1.75rem;
 }

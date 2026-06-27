@@ -125,7 +125,7 @@
 
 	<fieldset class="facets-toolbar">
 		<legend class="facets-legend">
-			<FilterIcon size="var(--icon-size-sm)" label="Filtrer" />
+			<FilterIcon size="var(--icon-size-md)" label="Filtrer" />
 			Filtres facettes
 		</legend>
 		<label class="select-field" for="facet-org">

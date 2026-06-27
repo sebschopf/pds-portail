@@ -20,6 +20,6 @@
 	aria-label={label}
 	role="img"
 >
-	<circle cx="10" cy="10" r="7" />
-	<line x1="15.5" y1="15.5" x2="22" y2="22" />
+	<circle cx="11" cy="11" r="7" />
+	<line x1="16" y1="16" x2="21" y2="21" />
 </svg>

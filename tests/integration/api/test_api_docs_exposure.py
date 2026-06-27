@@ -14,10 +14,15 @@ def _configure_main_module():
 
     import app.core.config as config_module
     import app.infrastructure.persistence.database as database_module
+    import app.infrastructure.persistence.models as models_module
     import app.main as main_module
 
     config_module.get_settings.cache_clear()
     database_module = importlib.reload(database_module)
+    # PDS-69 : recharger aussi les modeles pour qu'ils soient lies au nouveau
+    # Base.metadata cree par le reload(database_module). Sans cela, les modeles
+    # restent sur l'ancien Base → create_all() ne cree rien.
+    models_module = importlib.reload(models_module)
     main_module = importlib.reload(main_module)
 
     return database_module, main_module

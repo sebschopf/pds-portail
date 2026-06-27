@@ -35,7 +35,7 @@
 
 <PageLayout>
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation dataset" />
-	<Card title="Fiche dataset" subtitle="Contrat backend endpoint dataset detail">
+	<Card title="Fiche dataset">
 		{#if data.status === 'error'}
 			<EmptyState
 				variant="error"

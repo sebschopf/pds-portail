@@ -46,7 +46,7 @@
 
 <PageLayout>
 	<Breadcrumb items={breadcrumbItems} ariaLabel="Fil de navigation ressource" />
-	<Card title="Fiche ressource" subtitle="Contrat backend endpoint resource detail">
+	<Card title="Fiche ressource">
 		{#if data.status === 'error'}
 			<EmptyState
 				variant="error"

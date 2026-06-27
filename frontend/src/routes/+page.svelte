@@ -254,7 +254,7 @@
 </svelte:head>
 
 <PageLayout>
-	<Card title="Recherche datasets" subtitle="Appels reels sur le contrat backend PDS-6bis">
+	<Card title="Recherche datasets">
 		<div class="badges" aria-label="Etats de l'interface" role="status" aria-live="polite">
 			<StateBadge label={readyLabel} variant={readyState} />
 			<StateBadge label={sortLabel} variant="info" />

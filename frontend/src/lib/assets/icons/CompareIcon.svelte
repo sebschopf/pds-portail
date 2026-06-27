@@ -20,8 +20,8 @@
 	aria-label={label}
 	role="img"
 >
-	<polyline points="8,6 4,10 8,14" />
-	<line x1="4" y1="10" x2="16" y2="10" />
-	<polyline points="16,18 20,14 16,10" />
-	<line x1="20" y1="14" x2="8" y2="14" />
+	<path d="M2,3h5v12H2z M4,5h1v8H4z" />
+	<path d="M17,9v12h5V9H17z M20,11h1v8h-1z" />
+	<path d="M12,3l4,4l-4,4V8H9V6h3V3z" />
+	<path d="M12,16h3v2h-3v3l-4-4l4-4V16z" />
 </svg>

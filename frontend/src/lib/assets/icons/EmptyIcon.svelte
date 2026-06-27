@@ -20,9 +20,9 @@
 	aria-label={label}
 	role="img"
 >
-	<rect x="3" y="5" width="18" height="14" />
-	<line x1="3" y1="5" x2="12" y2="12" />
-	<line x1="21" y1="5" x2="12" y2="12" />
-	<line x1="7" y1="9" x2="7" y2="15" />
-	<line x1="17" y1="9" x2="17" y2="15" />
+	<polygon points="2,10 12,4 22,10 12,16" />
+	<polygon points="2,10 2,20 12,24 12,16" />
+	<polygon points="22,10 22,20 12,24 12,16" />
+	<polyline points="4,12 4,18" />
+	<polyline points="20,12 20,18" />
 </svg>

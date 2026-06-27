@@ -33,10 +33,16 @@ body {
 /* ── Mode lecture (accessibilité) ────────── */
 
 body.readable {
-	--font-size-body: 1.27rem;
-	--line-height-body: 1.8;
-	letter-spacing: 0.01em;
-	word-spacing: 0.06em;
+	--font-size-body: 1.5rem;
+	--line-height-body: 2;
+	--font-size-ui: 1.2rem;
+	--font-size-heading-sm: 1.2rem;
+	--font-size-heading-md: 1.35rem;
+	--font-size-heading-lg: 1.4rem;
+	--font-size-heading-xl: 1.5rem;
+	--paragraph-gap: 1.25em;
+	letter-spacing: 0.02em;
+	word-spacing: 0.1em;
 }
 
 /* ── Éléments de base ────────────────────── */

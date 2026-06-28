@@ -30,6 +30,42 @@ engine = create_engine(settings.database_url, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
+def _migrate_add_source_column() -> None:
+    """Ajoute la colonne `source` aux tables existantes (PDS-71).
+
+    SQLAlchemy create_all ne gere pas les migrations de schema (ALTER TABLE).
+    On ajoute la colonne en SQL brut si elle n'existe pas deja.
+    En SQLite, ALTER TABLE ADD COLUMN avec NOT NULL DEFAULT remplit
+    automatiquement les lignes existantes avec la valeur par defaut.
+    """
+    import logging
+    import sqlite3
+
+    logger = logging.getLogger(__name__)
+    settings = get_settings()
+    db_path = settings.database_url.removeprefix("sqlite:///")
+    if not db_path:
+        return
+
+    conn = sqlite3.connect(db_path)
+    try:
+        for table in ("organizations", "datasets", "resources"):
+            try:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN source VARCHAR NOT NULL DEFAULT 'ckan'"
+                )
+                logger.info("Migration PDS-71: colonne source ajoutee a %s", table)
+            except sqlite3.OperationalError as exc:
+                # La colonne existe deja (duplicate column name) → normal
+                if "duplicate column name" in str(exc).lower():
+                    logger.debug("Migration PDS-71: colonne source deja presente sur %s", table)
+                else:
+                    raise
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def create_schema() -> None:
     from app.infrastructure.persistence.models import (
         CacheHitStatsModel,
@@ -55,6 +91,10 @@ def create_schema() -> None:
     )
 
     Base.metadata.create_all(bind=engine)
+
+    # Migration PDS-71 : ajouter la colonne `source` aux tables existantes
+    # pour preparer le modele multisource (ckan|i14y|metadata.swiss).
+    _migrate_add_source_column()
 
     # Creer l'index FTS5 pour la recherche full-text (PDS-44, PDS-41).
     # FTS5 n'est pas gere par SQLAlchemy → creation en SQL brut.

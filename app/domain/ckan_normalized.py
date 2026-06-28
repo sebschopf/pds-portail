@@ -18,6 +18,7 @@ class Organization:
     description: str | None = None
     ckan_url: str | None = None
     last_synced: str | None = None
+    source: str = "ckan"
 
 
 @dataclass(slots=True)
@@ -36,6 +37,7 @@ class Dataset:
     freshness_days: int | None = None
     ckan_url: str | None = None
     normalized_at: str | None = None
+    source: str = "ckan"
 
 
 @dataclass(slots=True)
@@ -50,6 +52,7 @@ class Resource:
     size_bytes: int | None = None
     created: str | None = None
     last_modified: str | None = None
+    source: str = "ckan"
 
 
 @dataclass(slots=True)

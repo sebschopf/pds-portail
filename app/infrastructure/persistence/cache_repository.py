@@ -91,6 +91,7 @@ class SqlAlchemyCacheRepository:
                     description=organization.description,
                     ckan_url=organization.ckan_url,
                     last_synced=organization.last_synced,
+                    source=organization.source,
                 )
                 .on_conflict_do_update(
                     index_elements=[OrganizationModel.id],
@@ -99,6 +100,7 @@ class SqlAlchemyCacheRepository:
                         "description": organization.description,
                         "ckan_url": organization.ckan_url,
                         "last_synced": organization.last_synced,
+                        "source": organization.source,
                     },
                 )
             )
@@ -116,6 +118,7 @@ class SqlAlchemyCacheRepository:
                     existing.name = organization.name
                     existing.description = organization.description
                     existing.last_synced = organization.last_synced
+                    existing.source = organization.source
                     logger.debug(
                         "Organisation conflit ckan_url=%s: id=%s mis a jour depuis id=%s",
                         organization.ckan_url,
@@ -141,6 +144,7 @@ class SqlAlchemyCacheRepository:
                     freshness_days=dataset.freshness_days,
                     ckan_url=dataset.ckan_url,
                     normalized_at=dataset.normalized_at,
+                    source=dataset.source,
                 )
             )
 
@@ -156,6 +160,7 @@ class SqlAlchemyCacheRepository:
                     size_bytes=resource.size_bytes,
                     created=resource.created,
                     last_modified=resource.last_modified,
+                    source=resource.source,
                 )
             )
 

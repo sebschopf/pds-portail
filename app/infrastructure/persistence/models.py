@@ -12,6 +12,7 @@ class OrganizationModel(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     ckan_url: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
     last_synced: Mapped[str | None] = mapped_column(String, nullable=True)
+    source: Mapped[str] = mapped_column(String, nullable=False, default="ckan")
 
     datasets: Mapped[list["DatasetModel"]] = relationship(back_populates="organization")
 
@@ -35,6 +36,7 @@ class DatasetModel(Base):
     freshness_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ckan_url: Mapped[str | None] = mapped_column(String, nullable=True)
     normalized_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    source: Mapped[str] = mapped_column(String, nullable=False, default="ckan")
 
     organization: Mapped[OrganizationModel] = relationship(back_populates="datasets")
     resources: Mapped[list["ResourceModel"]] = relationship(back_populates="dataset")
@@ -51,6 +53,7 @@ class ResourceModel(Base):
     size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created: Mapped[str | None] = mapped_column(String, nullable=True)
     last_modified: Mapped[str | None] = mapped_column(String, nullable=True)
+    source: Mapped[str] = mapped_column(String, nullable=False, default="ckan")
 
     dataset: Mapped[DatasetModel] = relationship(back_populates="resources")
 

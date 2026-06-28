@@ -3,6 +3,12 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — M10 Préparation multisource
+
+### Added
+- PDS-71 : Colonne `source` sur les 3 tables du cache — `source` (VARCHAR, NOT NULL, DEFAULT 'ckan') ajoutée aux modèles SQLAlchemy `OrganizationModel`, `DatasetModel`, `ResourceModel` et aux dataclasses domaine `Organization`, `Dataset`, `Resource`. Les upserts (`cache_repository.py`) propagent `source='ckan'`. Migration automatique `_migrate_add_source_column()` dans `create_schema()` pour les bases existantes (ALTER TABLE avec fallback si colonne déjà présente). Prépare le modèle multisource CKAN/I14Y/metadata.swiss (ADR-026).
+- PDS-72 : Protocole de veille I14Y/metadata.swiss — document `Doc/20-technique/07-veille/veille-i14y-metadata-swiss.md` décrivant la fréquence de vérification (bimensuelle), les URLs à surveiller (API I14Y, handbook, GitHub, DCAT-AP), les 8 signaux de bascule (dont 4 primaires : champ ckanId, endpoint structures, bêta metadata.swiss, besoin utilisateur), les commandes curl de test API, le template de note de veille, et la procédure de réévaluation. Première vérification documentée : 2026-06-28 (S1-S4 tous absents, report confirmé ADR-026).
+
 ## [1.1.2] - 2026-06-27
 ### Added
 - PDS-69 : Polish cosmétique Frontend — intégration des 6 icônes SVG néo-brutalistes (PDS-67) dans les composants : SearchIcon+FilterIcon dans FiltersPanel, DatasetIcon+CompareIcon dans CardDataset, CompareIcon dans CompareBar. Espacements aérés (`--space-*` +25%, `--line-height-body` 1.6→1.7, `--paragraph-gap` 0.75em→1em). Correction overflow texte des `<select>` dans FiltersPanel (`text-overflow: ellipsis`). Pied de page avec lien "Sébastien Schopfer" vers schopfer.moustik.site.

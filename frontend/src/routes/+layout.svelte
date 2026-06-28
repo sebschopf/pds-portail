@@ -44,6 +44,7 @@
 		<h1>Explorateur Open Data Suisse</h1>
 		<nav class="header-actions" aria-label="Navigation secondaire">
 			<a href="/manuel" class="header-link">Manuel</a>
+			<a href="/suite" class="header-link">Suite du projet</a>
 			<button type="button" class="readable-toggle" onclick={toggleReadableMode}>
 				{readableMode ? 'Mode lecture: actif' : 'Mode lecture: inactif'}
 			</button>
@@ -70,6 +71,7 @@
 			</div>
 			<nav class="footer-links" aria-label="Liens du pied de page">
 				<a href="/manuel">Manuel d’utilisation</a>
+				<a href="/suite">Suite du projet</a>
 			</nav>
 		</div>
 		<div class="footer-meta">

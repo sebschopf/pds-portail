@@ -15,6 +15,7 @@ export { default as QualityBlock } from './ui/molecules/QualityBlock.svelte';
 export { default as ResourceList } from './ui/molecules/ResourceList.svelte';
 export { default as SkeletonCard } from './ui/molecules/SkeletonCard.svelte';
 export { default as StructureBlock } from './ui/molecules/StructureBlock.svelte';
+export { default as Timeline } from './ui/molecules/Timeline.svelte';
 
 // Organisms
 export { default as Card } from './ui/organisms/Card.svelte';
@@ -29,6 +30,7 @@ export { default as DatasetIcon } from './assets/icons/DatasetIcon.svelte';
 export { default as CompareIcon } from './assets/icons/CompareIcon.svelte';
 export { default as EmptyIcon } from './assets/icons/EmptyIcon.svelte';
 export { default as ErrorIcon } from './assets/icons/ErrorIcon.svelte';
+export { default as ExternalLinkIcon } from './assets/icons/ExternalLinkIcon.svelte';
 
 // Assets SVG (PDS-62)
 export { default as SwissCantonsMap } from './assets/SwissCantonsMap.svelte';

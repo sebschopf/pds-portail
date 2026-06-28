@@ -284,6 +284,7 @@
 		padding: var(--space-3) var(--space-4);
 		min-height: var(--size-control-md);
 		color: var(--color-on-surface);
+		width: 100%;
 		max-width: 100%;
 		overflow: hidden;
 		text-overflow: ellipsis;

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import cast
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -66,24 +66,21 @@ class SqlAlchemySearchRepository:
             query_terms = self._parse_query_terms(query) if query else []
 
             # Expand query with multilingual synonyms (PDS-41)
-            # Builds a LIKE clause that matches ALL expanded terms against
-            # title, description, org name, and tags.
-            expansion = expand_query(query) if query else None
+            # Kept for future hybrid search experiments — FTS5 handles
+            # the search now (PDS-94), expansion used only in ranking.
+            _expansion = expand_query(query) if query else None
 
             # Construire la clause WHERE
             base_filters: list[ColumnElement[bool]] = []
-            if query and expansion and expansion.all_terms:
-                # Construire un LIKE pour chaque terme etendu (OR logique)
-                # Limiter le nombre de termes pour eviter l'explosion combinatoire
-                # (chaque terme genere 4 LIKE, un trop grand nombre sature SQLite)
-                terms = expansion.all_terms[: self.MAX_EXPANSION_TERMS]
-                term_clauses: list[ColumnElement[bool]] = []
-                for term in terms:
-                    term_clauses.append(self._search_like_clause(term))
-                base_filters.append(or_(*term_clauses))
-            elif query:
-                # Fallback: requete sans expansion (aucun concept reconnu)
-                base_filters.append(self._search_like_clause(query))
+            fts_text_clause: ColumnElement[bool] | None = None
+            if query:
+                # PDS-94 : utiliser l'index FTS5 (remove_diacritics 2)
+                # au lieu des LIKE avec func.replace() en chaine qui saturent
+                # SQLite sur 16K datasets (>50s). FTS5 MATCH est quasi instantane.
+                fts_text_clause = self._search_fts_match(query)
+                # L'expansion multilingue (PDS-41) reste utilisee uniquement
+                # pour le ranking hybride (compute_hybrid_score), pas pour le
+                # filtrage SQL.
             if org_filter:
                 base_filters.append(DatasetModel.org_id == org_filter)
             if tag_filter:
@@ -101,6 +98,8 @@ class SqlAlchemySearchRepository:
                 .select_from(DatasetModel)
                 .join(OrganizationModel)
             )
+            if fts_text_clause is not None:
+                total_query = total_query.where(fts_text_clause)
             if fmt_filter is not None:
                 total_query = total_query.join(
                     ResourceModel, ResourceModel.dataset_id == DatasetModel.id
@@ -129,6 +128,8 @@ class SqlAlchemySearchRepository:
                     .offset(offset)
                     .limit(limit)
                 )
+            if fts_text_clause is not None:
+                dataset_query = dataset_query.where(fts_text_clause)
             if fmt_filter is not None:
                 dataset_query = dataset_query.join(
                     ResourceModel, ResourceModel.dataset_id == DatasetModel.id
@@ -370,6 +371,31 @@ class SqlAlchemySearchRepository:
         "ñ": "n",
         "ß": "ss",
     }
+
+    @classmethod
+    def _search_fts_match(cls, query: str):
+        # Retourne un TextClause SQLAlchemy — accepté par .where() au runtime.
+        """Utilise l'index FTS5 pour une recherche full-text instantanee (PDS-94).
+
+        L'index FTS5 (create_schema dans database.py) utilise
+        tokenize='unicode61 remove_diacritics 2' qui gere automatiquement
+        casse et accents. FTS5 MATCH est quasi instantane meme sur 16K datasets,
+        contrairement aux LIKE+func.replace() qui prennent >50s.
+
+        Utilise un JOIN sur datasets_fts.rowid = datasets.ROWID (rowid implicite
+        SQLite) pour filtrer les datasets via l'index FTS5.
+        """
+        terms = [t.strip() for t in query.split() if t.strip()]
+        if not terms:
+            return text("1")
+        fts_query = " ".join(f'"{term}"' for term in terms)
+        # JOIN datasets_fts ON datasets.ROWID = datasets_fts.rowid
+        return text(
+            "datasets.ROWID IN ("
+            "SELECT rowid FROM datasets_fts "
+            f"WHERE datasets_fts MATCH '{fts_query}'"
+            ")"
+        )
 
     @classmethod
     def _normalize_diacritics(cls, column: ColumnElement[str]) -> ColumnElement[str]:

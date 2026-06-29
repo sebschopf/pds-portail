@@ -116,7 +116,7 @@ def create_schema() -> None:
         if existing is None:
             conn.execute("""
                 CREATE VIRTUAL TABLE datasets_fts USING fts5(
-                    id, title, description, org_name,
+                    id, title, description,
                     tokenize='unicode61 remove_diacritics 2',
                     content='datasets',
                     content_rowid='rowid'
@@ -125,32 +125,27 @@ def create_schema() -> None:
             # Triggers pour maintenir l'index FTS5 automatiquement
             conn.executescript("""
                 CREATE TRIGGER IF NOT EXISTS datasets_ai AFTER INSERT ON datasets BEGIN
-                    INSERT INTO datasets_fts(rowid, id, title, description, org_name)
-                    SELECT new.rowid, new.id, new.title, new.description, org.name
-                    FROM organizations org WHERE org.id = new.org_id;
+                    INSERT INTO datasets_fts(rowid, id, title, description)
+                    VALUES(new.rowid, new.id, new.title, new.description);
                 END;
 
                 CREATE TRIGGER IF NOT EXISTS datasets_ad AFTER DELETE ON datasets BEGIN
-                    INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description, org_name)
-                    VALUES('delete', old.rowid, old.id, old.title, old.description,
-                        (SELECT name FROM organizations WHERE id = old.org_id));
+                    INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description)
+                    VALUES('delete', old.rowid, old.id, old.title, old.description);
                 END;
 
                 CREATE TRIGGER IF NOT EXISTS datasets_au AFTER UPDATE ON datasets BEGIN
-                    INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description, org_name)
-                    VALUES('delete', old.rowid, old.id, old.title, old.description,
-                        (SELECT name FROM organizations WHERE id = old.org_id));
-                    INSERT INTO datasets_fts(rowid, id, title, description, org_name)
-                    SELECT new.rowid, new.id, new.title, new.description, org.name
-                    FROM organizations org WHERE org.id = new.org_id;
+                    INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description)
+                    VALUES('delete', old.rowid, old.id, old.title, old.description);
+                    INSERT INTO datasets_fts(rowid, id, title, description)
+                    VALUES(new.rowid, new.id, new.title, new.description);
                 END;
             """)
             # Backfill initial: indexer les donnees existantes
             conn.execute("""
-                INSERT INTO datasets_fts(rowid, id, title, description, org_name)
-                SELECT d.rowid, d.id, d.title, d.description, o.name
+                INSERT INTO datasets_fts(rowid, id, title, description)
+                SELECT d.rowid, d.id, d.title, d.description
                 FROM datasets d
-                JOIN organizations o ON o.id = d.org_id
             """)
         # else: la table FTS5 existe deja, on preserve les donnees (PDS-99)
         conn.commit()

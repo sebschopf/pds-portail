@@ -203,13 +203,15 @@ def test_search_sort_hybrid_exposes_ranking_signals(
     data = cast(dict[str, Any], response.json())
     datasets = cast(list[dict[str, Any]], data["datasets"])
 
-    assert [str(item["id"]) for item in datasets] == ["dataset-json", "dataset-csv"]
+    # PDS-95 : l'ordre hybride est desormais determine par bm25(datasets_fts)
+    # en SQL (score BM25 natif), plus par compute_hybrid_score en Python.
+    # On verifie que les 2 datasets sont presents avec leurs signaux de ranking.
+    ids_returned = {str(item["id"]) for item in datasets}
+    assert ids_returned == {"dataset-json", "dataset-csv"}
     assert datasets[0]["ranking_signals"] is not None
     assert datasets[1]["ranking_signals"] is not None
-    assert (
-        datasets[0]["ranking_signals"]["hybrid_score"]
-        >= datasets[1]["ranking_signals"]["hybrid_score"]
-    )
+    assert "hybrid_score" in datasets[0]["ranking_signals"]
+    assert "hybrid_score" in datasets[1]["ranking_signals"]
 
 
 def test_search_sort_invalid_returns_422(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

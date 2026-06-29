@@ -49,10 +49,12 @@ def configure_api_modules(
     import app.application.use_cases.search_datasets as search_datasets_use_case_module
     import app.infrastructure.persistence.cache_read_repository as cache_read_repository_module
     import app.infrastructure.persistence.cache_repository as cache_repository_module
+    import app.infrastructure.persistence.compare_adapter as compare_adapter_module
     import app.infrastructure.persistence.database as database_module
+    import app.infrastructure.persistence.dataset_detail_adapter as dataset_detail_adapter_module
     import app.infrastructure.persistence.models as models_module
     import app.infrastructure.persistence.query_cache_repository as query_cache_repository_module
-    import app.infrastructure.persistence.search_repository as search_repository_module
+    import app.infrastructure.persistence.search_adapter as search_adapter_module
     import app.main as main_module
     import app.presentation.api.v1.router as router_module
 
@@ -61,7 +63,9 @@ def configure_api_modules(
     cache_repository_module = importlib.reload(cache_repository_module)
     cache_read_repository_module = importlib.reload(cache_read_repository_module)
     query_cache_repository_module = importlib.reload(query_cache_repository_module)
-    search_repository_module = importlib.reload(search_repository_module)
+    search_adapter_module = importlib.reload(search_adapter_module)
+    dataset_detail_adapter_module = importlib.reload(dataset_detail_adapter_module)
+    compare_adapter_module = importlib.reload(compare_adapter_module)
     search_datasets_use_case_module = importlib.reload(search_datasets_use_case_module)
     dataset_detail_use_case_module = importlib.reload(dataset_detail_use_case_module)
     resource_detail_use_case_module = importlib.reload(resource_detail_use_case_module)

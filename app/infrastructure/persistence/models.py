@@ -22,6 +22,8 @@ class DatasetModel(Base):
     __table_args__ = (
         Index("idx_datasets_title", "title"),
         Index("idx_datasets_tags", "tags"),
+        # PDS-95 : accelere les filtres par organisation tries par qualite
+        Index("idx_datasets_org_quality", "org_id", "quality_score"),
     )
 
     id: Mapped[str] = mapped_column(String, primary_key=True)

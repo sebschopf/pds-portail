@@ -20,8 +20,10 @@ from app.core.config import get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
+from app.infrastructure.persistence.compare_adapter import SqlAlchemyCompareAdapter
+from app.infrastructure.persistence.dataset_detail_adapter import SqlAlchemyDatasetDetailAdapter
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
-from app.infrastructure.persistence.search_repository import SqlAlchemySearchRepository
+from app.infrastructure.persistence.search_adapter import SqlAlchemySearchAdapter
 from app.presentation.api.v1.schemas import (
     CompareRequest,
     CompareResponse,
@@ -126,7 +128,7 @@ def search(
     settings = get_settings()
     if settings.query_cache_enabled:
         return CachedSearchDatasetsUseCase(
-            repository=SqlAlchemySearchRepository(),
+            repository=SqlAlchemySearchAdapter(),
             cache=SqlAlchemyQueryCacheRepository(),
             ttl_seconds=settings.query_cache_ttl_seconds,
         ).execute(
@@ -138,7 +140,7 @@ def search(
             tag_filter=tag,
             sort=sort,
         )
-    return SearchDatasetsUseCase(SqlAlchemySearchRepository()).execute(
+    return SearchDatasetsUseCase(SqlAlchemySearchAdapter()).execute(
         query=q,
         offset=offset,
         limit=limit,
@@ -166,12 +168,12 @@ def get_dataset(dataset_id: str) -> DatasetDetailResponse:
     settings = get_settings()
     if settings.query_cache_enabled:
         detail = CachedGetDatasetDetailUseCase(
-            repository=SqlAlchemySearchRepository(),
+            repository=SqlAlchemyDatasetDetailAdapter(),
             cache=SqlAlchemyQueryCacheRepository(),
             ttl_seconds=settings.query_cache_ttl_seconds,
         ).execute(dataset_id)
     else:
-        detail = GetDatasetDetailUseCase(SqlAlchemySearchRepository()).execute(dataset_id)
+        detail = GetDatasetDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(dataset_id)
     if not detail:
         raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
     return detail
@@ -188,7 +190,7 @@ def get_resource(resource_id: str) -> ResourceDetailResponse:
         ResourceDetailResponse ou 404 si non trouve
     """
 
-    detail = GetResourceDetailUseCase(SqlAlchemySearchRepository()).execute(resource_id)
+    detail = GetResourceDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(resource_id)
     if not detail:
         raise HTTPException(status_code=404, detail=f"Resource {resource_id} not found")
     return detail
@@ -211,7 +213,7 @@ def compare_datasets(request: CompareRequest) -> CompareResponse:
         400: Moins de 2 IDs fournis ou IDs invalides
     """
     try:
-        return CompareDatasetsUseCase(SqlAlchemySearchRepository()).execute(request)
+        return CompareDatasetsUseCase(SqlAlchemyCompareAdapter()).execute(request)
     except InvalidCompareRequestError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

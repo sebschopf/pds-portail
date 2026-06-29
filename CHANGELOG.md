@@ -3,7 +3,35 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — M10 Préparation multisource
+## [Unreleased] — M11 Monétisation & Exploration Premium
+
+### Fixed
+- PDS-94/PDS-99 : Investigation et confirmation du correctif CORS+502 — le DROP TABLE FTS5 a été remplacé par une vérification `IF NOT EXISTS` dans `create_schema()`, un exception handler global a été ajouté dans `main.py` pour garantir les headers CORS même sur les erreurs 500. Les logs Fly confirment que `/search` répond 200 OK depuis le déploiement.
+
+### Added
+- M11 : Milestone Monétisation & Exploration Premium créé (m-14).
+- SPEC-008 : Service payant Exploration des champs — endpoint `POST /api/v1/resources/{id}/explore` protégé par clé API, parsing CSV/JSON avec colonnes/types/remplissage/échantillons/stats, analyse sémantique automatique (géo/temporel/statistique/catégoriel/croisement), table `licenses` avec quotas et rate limiting, composant `ExploreDataset.svelte` avec localStorage et WCAG AA. Traçabilité PRD-F12, PRD-F13, PRD-F17. Document : `Doc/20-technique/01-spec/spec-008-service-payant-exploration-champs.md`.
+- SPEC-009 : Service payant Surveillance des changements — abonnement 5 CHF/mois (10 datasets max), détection automatique à chaque cycle d'ingestion, alertes email avec magic links (15 min, multi-usage), tables `watchers`/`watched_datasets`/`change_log`/`magic_links`, page `/alertes` tokenisée, paiement Polar MoR CHF natif. Traçabilité PRD-F14, PRD-F15, PRD-F16. Document : `Doc/20-technique/01-spec/spec-009-service-payant-surveillance-changements.md`.
+- SPEC-010 : Exploration I14Y — Faisabilité multisource (renuméroté de SPEC-008 pour éviter collision). Document : `Doc/20-technique/01-spec/spec-010-exploration-i14y.md`.
+- PRD-F12 à PRD-F17 : Exigences fonctionnelles M11 ajoutées au PRD (exploration, clé API, surveillance, paiement, page /alertes, analyse sémantique). Matrice de traçabilité mise à jour.
+- Index specs : `Doc/20-technique/01-spec/README.md` mis à jour avec SPEC-008, SPEC-009, SPEC-010.
+- PDS-78~79 : Remplacés par les tickets PDS-80 à PDS-90 (décomposition granulaire avec ADR, specs et dépendances).
+- PDS-80 (ADR-027) : Clé API pour l'exploration — token opaque UUID v4 hashé SHA-256, table `licenses`, middleware FastAPI `X-API-Key`, rate limiting par clé, distinct du token watcher (ADR-030). Document : `Doc/30-decisions/adr/0027-cle-api-exploration.md`.
+- PDS-81 : Backend Licence API — modèle `LicenseModel`, port `LicenseRepositoryPort`, dépendance `require_license`, protection endpoint exploration.
+- PDS-82 : Backend Exploration — endpoint `POST /api/v1/resources/{id}/explore`, parsing CSV/JSON stdlib, dataclasses `ExploredResource`/`ColumnInfo`/`ColumnStats`, cache 24h.
+- PDS-83 : Backend Analyse sémantique — module `dataset_analysis.py`, détection géo/temporel/numérique/catégoriel/ID, suggestions et mises en garde en langage naturel.
+- PDS-84 : Frontend ExploreDataset — composant Svelte avec clé API, localStorage, tableau des colonnes, section Analyse, WCAG AA.
+- PDS-85 (ADR-028) : Paiement Polar pour la surveillance — Polar MoR open-source, CHF natif (130+ devises), webhooks `order.created` et `subscription.cancelled`, SvelteKit adapter, frais transparents (5% + 0.50$). Document : `Doc/30-decisions/adr/0028-paiement-stripe-surveillance.md`.
+- PDS-91 (ADR-029) : Envoi d'emails pour la surveillance — smtplib stdlib, templates HTML+texte, déduplication 24h, lien désabonnement, pas de tracking. Document : `Doc/30-decisions/adr/0029-envoi-emails-surveillance.md`.
+- PDS-92 (ADR-030) : Magic Links pour /alertes — token temporaire 15min à usage unique dans les emails, token permanent `watchers.token` pour localStorage uniquement (jamais exposé dans les URLs). Double mécanisme : magic link (email) + token permanent (localStorage). Table `magic_links`. Document : `Doc/30-decisions/adr/0030-token-watcher-surveillance.md`.
+- PDS-86 : Backend Tables surveillance — `WatcherModel`, `WatchedDatasetModel`, `ChangeLogModel`, migrations, repositories.
+- PDS-87 : Backend Détection changements — `DetectChangesUseCase` intégré à `RunSyncCycleUseCase`, 5 types de changements (metadata, ressources, qualité, liens).
+- PDS-88 : Backend Alertes email — `SendAlertsUseCase`, smtplib, templates HTML+texte, déduplication 24h, lien désabonnement.
+- PDS-89 : Backend Endpoints Polar/watchers/alertes — webhook `order.created`, endpoints CRUD watchers, historique alertes.
+- PDS-90 : Frontend WatchDataset + /alertes — modale abonnement Polar (5 CHF/mois), badge Surveillé, page tokenisée avec historique des changements, WCAG AA.
+- Fiche portfolio : `Doc/10-produit/description-portfolio.md` décrivant le projet (Problématique/Solution/Défis/Résultats/Modèle économique) pour intégration sur schopfer.moustik.site.
+
+## [1.1.3] — M10 Préparation multisource
 
 ### Added
 - PDS-71 : Colonne `source` sur les 3 tables du cache — `source` (VARCHAR, NOT NULL, DEFAULT 'ckan') ajoutée aux modèles SQLAlchemy `OrganizationModel`, `DatasetModel`, `ResourceModel` et aux dataclasses domaine `Organization`, `Dataset`, `Resource`. Les upserts (`cache_repository.py`) propagent `source='ckan'`. Migration automatique `_migrate_add_source_column()` dans `create_schema()` pour les bases existantes (ALTER TABLE avec fallback si colonne déjà présente). Prépare le modèle multisource CKAN/I14Y/metadata.swiss (ADR-026).

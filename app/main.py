@@ -1,10 +1,12 @@
 import logging
 import threading
+import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -131,6 +133,20 @@ def create_app() -> FastAPI:
     )
     # Security headers (PDS-38, ADR-021)
     app.add_middleware(SecurityHeadersMiddleware, settings=settings)  # type: ignore[arg-type]
+
+    # Exception handler global : loggue la trace complete et garantit que
+    # les headers CORS sont presents meme sur les erreurs 500 (PDS-99).
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception) -> PlainTextResponse:
+        logger.error(
+            "Unhandled exception on %s %s: %s\n%s",
+            request.method,
+            request.url.path,
+            exc,
+            traceback.format_exc(),
+        )
+        return PlainTextResponse("Internal Server Error", status_code=500)
+
     app.include_router(api_router)
     return app
 

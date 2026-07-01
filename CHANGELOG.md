@@ -41,6 +41,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-90 : Frontend WatchDataset + /alertes — modale abonnement Polar (5 CHF/mois), badge Surveillé, page tokenisée avec historique des changements, WCAG AA.
 - Fiche portfolio : `Doc/10-produit/description-portfolio.md` décrivant le projet (Problématique/Solution/Défis/Résultats/Modèle économique) pour intégration sur schopfer.moustik.site.
 
+## [1.1.4] - 2026-07-01
+### Fixed
+- Frontend recherche : correction de la navigation dans la facette `Categorie / tag` (multi-selection). Le focus n'est plus vole vers le resume des resultats pendant la selection des tags, la selection au clic est plus fluide (ajout/retrait direct), et le composant conserve une navigation lisible sur longues listes (scroll vertical du select multiple).
+
 ## [1.1.3] — M10 Préparation multisource
 
 ### Added

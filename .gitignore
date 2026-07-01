@@ -24,6 +24,7 @@ build/
 # OS / editor
 .DS_Store
 Thumbs.db
+*.code-workspace
 
 # Doc & backlog (contenu interne)
 Doc/

@@ -15,6 +15,10 @@
  */
 
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 const THRESHOLDS = {
 	desktop: {
@@ -42,10 +46,22 @@ function parseArgs() {
 	}
 
 	if (!paths.desktop) {
-		paths.desktop = '../reports/lighthouse/latest-desktop.report.json';
+		paths.desktop = path.resolve(
+			SCRIPT_DIR,
+			'..',
+			'reports',
+			'lighthouse',
+			'latest-desktop.report.json'
+		);
 	}
 	if (!paths.mobile) {
-		paths.mobile = '../reports/lighthouse/latest-mobile.report.json';
+		paths.mobile = path.resolve(
+			SCRIPT_DIR,
+			'..',
+			'reports',
+			'lighthouse',
+			'latest-mobile.report.json'
+		);
 	}
 
 	return paths;

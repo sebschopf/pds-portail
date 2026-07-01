@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -6,6 +6,26 @@ const DEFAULT_BASE_URL = 'http://127.0.0.1:4173';
 const DEFAULT_TARGET_PATH = '/?q=mobilite&sort=quality_desc&page=1&fmt=CSV&tag=mobilite';
 const DEFAULT_OUTPUT_DIR = './reports/lighthouse';
 const LIGHTHOUSE_BINARY = process.platform === 'win32' ? 'lighthouse.cmd' : 'lighthouse';
+const DEFAULT_SERVER_READY_TIMEOUT_MS = 10_000;
+
+function findBrowserExecutable() {
+	const candidates =
+		process.platform === 'win32'
+			? ['chrome', 'msedge']
+			: ['google-chrome-stable', 'google-chrome', 'chromium-browser', 'chromium', 'vivaldi', 'vivaldi-stable'];
+
+	for (const candidate of candidates) {
+		const result = spawnSync('which', [candidate], { encoding: 'utf-8' });
+		if (result.status === 0) {
+			const resolved = result.stdout.trim();
+			if (resolved.length > 0) {
+				return resolved;
+			}
+		}
+	}
+
+	return null;
+}
 
 function parseList(input) {
 	if (!input) {
@@ -70,6 +90,26 @@ function createOutputPath(profile, index, totalTargets) {
 	return path.posix.join(outputDir, `latest-${profile}-${index + 1}`);
 }
 
+async function waitForTargetReady(url, timeoutMs) {
+	const startedAt = Date.now();
+	while (Date.now() - startedAt < timeoutMs) {
+		try {
+			const response = await fetch(url, { method: 'GET' });
+			if (response.ok) {
+				return;
+			}
+		} catch {
+			// Le serveur n'est pas encore prêt.
+		}
+		await new Promise((resolve) => setTimeout(resolve, 400));
+	}
+
+	throw new Error(
+		`Target URL not reachable within ${timeoutMs}ms: ${url}. ` +
+			"Start the preview/backend first, or run 'npm run lighthouse:suite'."
+	);
+}
+
 function runLighthouse(url, profile, index, totalTargets) {
 	const outputPath = createOutputPath(profile, index, totalTargets);
 	const profileArgs = buildProfileArgs(profile);
@@ -90,6 +130,11 @@ function runLighthouse(url, profile, index, totalTargets) {
 	const env = { ...process.env };
 	if (chromePath) {
 		env.CHROME_PATH = chromePath;
+	} else if (!env.CHROME_PATH) {
+		const detectedBrowser = findBrowserExecutable();
+		if (detectedBrowser) {
+			env.CHROME_PATH = detectedBrowser;
+		}
 	}
 
 	return new Promise((resolve, reject) => {
@@ -119,8 +164,13 @@ async function main() {
 
 	const targets = buildTargetUrls();
 	const outputDir = process.env.LIGHTHOUSE_OUTPUT_DIR?.trim() || DEFAULT_OUTPUT_DIR;
+	const readyTimeoutMs = Number.parseInt(
+		process.env.LIGHTHOUSE_SERVER_READY_TIMEOUT_MS || `${DEFAULT_SERVER_READY_TIMEOUT_MS}`,
+		10
+	);
 	await mkdir(outputDir, { recursive: true });
 	for (let index = 0; index < targets.length; index += 1) {
+		await waitForTargetReady(targets[index], readyTimeoutMs);
 		await runLighthouse(targets[index], profile, index, targets.length);
 	}
 }

@@ -8,6 +8,7 @@ from app.application.ports.ckan_payloads import (
     parse_package_payload,
     parse_package_search_response,
     parse_resource_payload,
+    parse_tag_payload,
 )
 from app.application.ports.ckan_types import (
     CkanPackagePayload,
@@ -278,3 +279,29 @@ def test_parse_resource_payload_rejects_invalid_media_type_and_size() -> None:
 
     with pytest.raises(TypeError, match="resource size must be an integer"):
         parse_resource_payload({"id": "r1", "size": "invalid"})
+
+
+def test_parse_tag_payload_accepts_multilingual_objects() -> None:
+    """Accepte les tags multilingues et extrait prioritairement le francais."""
+
+    parsed = parse_tag_payload(
+        {
+            "name": {"de": "verkehr", "fr": "mobilite"},
+            "display_name": {"en": "Mobility", "fr": "Mobilite"},
+        }
+    )
+
+    assert parsed.get("name") == "mobilite"
+    assert parsed.get("display_name") == "Mobilite"
+
+
+def test_parse_tag_payload_multilingual_fallback_first_non_empty_value() -> None:
+    """Si fr/de/it/en/rm sont vides, prend la premiere valeur non vide."""
+
+    parsed = parse_tag_payload(
+        {
+            "display_name": {"fr": "", "de": "", "custom": "Tag perso"},
+        }
+    )
+
+    assert parsed.get("display_name") == "Tag perso"

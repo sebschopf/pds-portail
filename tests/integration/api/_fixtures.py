@@ -55,6 +55,8 @@ def configure_api_modules(
     import app.infrastructure.persistence.models as models_module
     import app.infrastructure.persistence.query_cache_repository as query_cache_repository_module
     import app.infrastructure.persistence.search_adapter as search_adapter_module
+    import app.infrastructure.persistence.search_facets as search_facets_module
+    import app.infrastructure.persistence.search_tag_filter as search_tag_filter_module
     import app.main as main_module
     import app.presentation.api.v1.router as router_module
 
@@ -63,6 +65,8 @@ def configure_api_modules(
     cache_repository_module = importlib.reload(cache_repository_module)
     cache_read_repository_module = importlib.reload(cache_read_repository_module)
     query_cache_repository_module = importlib.reload(query_cache_repository_module)
+    search_tag_filter_module = importlib.reload(search_tag_filter_module)
+    search_facets_module = importlib.reload(search_facets_module)
     search_adapter_module = importlib.reload(search_adapter_module)
     dataset_detail_adapter_module = importlib.reload(dataset_detail_adapter_module)
     compare_adapter_module = importlib.reload(compare_adapter_module)
@@ -184,6 +188,218 @@ def populate_cache_facets(cache_repository: CacheRepositoryPort) -> None:
         resources=[resource_csv, resource_json],
     )
     cache_repository.upsert_normalized_batch(batch)
+
+
+def populate_cache_tag_only_fulltext(cache_repository: CacheRepositoryPort) -> str:
+    """Peuple un dataset ou le terme de recherche est present uniquement dans les tags."""
+
+    org = Organization(
+        id="org-climat",
+        name="Observatoire Donnees",
+        description="Donnees environnementales",
+        ckan_url="https://opendata.swiss/organization/observatoire",
+        last_synced="2026-07-01T10:00:00Z",
+    )
+
+    dataset = Dataset(
+        id="dataset-tag-only",
+        org_id="org-climat",
+        title="Mesures annuelles",
+        description="Serie chronologique de mesures publiques.",
+        tags=["climat", "environnement"],
+        created="2026-01-01T08:00:00Z",
+        modified="2026-06-10T15:30:00Z",
+        quality_score=70,
+        completeness=75,
+        freshness_days=5,
+    )
+
+    resource = Resource(
+        id="resource-tag-only",
+        dataset_id="dataset-tag-only",
+        name="Export CSV",
+        format="CSV",
+        url="https://example.org/tag-only.csv",
+    )
+
+    cache_repository.upsert_normalized_batch(
+        NormalizedBatch(organizations=[org], datasets=[dataset], resources=[resource])
+    )
+
+    return dataset.id
+
+
+def populate_cache_multilingual_expansion_case(cache_repository: CacheRepositoryPort) -> str:
+    """Peuple un dataset trouvable via expansion multilingue (ex: wetter -> meteo)."""
+
+    org = Organization(
+        id="org-meteo",
+        name="Meteo Cantonale",
+        description="Donnees meteorologiques",
+        ckan_url="https://opendata.swiss/organization/meteo",
+        last_synced="2026-07-01T10:00:00Z",
+    )
+
+    dataset = Dataset(
+        id="dataset-multilingual-meteo",
+        org_id="org-meteo",
+        title="Mesures atmospheriques",
+        description="Serie annuelle d'observations.",
+        tags=["meteo", "temperature"],
+        created="2026-01-01T08:00:00Z",
+        modified="2026-06-10T15:30:00Z",
+        quality_score=74,
+        completeness=78,
+        freshness_days=4,
+    )
+
+    resource = Resource(
+        id="resource-multilingual-meteo",
+        dataset_id="dataset-multilingual-meteo",
+        name="Export CSV",
+        format="CSV",
+        url="https://example.org/meteo.csv",
+    )
+
+    cache_repository.upsert_normalized_batch(
+        NormalizedBatch(organizations=[org], datasets=[dataset], resources=[resource])
+    )
+
+    return dataset.id
+
+
+def populate_cache_facets_filtered_scope_case(
+    cache_repository: CacheRepositoryPort,
+) -> tuple[str, str]:
+    """Peuple 2 datasets pour verifier que les facettes suivent le scope FTS actif."""
+
+    org_temp = Organization(
+        id="org-temp",
+        name="Observatoire Climat",
+        description="Donnees climat",
+        ckan_url="https://opendata.swiss/organization/observatoire-climat",
+        last_synced="2026-07-01T10:00:00Z",
+    )
+    org_pop = Organization(
+        id="org-pop",
+        name="Office Demographie",
+        description="Donnees population",
+        ckan_url="https://opendata.swiss/organization/office-demographie",
+        last_synced="2026-07-01T10:00:00Z",
+    )
+
+    ds_temp = Dataset(
+        id="dataset-temperature",
+        org_id="org-temp",
+        title="Temperature annuelle",
+        description="Mesures meteorologiques cantonales.",
+        tags=["climat", "environnement"],
+        created="2026-01-01T08:00:00Z",
+        modified="2026-06-10T15:30:00Z",
+        quality_score=76,
+        completeness=80,
+        freshness_days=3,
+    )
+    ds_pop = Dataset(
+        id="dataset-population",
+        org_id="org-pop",
+        title="Population residente",
+        description="Evolution de la population.",
+        tags=["population"],
+        created="2026-01-01T08:00:00Z",
+        modified="2026-06-10T15:30:00Z",
+        quality_score=72,
+        completeness=79,
+        freshness_days=5,
+    )
+
+    res_temp = Resource(
+        id="resource-temperature",
+        dataset_id="dataset-temperature",
+        name="Export CSV",
+        format="CSV",
+        url="https://example.org/temperature.csv",
+    )
+    res_pop = Resource(
+        id="resource-population",
+        dataset_id="dataset-population",
+        name="Export JSON",
+        format="JSON",
+        url="https://example.org/population.json",
+    )
+
+    cache_repository.upsert_normalized_batch(
+        NormalizedBatch(
+            organizations=[org_temp, org_pop],
+            datasets=[ds_temp, ds_pop],
+            resources=[res_temp, res_pop],
+        )
+    )
+
+    return ds_temp.id, ds_pop.id
+
+
+def populate_cache_tag_exact_match_case(cache_repository: CacheRepositoryPort) -> tuple[str, str]:
+    """Peuple 2 datasets pour verifier le filtrage tag exact (pas sous-chaine)."""
+
+    org = Organization(
+        id="org-tags",
+        name="Observatoire Qualite Air",
+        description="Donnees air et environnement",
+        ckan_url="https://opendata.swiss/organization/observatoire-air",
+        last_synced="2026-07-01T10:00:00Z",
+    )
+
+    ds_air = Dataset(
+        id="dataset-air",
+        org_id="org-tags",
+        title="Qualite de l'air",
+        description="Concentrations journalieres.",
+        tags=["air"],
+        created="2026-01-01T08:00:00Z",
+        modified="2026-06-10T15:30:00Z",
+        quality_score=77,
+        completeness=82,
+        freshness_days=2,
+    )
+
+    ds_agri = Dataset(
+        id="dataset-agri",
+        org_id="org-tags",
+        title="Statistiques agricoles",
+        description="Surfaces agricoles utiles.",
+        tags=["agriculture"],
+        created="2026-01-01T08:00:00Z",
+        modified="2026-06-10T15:30:00Z",
+        quality_score=71,
+        completeness=76,
+        freshness_days=6,
+    )
+
+    res_air = Resource(
+        id="resource-air",
+        dataset_id="dataset-air",
+        name="Export CSV",
+        format="CSV",
+        url="https://example.org/air.csv",
+    )
+    res_agri = Resource(
+        id="resource-agri",
+        dataset_id="dataset-agri",
+        name="Export CSV",
+        format="CSV",
+        url="https://example.org/agri.csv",
+    )
+
+    cache_repository.upsert_normalized_batch(
+        NormalizedBatch(
+            organizations=[org],
+            datasets=[ds_air, ds_agri],
+            resources=[res_air, res_agri],
+        )
+    )
+
+    return ds_air.id, ds_agri.id
 
 
 def populate_cache_organizations_many(cache_repository: CacheRepositoryPort) -> None:

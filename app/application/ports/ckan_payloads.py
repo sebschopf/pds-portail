@@ -127,8 +127,8 @@ def parse_tag_payload(payload: object) -> CkanTagPayload:
     source = cast(dict[str, object], payload)
 
     parsed_payload: dict[str, object] = {}
-    _copy_optional_str(source, parsed_payload, "name")
-    _copy_optional_str(source, parsed_payload, "display_name")
+    _copy_optional_text(source, parsed_payload, "name")
+    _copy_optional_text(source, parsed_payload, "display_name")
     return cast(CkanTagPayload, parsed_payload)
 
 

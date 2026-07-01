@@ -23,6 +23,7 @@ class _FakeSearchRepository:
     def search(
         self,
         query: str | None = None,
+        expanded_terms: list[str] | None = None,
         offset: int = 0,
         limit: int = 20,
         org_filter: str | None = None,
@@ -30,7 +31,16 @@ class _FakeSearchRepository:
         tag_filter: str | None = None,
         sort: str = "modified_desc",
     ) -> SearchResponse:
-        del query, offset, limit, org_filter, format_filter, tag_filter, sort  # unused in fake
+        del (
+            query,
+            expanded_terms,
+            offset,
+            limit,
+            org_filter,
+            format_filter,
+            tag_filter,
+            sort,
+        )  # unused in fake
         self.call_count += 1
         return self.response
 

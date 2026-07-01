@@ -20,7 +20,8 @@ class CacheEndpointType(StrEnum):
 
 # Version de schéma API — incrémenter en cas de changement de contrat
 # pour forcer l'invalidation globale du cache applicatif.
-CACHE_SCHEMA_VERSION = 1
+# PDS-100: bump pour invalider les clés de recherche existantes en production.
+CACHE_SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True, slots=True)

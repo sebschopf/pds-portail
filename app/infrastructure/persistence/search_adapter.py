@@ -13,10 +13,11 @@ pas le detail ni la comparaison.
 
 from __future__ import annotations
 
-from collections import Counter
+import logging
 from typing import cast
 
 from sqlalchemy import and_, func, select, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement, TextClause
 
@@ -25,18 +26,26 @@ from app.infrastructure.persistence._search_helpers import parse_tags
 from app.infrastructure.persistence.database import SessionLocal
 from app.infrastructure.persistence.models import (
     DatasetModel,
-    FacetsCacheModel,
     OrganizationModel,
     ResourceModel,
 )
+from app.infrastructure.persistence.search_facets import aggregate_facets as _aggregate_facets
+from app.infrastructure.persistence.search_fts import (
+    build_fts_match_any_terms_clause as _search_fts_match_any_terms,
+)
+from app.infrastructure.persistence.search_fts import build_fts_match_clause as _search_fts_match
+from app.infrastructure.persistence.search_fts import (
+    is_fts5_operational_error as _is_fts5_operational_error,
+)
+from app.infrastructure.persistence.search_tag_filter import (
+    build_exact_tag_filter as _build_exact_tag_filter,
+)
 from app.presentation.api.v1.schemas import (
-    FacetItem,
     SearchDatasetItem,
-    SearchFacets,
     SearchResponse,
 )
 
-ORGANIZATION_FACET_LIMIT = 20
+logger = logging.getLogger(__name__)
 
 
 class SqlAlchemySearchAdapter:
@@ -45,6 +54,7 @@ class SqlAlchemySearchAdapter:
     def search(
         self,
         query: str | None = None,
+        expanded_terms: list[str] | None = None,
         offset: int = 0,
         limit: int = 20,
         org_filter: str | None = None,
@@ -58,120 +68,171 @@ class SqlAlchemySearchAdapter:
         sur 16K+ datasets. Le score BM25 natif de FTS5 est exploite pour
         le tri hybride via une sous-requete scalaire dans ORDER BY.
         """
-        with SessionLocal() as session:
-            query_terms = _parse_query_terms(query)
-            query_str: str | None = query.strip() if query and query.strip() else None
+        query_terms = _parse_query_terms(query)
+        query_str: str | None = query.strip() if query and query.strip() else None
 
-            # Construire la sous-requete FTS5 (WHERE rowid IN ...)
-            fts_where_clause: TextClause | None = None
-            if query_str is not None:
+        # Construire la sous-requete FTS5 (WHERE rowid IN ...)
+        fts_where_clause: TextClause | None = None
+        if query_str is not None:
+            if expanded_terms:
+                original_terms = [t.strip() for t in query_str.split() if t.strip()]
+                all_terms = original_terms + [t for t in expanded_terms if t.strip()]
+                fts_where_clause = _search_fts_match_any_terms(all_terms)
+            else:
                 fts_where_clause = _search_fts_match(query_str)
 
-            # Filtres non-FTS
-            base_filters: list[ColumnElement[bool]] = []
-            if org_filter:
-                base_filters.append(DatasetModel.org_id == org_filter)
-            if tag_filter:
-                tag_term = f"%{tag_filter}%"
-                base_filters.append(DatasetModel.tags.collate("NOCASE").like(tag_term))
+        # Filtres non-FTS
+        base_filters: list[ColumnElement[bool]] = []
+        if org_filter:
+            base_filters.append(DatasetModel.org_id == org_filter)
+        if tag_filter:
+            base_filters.append(_build_exact_tag_filter(tag_filter))
 
-            filters = list(base_filters)
-            fmt_filter: str | None = format_filter
+        filters = list(base_filters)
+        fmt_filter: str | None = format_filter
 
-            # Compter les resultats totaux (avec FTS5 si recherche)
-            total = self._count_total(session, fts_where_clause, fmt_filter, filters)
-
-            # Determiner le tri
-            use_hybrid = sort == "hybrid" and bool(query_terms)
-
-            # Construire la query datasets
-            dataset_query = select(DatasetModel).join(OrganizationModel)
-
-            # Filtre FTS5 via sous-requete IN
-            if fts_where_clause is not None:
-                dataset_query = dataset_query.where(fts_where_clause)
-
-            # Filtre format
-            if fmt_filter is not None:
-                dataset_query = dataset_query.join(
-                    ResourceModel, ResourceModel.dataset_id == DatasetModel.id
+        with SessionLocal() as session:
+            try:
+                return self._run_query(
+                    session=session,
+                    query_terms=query_terms,
+                    offset=offset,
+                    limit=limit,
+                    sort=sort,
+                    fts_where_clause=fts_where_clause,
+                    base_filters=base_filters,
+                    filters=filters,
+                    fmt_filter=fmt_filter,
                 )
-                dataset_query = dataset_query.where(
-                    func.upper(ResourceModel.format) == fmt_filter.upper()
-                )
+            except OperationalError as exc:
+                if not _is_fts5_operational_error(exc):
+                    raise
 
-            # Filtres non-FTS
-            if filters:
-                dataset_query = dataset_query.where(and_(*filters))
-
-            # Tri et pagination
-            if use_hybrid:
-                # PDS-95 : tri BM25 natif via sous-requete scalaire
-                # (quasi gratuit via l'index FTS5) au lieu de charger
-                # tous les resultats en RAM pour un tri Python.
-                dataset_query = dataset_query.order_by(
-                    text(
-                        "(SELECT bm25(datasets_fts) FROM datasets_fts "
-                        "WHERE datasets_fts.rowid = datasets.ROWID) ASC"
-                    )
-                )
-            else:
-                dataset_query = dataset_query.order_by(*_order_by_for_sort(sort))
-
-            dataset_query = dataset_query.offset(offset).limit(limit)
-
-            datasets: list[DatasetModel] = list(session.scalars(dataset_query).all())
-
-            # Construire les items de recherche avec signaux de ranking
-            search_items: list[SearchDatasetItem] = []
-            for ds in datasets:
-                tags = parse_tags(ds.tags)
-                resource_count = len(ds.resources)
-                resource_formats = list(
-                    {r.format for r in ds.resources if r.format and r.format.upper()}
+                logger.warning(
+                    "FTS5 indisponible ou requete MATCH invalide: fallback SQL sans FTS5",
+                    exc_info=True,
                 )
 
-                ranking_signals = None
-                if query_terms:
-                    signals = compute_hybrid_score(
-                        quality_score=ds.quality_score,
-                        freshness_days=ds.freshness_days,
-                        query_terms=query_terms,
-                        title=ds.title,
-                        description=ds.description,
-                    )
-                    ranking_signals = signals.to_dict()
-
-                search_items.append(
-                    SearchDatasetItem(
-                        id=ds.id,
-                        title=ds.title,
-                        org_name=ds.organization.name,
-                        description=ds.description,
-                        quality_score=ds.quality_score,
-                        completeness=ds.completeness,
-                        freshness_days=ds.freshness_days,
-                        resource_formats=resource_formats,
-                        resource_count=resource_count,
-                        tags=tags,
-                        ranking_signals=ranking_signals,
-                    )
+                # Degradation controlee: pas de crash 500, on conserve les filtres non-FTS
+                # et un tri deterministe sans bm25.
+                return self._run_query(
+                    session=session,
+                    query_terms=query_terms,
+                    offset=offset,
+                    limit=limit,
+                    sort=sort,
+                    fts_where_clause=None,
+                    base_filters=base_filters,
+                    filters=filters,
+                    fmt_filter=fmt_filter,
                 )
 
-            # Le tri hybride est deja fait en SQL par bm25(), pas besoin
-            # de trier en Python. On garde compute_hybrid_score uniquement
-            # pour l'affichage des signaux de ranking.
+    def _run_query(
+        self,
+        session: Session,
+        query_terms: list[str],
+        offset: int,
+        limit: int,
+        sort: str,
+        fts_where_clause: TextClause | None,
+        base_filters: list[ColumnElement[bool]],
+        filters: list[ColumnElement[bool]],
+        fmt_filter: str | None,
+    ) -> SearchResponse:
+        # Compter les resultats totaux (avec FTS5 si recherche)
+        total = self._count_total(session, fts_where_clause, fmt_filter, filters)
 
-            # Agreger les facettes
-            facets = _aggregate_facets(session, base_filters, fmt_filter)
+        # Le tri hybride (bm25) n'est possible que si FTS5 est actif.
+        use_hybrid = sort == "hybrid" and bool(query_terms) and fts_where_clause is not None
 
-            return SearchResponse(
-                total=total,
-                offset=offset,
-                limit=limit,
-                datasets=search_items,
-                facets=facets,
+        # Construire la query datasets
+        dataset_query = select(DatasetModel).join(OrganizationModel)
+
+        # Filtre FTS5 via sous-requete IN
+        if fts_where_clause is not None:
+            dataset_query = dataset_query.where(fts_where_clause)
+
+        # Filtre format
+        if fmt_filter is not None:
+            dataset_query = dataset_query.join(
+                ResourceModel, ResourceModel.dataset_id == DatasetModel.id
             )
+            dataset_query = dataset_query.where(
+                func.upper(ResourceModel.format) == fmt_filter.upper()
+            )
+
+        # Filtres non-FTS
+        if filters:
+            dataset_query = dataset_query.where(and_(*filters))
+
+        # Tri et pagination
+        if use_hybrid:
+            # PDS-95 : tri BM25 natif via sous-requete scalaire
+            # (quasi gratuit via l'index FTS5) au lieu de charger
+            # tous les resultats en RAM pour un tri Python.
+            dataset_query = dataset_query.order_by(
+                text(
+                    "(SELECT bm25(datasets_fts) FROM datasets_fts "
+                    "WHERE datasets_fts.rowid = datasets.ROWID) ASC"
+                )
+            )
+        else:
+            dataset_query = dataset_query.order_by(*_order_by_for_sort(sort))
+
+        dataset_query = dataset_query.offset(offset).limit(limit)
+
+        datasets: list[DatasetModel] = list(session.scalars(dataset_query).all())
+
+        # Construire les items de recherche avec signaux de ranking
+        search_items: list[SearchDatasetItem] = []
+        for ds in datasets:
+            tags = parse_tags(ds.tags)
+            resource_count = len(ds.resources)
+            resource_formats = list(
+                {r.format for r in ds.resources if r.format and r.format.upper()}
+            )
+
+            ranking_signals = None
+            if query_terms:
+                signals = compute_hybrid_score(
+                    quality_score=ds.quality_score,
+                    freshness_days=ds.freshness_days,
+                    query_terms=query_terms,
+                    title=ds.title,
+                    description=ds.description,
+                )
+                ranking_signals = signals.to_dict()
+
+            search_items.append(
+                SearchDatasetItem(
+                    id=ds.id,
+                    title=ds.title,
+                    org_name=ds.organization.name,
+                    description=ds.description,
+                    quality_score=ds.quality_score,
+                    completeness=ds.completeness,
+                    freshness_days=ds.freshness_days,
+                    resource_formats=resource_formats,
+                    resource_count=resource_count,
+                    tags=tags,
+                    ranking_signals=ranking_signals,
+                )
+            )
+
+        # Le tri hybride est deja fait en SQL par bm25(), pas besoin
+        # de trier en Python. On garde compute_hybrid_score uniquement
+        # pour l'affichage des signaux de ranking.
+
+        # Agreger les facettes
+        facets = _aggregate_facets(session, base_filters, fmt_filter, fts_where_clause)
+
+        return SearchResponse(
+            total=total,
+            offset=offset,
+            limit=limit,
+            datasets=search_items,
+            facets=facets,
+        )
 
     @staticmethod
     def _count_total(
@@ -206,35 +267,6 @@ def _parse_query_terms(query: str | None) -> list[str]:
     if not query or not query.strip():
         return []
     return [term.lower().strip() for term in query.split() if term.strip()]
-
-
-def _search_fts_match(query: str) -> TextClause:
-    """Construit une clause FTS5 via sous-requete IN (PDS-94, PDS-95).
-
-    La table virtuelle datasets_fts n'est pas mappable en ORM SQLAlchemy,
-    donc on utilise une sous-requete WHERE rowid IN (SELECT rowid FROM
-    datasets_fts WHERE MATCH ...) qui reste quasi instantanee grace a
-    l'index FTS5.
-
-    Chaque terme est wrappe dans des guillemets pour un match exact
-    du token, avec echappement des caracteres speciaux FTS5.
-    """
-    terms = [t.strip() for t in query.split() if t.strip()]
-    if not terms:
-        return text("1")
-    escaped = [_escape_fts5_term(t) for t in terms]
-    fts_query = " ".join(f'"{t}"' for t in escaped)
-    return text(
-        "datasets.ROWID IN ("
-        "SELECT rowid FROM datasets_fts "
-        f"WHERE datasets_fts MATCH '{fts_query}'"
-        ")"
-    )
-
-
-def _escape_fts5_term(term: str) -> str:
-    """Echappe les caracteres speciaux de la syntaxe FTS5."""
-    return term.replace('"', '""')
 
 
 def _order_by_for_sort(sort: str) -> tuple[ColumnElement[object], ...]:
@@ -272,129 +304,3 @@ def _order_by_for_sort(sort: str) -> tuple[ColumnElement[object], ...]:
         ),
     }
     return sort_map.get(sort, sort_map["modified_desc"])
-
-
-# --- Agregation de facettes (PDS-44) ---
-
-
-def _aggregate_facets(
-    session: Session,
-    base_filters: list[ColumnElement[bool]],
-    format_filter: str | None = None,
-) -> SearchFacets:
-    """Lit les facettes depuis le cache pre-calcule, avec fallback direct (PDS-44).
-
-    Si la table facets_cache est peuplee et qu'aucun filtre n'est actif,
-    les facettes sont lues directement sans agregation SQL couteuse.
-    Des qu'un filtre (base_filters ou format_filter) est actif, on utilise
-    l'agregation directe pour garantir des compteurs coherents avec les filtres.
-    """
-    has_active_filters = bool(base_filters) or format_filter is not None
-    cache_count = session.query(FacetsCacheModel).count()
-
-    if cache_count > 0 and not has_active_filters:
-        # Cache hit : lecture directe (pas de filtres actifs)
-        cached_org_rows = (
-            session.query(FacetsCacheModel)
-            .filter(FacetsCacheModel.facet_type == "org")
-            .order_by(FacetsCacheModel.count.desc())
-            .all()
-        )
-        cached_orgs = [
-            FacetItem(name=row.name, display_name=row.display_name, count=row.count)
-            for row in cached_org_rows
-        ]
-        cached_fmt_rows = (
-            session.query(FacetsCacheModel)
-            .filter(FacetsCacheModel.facet_type == "format")
-            .order_by(FacetsCacheModel.count.desc())
-            .all()
-        )
-        cached_formats = [FacetItem(name=row.name, count=row.count) for row in cached_fmt_rows]
-
-        cached_tags = __aggregate_tags(session, base_filters)
-        return SearchFacets(organizations=cached_orgs, formats=cached_formats, tags=cached_tags)
-
-    # Fallback : agregation directe (cache vide ou filtres actifs)
-    org_query = (
-        select(
-            OrganizationModel.id,
-            OrganizationModel.name,
-            func.count(DatasetModel.id).label("count"),
-        )
-        .join(DatasetModel)
-        .group_by(OrganizationModel.id, OrganizationModel.name)
-        .order_by(
-            func.count(DatasetModel.id).desc(),
-            OrganizationModel.name.asc(),
-        )
-        .limit(ORGANIZATION_FACET_LIMIT)
-    )
-    if format_filter is not None:
-        org_query = org_query.join(ResourceModel, ResourceModel.dataset_id == DatasetModel.id)
-        org_query = org_query.where(func.upper(ResourceModel.format) == format_filter.upper())
-    if base_filters:
-        org_query = org_query.where(and_(*base_filters))
-
-    orgs: list[FacetItem] = []
-    for org_id, org_name, count in session.execute(org_query).all():
-        orgs.append(
-            FacetItem(
-                name=str(org_id),
-                display_name=str(org_name),
-                count=int(count),
-            )
-        )
-
-    format_query = (
-        select(
-            func.upper(ResourceModel.format).label("format_name"),
-            func.count(func.distinct(ResourceModel.dataset_id)).label("count"),
-        )
-        .join(DatasetModel, DatasetModel.id == ResourceModel.dataset_id)
-        .join(OrganizationModel, OrganizationModel.id == DatasetModel.org_id)
-        .where(ResourceModel.format.is_not(None))
-        .group_by(func.upper(ResourceModel.format))
-        .order_by(func.count(func.distinct(ResourceModel.dataset_id)).desc())
-    )
-    if base_filters:
-        format_query = format_query.where(and_(*base_filters))
-
-    formats: list[FacetItem] = []
-    for format_name, count in session.execute(format_query).all():
-        if format_name:
-            formats.append(FacetItem(name=str(format_name), count=int(count)))
-
-    tags = __aggregate_tags_with_format(session, base_filters, format_filter)
-
-    return SearchFacets(organizations=orgs, formats=formats, tags=tags)
-
-
-def __aggregate_tags(
-    session: Session,
-    base_filters: list[ColumnElement[bool]],
-) -> list[FacetItem]:
-    """Agrege les tags depuis les datasets (toujours depuis la DB, pas en cache)."""
-    return __aggregate_tags_with_format(session, base_filters, format_filter=None)
-
-
-def __aggregate_tags_with_format(
-    session: Session,
-    base_filters: list[ColumnElement[bool]],
-    format_filter: str | None,
-) -> list[FacetItem]:
-    """Agrege les tags depuis les datasets, avec filtre format optionnel."""
-    tag_query = select(DatasetModel.tags).select_from(DatasetModel).join(OrganizationModel)
-    if format_filter is not None:
-        tag_query = tag_query.join(ResourceModel, ResourceModel.dataset_id == DatasetModel.id)
-        tag_query = tag_query.where(func.upper(ResourceModel.format) == format_filter.upper())
-    if base_filters:
-        tag_query = tag_query.where(and_(*base_filters))
-    tag_counter: Counter[str] = Counter()
-    for tags_str in session.scalars(tag_query).all():
-        if not tags_str:
-            continue
-        for tag in parse_tags(tags_str):
-            if tag:
-                tag_counter[tag] += 1
-    return [FacetItem(name=name, count=count) for name, count in tag_counter.most_common()]

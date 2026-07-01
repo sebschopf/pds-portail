@@ -4,6 +4,7 @@ Orchestre une requete de recherche paginee avec filtres et facettes.
 """
 
 from app.application.ports.search_repository import SearchRepositoryPort
+from app.domain.query_expansion import expand_query
 from app.presentation.api.v1.schemas import SearchResponse
 
 
@@ -42,8 +43,15 @@ class SearchDatasetsUseCase:
         limit = min(limit, 100)  # Cap a 100 par page
         offset = max(offset, 0)
 
+        expanded_terms: list[str] | None = None
+        if query and query.strip():
+            expansion = expand_query(query)
+            if expansion.expanded_terms:
+                expanded_terms = expansion.expanded_terms
+
         return self._repository.search(
             query=query,
+            expanded_terms=expanded_terms,
             offset=offset,
             limit=limit,
             org_filter=org_filter,

@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import importlib
+import json
 from pathlib import Path
 from types import ModuleType
 
 import pytest
 from sqlalchemy import select
 
+from app.application.ports.ckan_payloads import parse_package_search_response
 from app.application.ports.ckan_types import CkanPackageSearchResponse
 
 
@@ -146,3 +148,57 @@ def test_sync_ckan_batch_is_idempotent(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert resources[0].name in {"Horaires tram CSV v2", "Documentation PDF"}
     assert resources[1].name in {"Horaires tram CSV v2", "Documentation PDF"}
     assert {resource.id for resource in resources} == {"resource-001", "resource-002"}
+
+
+def test_sync_ckan_batch_normalizes_and_deduplicates_multilingual_tags(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Les tags multilingues sont parses puis normalises sans doublons semantiques."""
+
+    database_path = tmp_path / "sync-tags-normalized.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+
+    database_module, models_module, repository_module, use_case_module = _configure_test_modules()
+    database_module.create_schema()
+
+    raw_payload: dict[str, object] = {
+        "result": {
+            "results": [
+                {
+                    "id": "dataset-tags-001",
+                    "title": "Dataset tags",
+                    "notes": "Validation tags",
+                    "metadata_created": "2026-06-01T08:00:00Z",
+                    "organization": {
+                        "id": "org-tags-001",
+                        "name": "org-tags",
+                    },
+                    "tags": [
+                        {"display_name": {"fr": "Mobilite"}},
+                        {"display_name": {"en": "Mobilité"}},
+                        {"name": "  MOBILITE  "},
+                        {"name": "Open Data"},
+                    ],
+                    "resources": [],
+                }
+            ]
+        }
+    }
+    payload = parse_package_search_response(raw_payload)
+
+    client = FakeCkanClient([payload])
+    repository = repository_module.SqlAlchemyCacheRepository()
+    use_case = use_case_module.SyncCkanBatchUseCase(client=client, repository=repository)
+    use_case.execute(start=0, rows=100)
+
+    with database_module.SessionLocal() as session:
+        dataset = session.scalar(
+            select(models_module.DatasetModel).where(
+                models_module.DatasetModel.id == "dataset-tags-001"
+            )
+        )
+
+    assert dataset is not None
+    assert dataset.tags is not None
+    parsed_tags = json.loads(dataset.tags)
+    assert parsed_tags == ["mobilite", "open data"]

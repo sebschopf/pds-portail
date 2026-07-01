@@ -1,6 +1,8 @@
 """Cas d'usage de synchronisation d'un lot CKAN vers le cache local."""
 
 import logging
+import re
+import unicodedata
 from datetime import UTC, datetime
 
 from app.application.errors.ingestion import CkanRateLimitError, CkanTimeoutError
@@ -192,13 +194,38 @@ class SyncCkanBatchUseCase:
         """Ne conserve que les libelles exploitables pour la recherche locale."""
 
         tags: list[str] = []
+        seen: set[str] = set()
         for tag in item.get("tags", []):
             value = self._tag_value(tag)
-            if value:
+            if value and value not in seen:
                 tags.append(value)
+                seen.add(value)
         return tags
 
     def _tag_value(self, tag: CkanTagPayload) -> str | None:
         """Prefere ``display_name`` quand CKAN fournit un libelle humain."""
 
-        return tag.get("display_name") or tag.get("name")
+        raw = tag.get("display_name") or tag.get("name")
+        if not raw:
+            return None
+        return _normalize_tag(raw)
+
+
+def _normalize_tag(raw: object) -> str | None:
+    """Normalise un tag CKAN pour reduire les doublons semantiques.
+
+    Regles appliquees:
+    - trim + lower
+    - suppression des accents (NFKD)
+    - espaces multiples compactes
+    """
+
+    if not isinstance(raw, str):
+        return None
+
+    value = raw.strip().lower()
+    if not value:
+        return None
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"\s+", " ", value).strip()
+    return value or None

@@ -20,6 +20,7 @@ class SearchRepositoryPort(Protocol):
     def search(
         self,
         query: str | None = None,
+        expanded_terms: list[str] | None = None,
         offset: int = 0,
         limit: int = 20,
         org_filter: str | None = None,
@@ -31,6 +32,7 @@ class SearchRepositoryPort(Protocol):
 
         Args:
             query: Texte libre (titre, description)
+            expanded_terms: Termes etendus calcules en couche application
             offset: Position dans les resultats
             limit: Nombre de resultats par page
             org_filter: Filtrer par organisation (slugname)

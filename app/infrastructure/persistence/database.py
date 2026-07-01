@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -39,7 +40,6 @@ def _migrate_add_source_column() -> None:
     automatiquement les lignes existantes avec la valeur par defaut.
     """
     import logging
-    import sqlite3
 
     logger = logging.getLogger(__name__)
     settings = get_settings()
@@ -96,57 +96,106 @@ def create_schema() -> None:
     # pour preparer le modele multisource (ckan|i14y|metadata.swiss).
     _migrate_add_source_column()
 
-    # Creer l'index FTS5 pour la recherche full-text (PDS-44, PDS-41).
+    # Creer/migrer l'index FTS5 pour la recherche full-text (PDS-44, PDS-41, PDS-96).
     # FTS5 n'est pas gere par SQLAlchemy → creation en SQL brut.
     # remove_diacritics=2 supprime les accents automatiquement (FR/DE/IT).
-    import sqlite3
-
     from app.core.config import get_settings
 
     settings = get_settings()
     db_path = settings.database_url.removeprefix("sqlite:///")
     if db_path:
         conn = sqlite3.connect(db_path)
-        # Créer la table FTS5 si elle n'existe pas (PDS-41: multilingue).
-        # PDS-99 : Ne JAMAIS dropper FTS5 — cela casse la recherche.
-        # On vérifie d'abord si la table existe déjà.
-        existing = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='datasets_fts'"
-        ).fetchone()
-        if existing is None:
-            conn.execute("""
-                CREATE VIRTUAL TABLE datasets_fts USING fts5(
-                    id, title, description,
-                    tokenize='unicode61 remove_diacritics 2',
-                    content='datasets',
-                    content_rowid='rowid'
-                )
-            """)
-            # Triggers pour maintenir l'index FTS5 automatiquement
-            conn.executescript("""
-                CREATE TRIGGER IF NOT EXISTS datasets_ai AFTER INSERT ON datasets BEGIN
-                    INSERT INTO datasets_fts(rowid, id, title, description)
-                    VALUES(new.rowid, new.id, new.title, new.description);
-                END;
+        try:
+            _ensure_datasets_fts_schema(conn)
+            conn.commit()
+        finally:
+            conn.close()
 
-                CREATE TRIGGER IF NOT EXISTS datasets_ad AFTER DELETE ON datasets BEGIN
-                    INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description)
-                    VALUES('delete', old.rowid, old.id, old.title, old.description);
-                END;
 
-                CREATE TRIGGER IF NOT EXISTS datasets_au AFTER UPDATE ON datasets BEGIN
-                    INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description)
-                    VALUES('delete', old.rowid, old.id, old.title, old.description);
-                    INSERT INTO datasets_fts(rowid, id, title, description)
-                    VALUES(new.rowid, new.id, new.title, new.description);
-                END;
-            """)
-            # Backfill initial: indexer les donnees existantes
-            conn.execute("""
-                INSERT INTO datasets_fts(rowid, id, title, description)
-                SELECT d.rowid, d.id, d.title, d.description
-                FROM datasets d
-            """)
-        # else: la table FTS5 existe deja, on preserve les donnees (PDS-99)
-        conn.commit()
-        conn.close()
+def _ensure_datasets_fts_schema(conn: "sqlite3.Connection") -> None:
+    """Garantit un schema FTS5 coherent avec les colonnes attendues.
+
+    PDS-96 introduit l'indexation des tags. Si un schema historique sans
+    `tags` est detecte, on reconstruit table + triggers de maniere controlee
+    puis on rejoue un backfill complet.
+    """
+
+    existing = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='datasets_fts'"
+    ).fetchone()
+
+    if existing is None:
+        _create_datasets_fts(conn)
+        _create_datasets_fts_triggers(conn)
+        _backfill_datasets_fts(conn)
+        return
+
+    columns = conn.execute("PRAGMA table_info(datasets_fts)").fetchall()
+    column_names = [str(row[1]).lower() for row in columns]
+    has_tags = "tags" in column_names
+
+    if has_tags:
+        # Schema deja a jour
+        return
+
+    _rebuild_datasets_fts_with_tags(conn)
+
+
+def _rebuild_datasets_fts_with_tags(conn: "sqlite3.Connection") -> None:
+    """Reconstruit l'index FTS5 avec la colonne tags (migration PDS-96)."""
+
+    conn.executescript("""
+        DROP TRIGGER IF EXISTS datasets_ai;
+        DROP TRIGGER IF EXISTS datasets_ad;
+        DROP TRIGGER IF EXISTS datasets_au;
+        DROP TABLE IF EXISTS datasets_fts;
+    """)
+    _create_datasets_fts(conn)
+    _create_datasets_fts_triggers(conn)
+    _backfill_datasets_fts(conn)
+
+
+def _create_datasets_fts(conn: "sqlite3.Connection") -> None:
+    """Cree la table virtuelle FTS5 avec le schema recherche courant."""
+
+    conn.execute("""
+        CREATE VIRTUAL TABLE datasets_fts USING fts5(
+            id, title, description, tags,
+            tokenize='unicode61 remove_diacritics 2',
+            content='datasets',
+            content_rowid='rowid'
+        )
+    """)
+
+
+def _create_datasets_fts_triggers(conn: "sqlite3.Connection") -> None:
+    """Cree les triggers FTS5 INSERT/UPDATE/DELETE."""
+
+    conn.executescript("""
+        CREATE TRIGGER IF NOT EXISTS datasets_ai AFTER INSERT ON datasets BEGIN
+            INSERT INTO datasets_fts(rowid, id, title, description, tags)
+            VALUES(new.rowid, new.id, new.title, new.description, new.tags);
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS datasets_ad AFTER DELETE ON datasets BEGIN
+            INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description, tags)
+            VALUES('delete', old.rowid, old.id, old.title, old.description, old.tags);
+        END;
+
+        CREATE TRIGGER IF NOT EXISTS datasets_au AFTER UPDATE ON datasets BEGIN
+            INSERT INTO datasets_fts(datasets_fts, rowid, id, title, description, tags)
+            VALUES('delete', old.rowid, old.id, old.title, old.description, old.tags);
+            INSERT INTO datasets_fts(rowid, id, title, description, tags)
+            VALUES(new.rowid, new.id, new.title, new.description, new.tags);
+        END;
+    """)
+
+
+def _backfill_datasets_fts(conn: "sqlite3.Connection") -> None:
+    """Rejoue l'indexation complete des datasets vers FTS5."""
+
+    conn.execute("""
+        INSERT INTO datasets_fts(rowid, id, title, description, tags)
+        SELECT d.rowid, d.id, d.title, d.description, d.tags
+        FROM datasets d
+    """)

@@ -33,7 +33,7 @@
 	let sort = $state<SortValue>('modified_desc');
 	let selectedOrg = $state('');
 	let selectedFormat = $state('');
-	let selectedTag = $state('');
+	let selectedTags = $state<string[]>([]);
 	let currentPage = $state(1);
 	let isLoading = $state(false);
 	let errorMessage = $state('');
@@ -73,7 +73,7 @@
 	const canGoPrev = $derived(currentPage > 1);
 	const canGoNext = $derived(currentPage < totalPages);
 	const activeFilterCount = $derived(
-		(selectedOrg ? 1 : 0) + (selectedFormat ? 1 : 0) + (selectedTag ? 1 : 0)
+		(selectedOrg ? 1 : 0) + (selectedFormat ? 1 : 0) + selectedTags.length
 	);
 
 	// Badges d'état reflétant l'état réel de l'interface
@@ -89,7 +89,42 @@
 	const useMockApi = env.PUBLIC_USE_MOCK_API === '1';
 	const apiBase = useMockApi ? '' : (env.PUBLIC_API_BASE_URL || '');
 	const searchContext = $derived.by(() => normalizeSearchContext(buildSearchStateParams().toString()));
-	const resultsKey = $derived(`${query}|${sort}|${selectedOrg}|${selectedFormat}|${selectedTag}|${currentPage}`);
+	const resultsKey = $derived(
+		`${query}|${sort}|${selectedOrg}|${selectedFormat}|${selectedTags.join(',')}|${currentPage}`
+	);
+
+	function dedupe(values: string[]): string[] {
+		const output: string[] = [];
+		for (const value of values) {
+			if (!output.includes(value)) {
+				output.push(value);
+			}
+		}
+		return output;
+	}
+
+	function parseSelectedTags(params: URLSearchParams): string[] {
+		const csvTags = (params.get('tags') ?? '')
+			.split(',')
+			.map((tag) => tag.trim())
+			.filter((tag) => tag.length > 0);
+
+		if (csvTags.length > 0) {
+			return dedupe(csvTags);
+		}
+
+		const legacyTags = params
+			.getAll('tag')
+			.map((tag) => tag.trim())
+			.filter((tag) => tag.length > 0);
+
+		if (legacyTags.length > 0) {
+			return dedupe(legacyTags);
+		}
+
+		const singleLegacyTag = (params.get('tag') ?? '').trim();
+		return singleLegacyTag.length > 0 ? [singleLegacyTag] : [];
+	}
 
 	function safeTrim(value: string): string {
 		return value.trim();
@@ -114,8 +149,11 @@
 		if (selectedFormat) {
 			params.set('fmt', selectedFormat);
 		}
-		if (selectedTag) {
-			params.set('tag', selectedTag);
+		if (selectedTags.length === 1) {
+			params.set('tag', selectedTags[0]);
+		}
+		if (selectedTags.length > 1) {
+			params.set('tags', selectedTags.join(','));
 		}
 
 		return params;
@@ -137,7 +175,7 @@
 		query = params.get('q') ?? '';
 		selectedOrg = params.get('org') ?? '';
 		selectedFormat = params.get('fmt') ?? '';
-		selectedTag = params.get('tag') ?? '';
+		selectedTags = parseSelectedTags(params);
 
 		if (urlSort && urlSort in sortLabels) {
 			sort = urlSort as SortValue;
@@ -167,8 +205,11 @@
 		if (selectedFormat) {
 			params.set('fmt', selectedFormat);
 		}
-		if (selectedTag) {
-			params.set('tag', selectedTag);
+		for (const tag of selectedTags) {
+			params.append('tag', tag);
+		}
+		if (selectedTags.length > 1) {
+			params.set('tags', selectedTags.join(','));
 		}
 		return `${apiBase}/api/v1/search?${params.toString()}`;
 	}
@@ -212,16 +253,15 @@
 		await runSearch();
 	}
 
-	async function changeFacet(event: Event, facet: 'org' | 'fmt' | 'tag'): Promise<void> {
-		const value = (event.currentTarget as HTMLSelectElement).value;
+	async function changeFacet(value: string | string[], facet: 'org' | 'fmt' | 'tag'): Promise<void> {
 		if (facet === 'org') {
-			selectedOrg = value;
+			selectedOrg = value as string;
 		}
 		if (facet === 'fmt') {
-			selectedFormat = value;
+			selectedFormat = value as string;
 		}
 		if (facet === 'tag') {
-			selectedTag = value;
+			selectedTags = Array.isArray(value) ? value : value ? [value] : [];
 		}
 		currentPage = 1;
 		await runSearch();
@@ -230,7 +270,7 @@
 	async function clearAllFilters(): Promise<void> {
 		selectedOrg = '';
 		selectedFormat = '';
-		selectedTag = '';
+		selectedTags = [];
 		currentPage = 1;
 		await runSearch();
 	}
@@ -269,7 +309,7 @@
 				bind:sort
 				bind:selectedOrg
 				bind:selectedFormat
-				bind:selectedTag
+				bind:selectedTags
 				{activeFilterCount}
 				{organizations}
 				{formats}
@@ -291,7 +331,7 @@
 	{#if isLoading}
 		<div role="status" aria-live="polite" aria-label="Chargement des résultats">
 			<ul class="results">
-				{#each Array(3) as _}
+				{#each Array(3) as _, idx (`skeleton-${idx}`)}
 					<li><SkeletonCard /></li>
 				{/each}
 			</ul>

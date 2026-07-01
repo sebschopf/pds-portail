@@ -13,6 +13,20 @@ describe('search-context helpers', () => {
 		).toBe('q=mobilite&sort=quality_desc&page=2&org=org-1&fmt=CSV&tag=transport');
 	});
 
+	it('normalise le contexte multi-tags via tags=... et priorise ce format', () => {
+		expect(
+			normalizeSearchContext(
+				'q=mobilite&sort=quality_desc&page=2&org=org-1&fmt=CSV&tags=transport,commune&tag=legacy'
+			)
+		).toBe('q=mobilite&sort=quality_desc&page=2&org=org-1&fmt=CSV&tags=transport%2Ccommune');
+	});
+
+	it('conserve les tags legacy repetes quand tags=... est absent', () => {
+		expect(
+			normalizeSearchContext('q=mobilite&tag=transport&tag=commune&tag=transport')
+		).toBe('q=mobilite&tag=transport&tag=commune');
+	});
+
 	it('retourne null quand le contexte est vide ou invalide', () => {
 		expect(normalizeSearchContext(null)).toBeNull();
 		expect(normalizeSearchContext('page=0')).toBeNull();

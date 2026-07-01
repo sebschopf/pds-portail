@@ -33,9 +33,10 @@ interface SearchRecord {
 
 function filterRecords(
 	records: SearchRecord[],
-	opts: { query?: string; org?: string; format?: string; tag?: string }
+	opts: { query?: string; org?: string; format?: string; tag?: string; tags?: string[] }
 ): SearchRecord[] {
 	const terms = opts.query ? parseQueryTerms(opts.query) : [];
+	const normalizedTags = opts.tags && opts.tags.length > 0 ? opts.tags : opts.tag ? [opts.tag] : [];
 
 	return records.filter((dataset) => {
 		if (opts.org && dataset.org_id !== opts.org && dataset.org_name !== opts.org) {
@@ -50,9 +51,9 @@ function filterRecords(
 			return false;
 		}
 		if (
-			opts.tag &&
-			!dataset.tags.some(
-				(t) => t.toUpperCase() === opts.tag!.toUpperCase()
+			normalizedTags.length > 0 &&
+			!normalizedTags.some((selectedTag) =>
+				dataset.tags.some((t) => t.toUpperCase() === selectedTag.toUpperCase())
 			)
 		) {
 			return false;
@@ -120,6 +121,14 @@ describe('Logique de filtrage mock API (search)', () => {
 		const results = filterRecords(mockRecords, { tag: 'TRANSPORT' });
 		expect(results).toHaveLength(1);
 		expect(results[0].tags).toContain('transport');
+	});
+
+	it('filtre par multi-tags (OR) avec tags=...', () => {
+		const results = filterRecords(mockRecords, { tags: ['transport', 'demographie'] });
+		expect(results).toHaveLength(2);
+		const ids = new Set(results.map((result) => result.id));
+		expect(ids.has('dataset-1')).toBe(true);
+		expect(ids.has('dataset-2')).toBe(true);
 	});
 
 	it('combine texte + org + format + tag : donne un resultat', () => {

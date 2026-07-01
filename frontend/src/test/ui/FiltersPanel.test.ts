@@ -11,11 +11,14 @@ describe('FiltersPanel', () => {
 				sort: 'quality_desc',
 				selectedOrg: 'org-1',
 				selectedFormat: 'CSV',
-				selectedTag: 'transport',
+				selectedTags: ['transport', 'commune'],
 				activeFilterCount: 3,
 				organizations: [{ name: 'org-1', count: 2, display_name: 'Office mobilite' }],
 				formats: [{ name: 'CSV', count: 4 }],
-				tags: [{ name: 'transport', count: 3 }],
+				tags: [
+					{ name: 'transport', count: 3 },
+					{ name: 'commune', count: 2 }
+				],
 				sortOptions: [
 					{ value: 'modified_desc', label: 'Date (plus recent)' },
 					{ value: 'quality_desc', label: 'Qualite (meilleure)' }
@@ -32,6 +35,8 @@ describe('FiltersPanel', () => {
 		expect(view.body).toContain('Filtres actifs: 3');
 		expect(view.body).toContain('Office mobilite');
 		expect(view.body).toContain('Qualite (meilleure)');
+			expect(view.body).toContain('transport (3)');
+			expect(view.body).toContain('commune (2)');
 		expect(view.body).toContain('Vider les filtres');
 	});
 

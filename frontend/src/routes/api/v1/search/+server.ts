@@ -57,7 +57,15 @@ export const GET: RequestHandler = async ({ url }) => {
 	const query = (url.searchParams.get('q') ?? '').trim();
 	const org = (url.searchParams.get('org') ?? '').trim();
 	const format = (url.searchParams.get('fmt') ?? '').trim();
-	const tag = (url.searchParams.get('tag') ?? '').trim();
+	const csvTags = (url.searchParams.get('tags') ?? '')
+		.split(',')
+		.map((tag) => tag.trim())
+		.filter((tag) => tag.length > 0);
+	const legacyTags = url.searchParams
+		.getAll('tag')
+		.map((tag) => tag.trim())
+		.filter((tag) => tag.length > 0);
+	const selectedTags = Array.from(new Set(csvTags.length > 0 ? csvTags : legacyTags));
 	const sort = (url.searchParams.get('sort') ?? 'modified_desc') as SortValue;
 	const offset = toInteger(url.searchParams.get('offset'), 0);
 	const limit = Math.max(1, toInteger(url.searchParams.get('limit'), 10));
@@ -74,8 +82,13 @@ export const GET: RequestHandler = async ({ url }) => {
 		if (format && !dataset.resource_formats.some((fmt) => fmt.toUpperCase() === format.toUpperCase())) {
 			return false;
 		}
-		// Filtre par tag (match exact insensible a la casse)
-		if (tag && !dataset.tags.some((t) => t.toUpperCase() === tag.toUpperCase())) {
+		// Filtre par tags (OR, match exact insensible a la casse).
+		if (
+			selectedTags.length > 0 &&
+			!selectedTags.some((selectedTag) =>
+				dataset.tags.some((t) => t.toUpperCase() === selectedTag.toUpperCase())
+			)
+		) {
 			return false;
 		}
 		// Pas de terme textuel : on garde le dataset (filtres uniquement)

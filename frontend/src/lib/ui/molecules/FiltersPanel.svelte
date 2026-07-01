@@ -15,7 +15,7 @@
 		sort = $bindable('modified_desc'),
 		selectedOrg = $bindable(''),
 		selectedFormat = $bindable(''),
-		selectedTag = $bindable(''),
+		selectedTags = $bindable([]),
 		activeFilterCount = 0,
 		organizations = [],
 		formats = [],
@@ -32,7 +32,7 @@
 		sort?: string;
 		selectedOrg?: string;
 		selectedFormat?: string;
-		selectedTag?: string;
+		selectedTags?: string[];
 		activeFilterCount?: number;
 		organizations?: FacetItem[];
 		formats?: FacetItem[];
@@ -40,7 +40,10 @@
 		sortOptions?: Array<{ value: string; label: string }>;
 		onSubmit: (event: SubmitEvent) => Promise<void> | void;
 		onSortChange: (event: Event) => Promise<void> | void;
-		onFacetChange: (event: Event, facet: 'org' | 'fmt' | 'tag') => Promise<void> | void;
+		onFacetChange: (
+			value: string | string[],
+			facet: 'org' | 'fmt' | 'tag'
+		) => Promise<void> | void;
 		onQueryChange: (value: string) => Promise<void> | void;
 		onClearQuery: () => Promise<void> | void;
 		onClearFilters: () => Promise<void> | void;
@@ -53,19 +56,32 @@
 	 */
 	const facetTimers: Record<string, ReturnType<typeof setTimeout> | null> = {};
 
-	function immediateFacetChange(event: Event, facet: 'org' | 'fmt' | 'tag'): void {
+	function immediateFacetChange(event: Event, facet: 'org' | 'fmt'): void {
 		const target = event.currentTarget as HTMLSelectElement;
 		const value = target.value;
 
 		// Mise a jour immediate de la variable bindable locale
 		if (facet === 'org') selectedOrg = value;
 		if (facet === 'fmt') selectedFormat = value;
-		if (facet === 'tag') selectedTag = value;
 
 		// Debounce independant par facette pour eviter les appels API en rafale
 		if (facetTimers[facet]) clearTimeout(facetTimers[facet]!);
 		facetTimers[facet] = setTimeout(() => {
-			onFacetChange({ currentTarget: { value } } as unknown as Event, facet);
+			onFacetChange(value, facet);
+		}, 300);
+	}
+
+	function immediateTagFacetChange(event: Event): void {
+		const target = event.currentTarget as HTMLSelectElement;
+		const values = Array.from(target.selectedOptions)
+			.map((option) => option.value)
+			.filter((value) => value.length > 0);
+
+		selectedTags = values;
+
+		if (facetTimers.tag) clearTimeout(facetTimers.tag);
+		facetTimers.tag = setTimeout(() => {
+			onFacetChange(values, 'tag');
 		}, 300);
 	}
 
@@ -101,17 +117,32 @@
 
 	function optionList(items: FacetItem[], selectedValue: string): FacetItem[] {
 		// Dedoublonne par nom pour eviter each_key_duplicate
-		const seen = new Set<string>();
+		const seen: string[] = [];
 		const deduped = items.filter((item) => {
-			if (seen.has(item.name)) return false;
-			seen.add(item.name);
+			if (seen.includes(item.name)) return false;
+			seen.push(item.name);
 			return true;
 		});
 
-		if (!selectedValue || seen.has(selectedValue)) {
+		if (!selectedValue || seen.includes(selectedValue)) {
 			return deduped;
 		}
 		return [{ name: selectedValue, count: 0, display_name: selectedValue }, ...deduped];
+	}
+
+	function optionListMultiple(items: FacetItem[], selectedValues: string[]): FacetItem[] {
+		const seen: string[] = [];
+		const deduped = items.filter((item) => {
+			if (seen.includes(item.name)) return false;
+			seen.push(item.name);
+			return true;
+		});
+
+		const missing = selectedValues
+			.filter((value) => !seen.includes(value))
+			.map((value) => ({ name: value, count: 0, display_name: value }));
+
+		return [...missing, ...deduped];
 	}
 </script>
 
@@ -159,9 +190,14 @@
 
 		<label class="select-field" for="facet-tag">
 			<span>Categorie / tag</span>
-			<select id="facet-tag" value={selectedTag} onchange={(event) => immediateFacetChange(event, 'tag')}>
-				<option value="">Tous</option>
-				{#each optionList(tags, selectedTag) as facet, idx (`tag-${facet.name}-${idx}`)}
+			<select
+				id="facet-tag"
+				multiple
+				size="6"
+				bind:value={selectedTags}
+				onchange={immediateTagFacetChange}
+			>
+				{#each optionListMultiple(tags, selectedTags) as facet, idx (`tag-${facet.name}-${idx}`)}
 					<option value={facet.name}>{facet.name} ({facet.count})</option>
 				{/each}
 			</select>

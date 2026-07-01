@@ -1,4 +1,4 @@
-const SEARCH_CONTEXT_KEYS = ['q', 'sort', 'page', 'org', 'fmt', 'tag'] as const;
+const SEARCH_CONTEXT_KEYS = ['q', 'sort', 'page', 'org', 'fmt'] as const;
 
 function isPositivePage(value: string): boolean {
 	const page = Number.parseInt(value, 10);
@@ -25,6 +25,28 @@ export function normalizeSearchContext(rawContext: string | null | undefined): s
 		}
 
 		normalized.set(key, value);
+	}
+
+	const csvTags = (sourceParams.get('tags') ?? '')
+		.split(',')
+		.map((tag) => tag.trim())
+		.filter((tag) => tag.length > 0);
+
+	if (csvTags.length > 0) {
+		normalized.set('tags', Array.from(new Set(csvTags)).join(','));
+	} else {
+		const legacyTags = Array.from(
+			new Set(
+				sourceParams
+					.getAll('tag')
+					.map((tag) => tag.trim())
+					.filter((tag) => tag.length > 0)
+			)
+		);
+
+		for (const tag of legacyTags) {
+			normalized.append('tag', tag);
+		}
 	}
 
 	const normalizedValue = normalized.toString();

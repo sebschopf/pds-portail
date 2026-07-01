@@ -214,7 +214,7 @@
 		return `${apiBase}/api/v1/search?${params.toString()}`;
 	}
 
-	async function runSearch(): Promise<void> {
+	async function runSearch({ focusResults = false }: { focusResults?: boolean } = {}): Promise<void> {
 		isLoading = true;
 		errorMessage = '';
 		try {
@@ -229,7 +229,7 @@
 		} finally {
 			syncUrlState();
 			isLoading = false;
-			if (resultHeading) {
+			if (focusResults && resultHeading) {
 				requestAnimationFrame(() => resultHeading?.focus());
 			}
 		}
@@ -238,13 +238,13 @@
 	async function submitSearch(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		currentPage = 1;
-		await runSearch();
+		await runSearch({ focusResults: true });
 	}
 
 	async function handleQueryChange(newQuery: string): Promise<void> {
 		query = newQuery;
 		currentPage = 1;
-		await runSearch();
+		await runSearch({ focusResults: true });
 	}
 
 	async function changeSort(event: Event): Promise<void> {
@@ -280,7 +280,7 @@
 			return;
 		}
 		currentPage = page;
-		await runSearch();
+		await runSearch({ focusResults: true });
 	}
 
 	onMount(async () => {
@@ -322,7 +322,7 @@
 				onClearQuery={async () => {
 					query = '';
 					currentPage = 1;
-					await runSearch();
+					await runSearch({ focusResults: true });
 				}}
 				onClearFilters={clearAllFilters}
 			/>

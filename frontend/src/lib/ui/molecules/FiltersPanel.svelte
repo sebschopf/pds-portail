@@ -85,6 +85,29 @@
 		}, 300);
 	}
 
+	function toggleTagOption(event: MouseEvent): void {
+		const option = event.target;
+		if (!(option instanceof HTMLOptionElement)) {
+			return;
+		}
+
+		// Permet une multi-selection au clic simple sans exiger Ctrl/Cmd.
+		event.preventDefault();
+		option.selected = !option.selected;
+		const select = event.currentTarget as HTMLSelectElement;
+		select.focus();
+
+		const values = Array.from(select.selectedOptions)
+			.map((selectedOption) => selectedOption.value)
+			.filter((value) => value.length > 0);
+		selectedTags = values;
+
+		if (facetTimers.tag) clearTimeout(facetTimers.tag);
+		facetTimers.tag = setTimeout(() => {
+			onFacetChange(values, 'tag');
+		}, 300);
+	}
+
 	const sortTimer: { current: ReturnType<typeof setTimeout> | null } = { current: null };
 
 	function immediateSortChange(event: Event): void {
@@ -190,11 +213,14 @@
 
 		<label class="select-field" for="facet-tag">
 			<span>Categorie / tag</span>
+			<small class="select-help">Clic simple pour ajouter ou retirer un tag.</small>
 			<select
 				id="facet-tag"
+				class="tag-select"
 				multiple
 				size="6"
 				bind:value={selectedTags}
+				onmousedown={toggleTagOption}
 				onchange={immediateTagFacetChange}
 			>
 				{#each optionListMultiple(tags, selectedTags) as facet, idx (`tag-${facet.name}-${idx}`)}
@@ -313,6 +339,11 @@
 		color: var(--color-on-surface-subtle);
 	}
 
+	.select-help {
+		font-size: var(--font-size-caption);
+		color: var(--color-on-surface-subtle);
+	}
+
 	.select-field select {
 		border: var(--border-thin) solid var(--color-border);
 		background: var(--color-surface);
@@ -322,9 +353,18 @@
 		color: var(--color-on-surface);
 		width: 100%;
 		max-width: 100%;
+	}
+
+	.select-field select:not([multiple]) {
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.tag-select {
+		min-height: calc(var(--size-control-md) * 2.75);
+		overflow-y: auto;
+		white-space: normal;
 	}
 
 	.select-field select:focus-visible {

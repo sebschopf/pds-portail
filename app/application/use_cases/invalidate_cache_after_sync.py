@@ -29,9 +29,10 @@ def invalidate_cache_after_sync(
         synced_count: Nombre de datasets synchronises dans le cycle
         synced_dataset_ids: Liste optionnelle des IDs pour invalidation fine
 
-    Les regles d'invalidation (ADR-007, ADR-023) :
+    Les regles d'invalidation (ADR-007, ADR-023, PDS-109) :
     - SEARCH : invalide si >= 1 dataset sync (les resultats peuvent changer)
     - FACETS : invalide si >= 1 dataset sync (les compteurs peuvent changer)
+    - EXPLORATION : invalide si >= 1 dataset sync (les ressources peuvent changer)
     - DATASET_DETAIL : invalide par dataset si synced_dataset_ids fournis
     """
     settings = get_settings()
@@ -40,15 +41,17 @@ def invalidate_cache_after_sync(
     if synced_count <= 0:
         return
 
-    # Invalidation globale SEARCH + FACETS
+    # Invalidation globale SEARCH + FACETS + EXPLORATION (PDS-109)
     search_deleted = cache.invalidate_by_endpoint_type(CacheEndpointType.SEARCH)
     facets_deleted = cache.invalidate_by_endpoint_type(CacheEndpointType.FACETS)
+    exploration_deleted = cache.invalidate_by_endpoint_type(CacheEndpointType.EXPLORATION)
     logger.info(
-        "Cache SEARCH+FACETS invalides apres sync: synced_datasets=%d, "
-        "search_deleted=%d, facets_deleted=%d",
+        "Cache SEARCH+FACETS+EXPLORATION invalides apres sync: synced_datasets=%d, "
+        "search_deleted=%d, facets_deleted=%d, exploration_deleted=%d",
         synced_count,
         search_deleted,
         facets_deleted,
+        exploration_deleted,
     )
 
     # Invalidation fine DATASET_DETAIL

@@ -91,7 +91,12 @@ def test_invalidate_cache_after_sync_invalidates_search_facets_and_dataset_detai
         synced_dataset_ids=["dataset-001", "dataset-002"],
     )
 
-    assert cache.invalidated == [CacheEndpointType.SEARCH, CacheEndpointType.FACETS]
+    # PDS-109: EXPLORATION ajouté à la liste des types invalidés après sync
+    assert cache.invalidated == [
+        CacheEndpointType.SEARCH,
+        CacheEndpointType.FACETS,
+        CacheEndpointType.EXPLORATION,
+    ]
     assert search_key not in cache.store
     assert facets_key not in cache.store
     assert detail_key_1 not in cache.store

@@ -59,3 +59,36 @@ async def require_license(x_api_key: str = Header(None)) -> License:
         ) from e
 
     return license_obj
+
+
+async def require_license_without_quota_check(x_api_key: str = Header(None)) -> License:
+    """Valide une clé API X-API-Key sans consommer de quota.
+
+    Utilisé pour les endpoints où la consommation de quota dépend du statut du cache
+    (e.g., exploration avec cache 24h). Ne consomme le quota que sur cache miss.
+
+    Lève :
+    - HTTPException 401 si la clé est manquante, invalide ou expirée.
+    """
+    if not x_api_key:
+        logger.warning("Missing X-API-Key header")
+        raise HTTPException(
+            status_code=401,
+            detail="Missing X-API-Key header",
+        )
+
+    # Hash la clé en SHA-256
+    key_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
+
+    # Cherche la licence
+    repository = SqlAlchemyLicenseRepository()
+    license_obj = repository.find_by_key_hash(key_hash)
+
+    if not license_obj:
+        logger.warning(f"Invalid or expired API key (hash prefix: {key_hash[:8]}...)")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired API key",
+        )
+
+    return license_obj

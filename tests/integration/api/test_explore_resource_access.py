@@ -98,17 +98,24 @@ def test_explore_resource_unsupported_format(
     assert response.status_code == 422
 
 
-def test_explore_resource_increments_usage(
+def test_explore_resource_quota_consumed_only_on_cache_miss(
     app_with_temp_db: Any,
     valid_license: LicenseModel,
     test_csv_resource: str,
     api_key: str,
 ) -> None:
-    """POST /resources/{id}/explore incrémente used_this_month (0→1→2)."""
+    """PDS-109: Quota consommé seulement sur cache miss, pas sur cache hit.
+
+    Scenario:
+    1. Premier appel (cache miss) → quota 0→1
+    2. Deuxième appel (cache hit, TTL 24h) → quota reste 1
+    3. Troisième appel (cache hit) → quota reste 1
+    """
 
     assert valid_license is not None
     client = cast(Any, TestClient(app_with_temp_db))
 
+    # Etat initial : quota = 0
     session = SessionLocal()
     try:
         lic = session.query(LicenseModel).filter_by(id="test-license").first()
@@ -117,6 +124,7 @@ def test_explore_resource_increments_usage(
     finally:
         session.close()
 
+    # Premier appel : cache miss → quota 0→1
     response1 = cast(
         Response,
         client.post(
@@ -125,15 +133,18 @@ def test_explore_resource_increments_usage(
         ),
     )
     assert response1.status_code == 200
+    data1 = response1.json()
+    assert data1.get("cached") is False  # Cache miss
 
     session = SessionLocal()
     try:
         lic = session.query(LicenseModel).filter_by(id="test-license").first()
         assert lic is not None
-        assert lic.used_this_month == 1
+        assert lic.used_this_month == 1  # Quota consommé
     finally:
         session.close()
 
+    # Deuxième appel : cache hit → quota reste 1
     response2 = cast(
         Response,
         client.post(
@@ -142,12 +153,34 @@ def test_explore_resource_increments_usage(
         ),
     )
     assert response2.status_code == 200
+    data2 = response2.json()
+    assert data2.get("cached") is True  # Cache hit
 
     session = SessionLocal()
     try:
         lic = session.query(LicenseModel).filter_by(id="test-license").first()
         assert lic is not None
-        assert lic.used_this_month == 2
+        assert lic.used_this_month == 1  # Quota PAS consommé (cache hit)
+    finally:
+        session.close()
+
+    # Troisième appel : cache hit → quota reste 1
+    response3 = cast(
+        Response,
+        client.post(
+            f"/api/v1/resources/{test_csv_resource}/explore",
+            headers={"X-API-Key": api_key},
+        ),
+    )
+    assert response3.status_code == 200
+    data3 = response3.json()
+    assert data3.get("cached") is True  # Cache hit
+
+    session = SessionLocal()
+    try:
+        lic = session.query(LicenseModel).filter_by(id="test-license").first()
+        assert lic is not None
+        assert lic.used_this_month == 1  # Quota PAS consommé (cache hit)
     finally:
         session.close()
 
@@ -157,7 +190,10 @@ def test_explore_resource_unreachable_url_returns_422(
     valid_license: LicenseModel,
     api_key: str,
 ) -> None:
-    """POST /resources/{id}/explore URL inaccessible → 422 explicite (pas 500)."""
+    """POST /resources/{id}/explore URL inaccessible → 422 explicite (pas 500).
+
+    PDS-109: Aucun quota consommé en cas d'erreur fetch.
+    """
 
     assert valid_license is not None
     _, cache_repository, _ = configure_api_modules()
@@ -185,6 +221,17 @@ def test_explore_resource_unreachable_url_returns_422(
     cache_repository.upsert_normalized_batch(NormalizedBatch([org], [dataset], [resource]))
 
     client = cast(Any, TestClient(app_with_temp_db))
+
+    # Etat initial
+    session = SessionLocal()
+    try:
+        lic = session.query(LicenseModel).filter_by(id="test-license").first()
+        assert lic is not None
+        initial_usage = lic.used_this_month
+    finally:
+        session.close()
+
+    # Appel qui provoque une erreur fetch
     response = cast(
         Response,
         client.post(
@@ -195,3 +242,12 @@ def test_explore_resource_unreachable_url_returns_422(
 
     assert response.status_code == 422
     assert "inaccessible" in response.json()["detail"].lower()
+
+    # Vérifier que le quota N'a PAS été consommé (PDS-109)
+    session = SessionLocal()
+    try:
+        lic = session.query(LicenseModel).filter_by(id="test-license").first()
+        assert lic is not None
+        assert lic.used_this_month == initial_usage  # Pas de consommation
+    finally:
+        session.close()

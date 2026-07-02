@@ -24,9 +24,10 @@ from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCache
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
 from app.infrastructure.persistence.compare_adapter import SqlAlchemyCompareAdapter
 from app.infrastructure.persistence.dataset_detail_adapter import SqlAlchemyDatasetDetailAdapter
+from app.infrastructure.persistence.license_repository import SqlAlchemyLicenseRepository
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.infrastructure.persistence.search_adapter import SqlAlchemySearchAdapter
-from app.presentation.api.dependencies import require_license
+from app.presentation.api.dependencies import require_license_without_quota_check
 from app.presentation.api.v1.schemas import (
     CompareRequest,
     CompareResponse,
@@ -449,9 +450,12 @@ def internal_metrics_zero_results(
 @api_router.post("/resources/{resource_id}/explore", response_model=ExploreResourceResponse)
 def explore_resource(
     resource_id: str,
-    _license_obj: License = Depends(require_license),  # noqa: B008
+    _license_obj: License = Depends(require_license_without_quota_check),  # noqa: B008
 ) -> ExploreResourceResponse:
-    """Explore la structure d'une ressource (CSV/JSON/RDF) via sa clé API."""
+    """Explore la structure d'une ressource (CSV/JSON/RDF) via sa clé API.
+
+    Le quota n'est consommé que sur cache miss (pas sur cache hit).
+    """
 
     detail = GetResourceDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(resource_id)
     if not detail:
@@ -477,8 +481,25 @@ def explore_resource(
             detail=f"Format '{detail.format}' not supported",
         )
 
-    return explore_resource_use_case(
+    response = explore_resource_use_case(
         detail=detail,
         cache=SqlAlchemyQueryCacheRepository(),
         ttl_seconds=get_settings().query_cache_ttl_seconds,
     )
+
+    # Consomme le quota uniquement sur cache miss (PDS-109)
+    if not response.cached:
+        try:
+            repository = SqlAlchemyLicenseRepository()
+            repository.increment_usage(_license_obj.id)
+        except ValueError as e:
+            logger.warning(f"License quota exceeded after cache miss: {e}")
+            raise HTTPException(
+                status_code=429,
+                detail="Monthly quota exceeded for this API key",
+                headers={
+                    "Retry-After": "2592000",  # 30 jours en secondes
+                },
+            ) from e
+
+    return response

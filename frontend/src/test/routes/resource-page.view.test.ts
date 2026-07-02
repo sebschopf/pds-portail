@@ -33,6 +33,9 @@ describe('resource/[id] page', () => {
 		expect(view.body).toContain("Ouvrir l\'URL source");
 		expect(view.body).toContain('href="/"');
 		expect(view.body).toContain('Prévisualisation courte');
+		expect(view.body).toContain('Prévisualisation accessible via clé API');
+		expect(view.body).toContain('class="preview compatible');
+		expect(view.body).toContain('class="badge success');
 		expect(view.body).toContain('Aperçu CSV');
 		expect(view.body).toContain('Exploration des champs');
 	});
@@ -80,6 +83,9 @@ describe('resource/[id] page', () => {
 
 		expect(view.body).toContain('Prévisualisation courte');
 		expect(view.body).toContain('Prévisualisation non disponible pour le format XLSX');
+		expect(view.body).toContain('Format non pris en charge');
+		expect(view.body).toContain('class="preview unsupported');
+		expect(view.body).toContain('class="badge warning');
 	});
 
 	it('garde un message explicite en cas d erreur backend', () => {

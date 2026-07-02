@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card, EmptyState, ExploreDataset, PageLayout } from '$lib';
+	import { Breadcrumb, Card, EmptyState, ExploreDataset, PageLayout, StateBadge } from '$lib';
 	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 	import { getSafeExternalUrl } from '$lib/security/external-url';
 
@@ -17,6 +17,19 @@
 		const format = resource?.format?.toLowerCase();
 		return format === 'csv' || format === 'json' || format === 'txt';
 	});
+	const previewState = $derived.by(() =>
+		isPreviewCompatible
+			? {
+				label: 'Prévisualisation accessible via clé API',
+				variant: 'success' as const,
+				sectionClass: 'compatible'
+			}
+			: {
+				label: 'Format non pris en charge',
+				variant: 'warning' as const,
+				sectionClass: 'unsupported'
+			}
+	);
 	const previewText = $derived.by(() => {
 		if (!resource) {
 			return '';
@@ -102,8 +115,11 @@
 				</div>
 			</dl>
 
-			<section class="preview" aria-label="Prévisualisation ressource">
-				<h4 class="preview-title">Prévisualisation courte</h4>
+			<section class={`preview ${previewState.sectionClass}`} aria-label="Prévisualisation ressource">
+				<div class="preview-header">
+					<h4 class="preview-title">Prévisualisation courte</h4>
+					<StateBadge label={previewState.label} variant={previewState.variant} />
+				</div>
 				{#if isPreviewCompatible}
 					<p class="preview-text">{previewText}</p>
 				{:else}
@@ -150,8 +166,26 @@
 		border-radius: var(--radius-none);
 	}
 
+	.preview.compatible {
+		background: color-mix(in oklch, var(--color-success) 10%, var(--color-surface-muted));
+		border-color: var(--color-success);
+	}
+
+	.preview.unsupported {
+		background: color-mix(in oklch, var(--color-warning) 18%, var(--color-surface-muted));
+		border-color: var(--color-warning);
+	}
+
+	.preview-header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: var(--space-3);
+		margin-bottom: var(--space-2);
+	}
+
 	.preview-title {
-		margin: 0 0 var(--space-2);
+		margin: 0;
 		font-size: var(--font-size-heading-sm);
 		line-height: var(--line-height-title);
 	}

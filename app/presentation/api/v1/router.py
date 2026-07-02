@@ -1,15 +1,17 @@
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from app.application.ports.license_repository import License
 from app.application.use_cases.cached_get_dataset_detail import CachedGetDatasetDetailUseCase
 from app.application.use_cases.cached_search_datasets import CachedSearchDatasetsUseCase
 from app.application.use_cases.compare_datasets import (
     CompareDatasetsUseCase,
     InvalidCompareRequestError,
 )
+from app.application.use_cases.explore_resource import explore_resource as explore_resource_use_case
 from app.application.use_cases.get_dataset_detail import GetDatasetDetailUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
 from app.application.use_cases.get_resource_detail import GetResourceDetailUseCase
@@ -24,10 +26,12 @@ from app.infrastructure.persistence.compare_adapter import SqlAlchemyCompareAdap
 from app.infrastructure.persistence.dataset_detail_adapter import SqlAlchemyDatasetDetailAdapter
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.infrastructure.persistence.search_adapter import SqlAlchemySearchAdapter
+from app.presentation.api.dependencies import require_license
 from app.presentation.api.v1.schemas import (
     CompareRequest,
     CompareResponse,
     DatasetDetailResponse,
+    ExploreResourceResponse,
     ResourceDetailResponse,
     SearchResponse,
     TopQueriesResponse,
@@ -437,3 +441,33 @@ def internal_metrics_zero_results(
     from app.presentation.api.v1.schemas import ZeroResultItem
 
     return ZeroResultsResponse(queries=[ZeroResultItem(**row) for row in rows], count=len(rows))
+
+
+# --- Exploration de ressource (PDS-81/82) ---
+
+
+@api_router.post("/resources/{resource_id}/explore", response_model=ExploreResourceResponse)
+def explore_resource(
+    resource_id: str,
+    _license_obj: License = Depends(require_license),  # noqa: B008
+) -> ExploreResourceResponse:
+    """Explore la structure d'une ressource (CSV/JSON) via sa clé API."""
+
+    detail = GetResourceDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(resource_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail=f"Resource {resource_id} not found")
+
+    # Vérifie que le format est supporté
+    supported_formats = ["csv", "json"]
+    format_lower = (detail.format or "").lower()
+    if format_lower not in supported_formats:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Format '{detail.format}' not supported (csv or json only)",
+        )
+
+    return explore_resource_use_case(
+        detail=detail,
+        cache=SqlAlchemyQueryCacheRepository(),
+        ttl_seconds=get_settings().query_cache_ttl_seconds,
+    )

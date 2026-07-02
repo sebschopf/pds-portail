@@ -14,6 +14,7 @@ class CacheEndpointType(StrEnum):
     SEARCH = "search"
     DATASET_DETAIL = "dataset_detail"
     RESOURCE_DETAIL = "resource_detail"
+    EXPLORATION = "exploration"
     COMPARE = "compare"
     FACETS = "facets"
 
@@ -92,6 +93,14 @@ def build_resource_detail_cache_key(resource_id: str) -> str:
     fingerprint = resource_id.lower()
     return CacheKey(
         endpoint_type=CacheEndpointType.RESOURCE_DETAIL, fingerprint=fingerprint
+    ).to_string()
+
+
+def build_explore_cache_key(resource_id: str) -> str:
+    """Construit une clé de cache pour l'exploration d'une ressource."""
+    fingerprint = resource_id.lower()
+    return CacheKey(
+        endpoint_type=CacheEndpointType.EXPLORATION, fingerprint=fingerprint
     ).to_string()
 
 

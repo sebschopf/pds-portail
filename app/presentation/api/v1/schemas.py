@@ -193,3 +193,43 @@ class ZeroResultsResponse(BaseModel):
 
     queries: list[ZeroResultItem] = Field(description="Requetes avec total=0 dans le response_json")
     count: int = Field(description="Nombre total de requetes sans resultat")
+
+
+# --- Schemas pour l'exploration de ressource (PDS-81/82) ---
+
+
+class ColumnStats(BaseModel):
+    """Statistiques descriptives pour une colonne numerique."""
+
+    min: float | None = Field(None, description="Valeur minimale")
+    max: float | None = Field(None, description="Valeur maximale")
+    mean: float | None = Field(None, description="Moyenne arithmetique")
+    median: float | None = Field(None, description="Mediane")
+
+
+class ColumnInfo(BaseModel):
+    """Information sur une colonne detectee dans le fichier explore."""
+
+    name: str = Field(description="Nom de la colonne")
+    detected_type: str = Field(
+        description="Type detecte: 'string', 'integer', 'float', 'date', 'unknown'"
+    )
+    fill_rate: float = Field(description="Taux de remplissage (0.0-1.0)", ge=0.0, le=1.0)
+    sample_values: list[str] = Field(
+        default_factory=list, description="Echantillon de valeurs (max 5)"
+    )
+    stats: ColumnStats | None = Field(None, description="Statistiques numeriques (si applicable)")
+
+
+class ExploreResourceResponse(BaseModel):
+    """Reponse du parsing d'une ressource (CSV/JSON)."""
+
+    resource_id: str = Field(description="ID de la ressource")
+    format: str = Field(description="Format du fichier (csv, json)")
+    parsed_at: str = Field(description="Horodatage du parsing (ISO 8601)")
+    columns: list[ColumnInfo] = Field(default_factory=list, description="Colonnes detectees")
+    row_count: int = Field(default=0, description="Nombre de lignes/enregistrements")
+    cached: bool = Field(
+        default=False,
+        description="True si le resultat provient du cache (moins de 24h)",
+    )

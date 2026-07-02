@@ -229,8 +229,8 @@ def test_differential_sync_persists_new_timestamp() -> None:
     batch = use_case.execute(start=0, rows=100, modified_since=modified_since)
     assert len(batch.datasets) == 3
 
-    # Simule la fin d'un cycle differentiel: on met a jour last_full_sync a now
-    now = datetime.now(UTC).isoformat()
+    # Simule la fin d'un cycle differentiel avec un horodatage fixe.
+    now = datetime(2026, 7, 2, tzinfo=UTC).isoformat()
     repository.set_sync_state("last_full_sync", now)
     assert repository.get_sync_state("last_full_sync") == now
 

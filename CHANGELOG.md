@@ -6,6 +6,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased] — M11 Monétisation & Exploration Premium
 
 ### Added
+- PDS-108 : QA tests backend - baseline documentee (fiabilite, vitesse, couverture), publication d'une liste de modules critiques avec cibles progressives de couverture, et definition de gates en 2 phases (informative puis enforcee). Rapport versionne: `backlog/docs/RAPPORT-QA-PDS-108-2026-07-02.md`. Runbook exploitation synchronise: `Doc/40-exploitation/R004-description-plan-fiabilisation-tests.md`.
 - PDS-80 : ADR-027 Mécanisme de clé API — Documente le choix d'un token opaque UUID v4 hashé SHA-256 pour protéger l'endpoint d'exploration. Justifie le rejet de JWT, PASETO, et Redis. Détaille le format, le stockage en table `licenses`, la transmission via header `X-API-Key`, le rate limiting par clé, et le hachage SHA-256. Lien : `Doc/30-decisions/adr/0027-cle-api-exploration.md`.
 - PDS-81 : Backend Licence API — Implémente l'infrastructure de gestion des licences pour les services payants (ADR-027). Contient : modèle SQLAlchemy `LicenseModel` (table `licenses`), port `LicenseRepositoryPort`, repository `SqlAlchemyLicenseRepository`, dépendance FastAPI `require_license` pour valider le header `X-API-Key`. Tests : 10 tests unitaires couvrant find_by_key_hash, increment_usage, create, reset_monthly_usage. Traçabilité : SPEC-008 §3 & §4, ADR-027.
 

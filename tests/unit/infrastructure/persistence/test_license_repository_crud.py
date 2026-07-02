@@ -70,8 +70,8 @@ class TestLicenseRepositoryFindByKeyHash:
         """Teste qu'une licence expirée n'est pas trouvée."""
         expired_key = str(uuid.uuid4())
         key_hash = hashlib.sha256(expired_key.encode()).hexdigest()
-        now = datetime.now(UTC)
-        expired_date = (now - timedelta(days=1)).isoformat()
+        reference_now = datetime(2026, 7, 2, tzinfo=UTC)
+        expired_date = (reference_now - timedelta(days=1)).isoformat()
 
         license_obj = repository.create(
             key_hash=key_hash,

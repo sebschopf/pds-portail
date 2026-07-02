@@ -99,8 +99,8 @@ class TestRequireLicenseDependency:
         """Teste 401 si clé expirée."""
         key = str(uuid.uuid4())
         key_hash = hashlib.sha256(key.encode()).hexdigest()
-        now = datetime.now(UTC)
-        expired_date = (now - timedelta(days=1)).isoformat()
+        reference_now = datetime(2026, 7, 2, tzinfo=UTC)
+        expired_date = (reference_now - timedelta(days=1)).isoformat()
         repo = SqlAlchemyLicenseRepository()
 
         license_obj = repo.create(

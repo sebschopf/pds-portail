@@ -60,3 +60,4 @@ exclude = [
 [tool.pytest.ini_options]
 addopts = "--cov=app --cov-fail-under=80 --cov-report=term-missing"
 testpaths = ["tests"]
+asyncio_mode = "auto"

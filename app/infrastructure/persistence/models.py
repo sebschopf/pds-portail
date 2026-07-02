@@ -1,5 +1,5 @@
 from sqlalchemy import ForeignKey, Index, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, configure_mappers, mapped_column, relationship
 
 from app.infrastructure.persistence.database import Base
 
@@ -14,7 +14,10 @@ class OrganizationModel(Base):
     last_synced: Mapped[str | None] = mapped_column(String, nullable=True)
     source: Mapped[str] = mapped_column(String, nullable=False, default="ckan")
 
-    datasets: Mapped[list["DatasetModel"]] = relationship(back_populates="organization")
+    datasets: Mapped[list["DatasetModel"]] = relationship(
+        lambda: DatasetModel,
+        back_populates="organization",
+    )
 
 
 class DatasetModel(Base):
@@ -40,8 +43,14 @@ class DatasetModel(Base):
     normalized_at: Mapped[str | None] = mapped_column(String, nullable=True)
     source: Mapped[str] = mapped_column(String, nullable=False, default="ckan")
 
-    organization: Mapped[OrganizationModel] = relationship(back_populates="datasets")
-    resources: Mapped[list["ResourceModel"]] = relationship(back_populates="dataset")
+    organization: Mapped[OrganizationModel] = relationship(
+        lambda: OrganizationModel,
+        back_populates="datasets",
+    )
+    resources: Mapped[list["ResourceModel"]] = relationship(
+        lambda: ResourceModel,
+        back_populates="dataset",
+    )
 
 
 class ResourceModel(Base):
@@ -57,7 +66,10 @@ class ResourceModel(Base):
     last_modified: Mapped[str | None] = mapped_column(String, nullable=True)
     source: Mapped[str] = mapped_column(String, nullable=False, default="ckan")
 
-    dataset: Mapped[DatasetModel] = relationship(back_populates="resources")
+    dataset: Mapped[DatasetModel] = relationship(
+        lambda: DatasetModel,
+        back_populates="resources",
+    )
 
 
 class SyncStateModel(Base):
@@ -141,3 +153,44 @@ class CacheHitStatsModel(Base):
     hits: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     misses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     stale_entries: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class LicenseModel(Base):
+    """Licences API pour services payants (exploration, surveillance).
+
+    Chaque licence est associée à une clé API (token opaque UUID v4) hashée en SHA-256.
+    Traçabilité : ADR-027 (PDS-80), SPEC-008 §3 & §4.
+    """
+
+    __tablename__ = "licenses"
+    __table_args__ = (
+        Index("idx_licenses_key_hash", "key_hash"),  # Lookup rapide par clé
+        Index("idx_licenses_plan", "plan"),  # Filtres par plan (admin)
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    plan: Mapped[str] = mapped_column(String(20), nullable=False)  # 'basic' | 'pro'
+    quota_monthly: Mapped[int] = mapped_column(Integer, nullable=False)
+    used_this_month: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)  # ISO 8601
+    expires_at: Mapped[str | None] = mapped_column(String, nullable=True)  # ISO 8601
+
+
+# Explicit __all__ to ensure the module is fully loaded before any imports
+# This helps avoid forward reference resolution issues in SQLAlchemy
+__all__ = [
+    "OrganizationModel",
+    "DatasetModel",
+    "ResourceModel",
+    "SyncStateModel",
+    "FacetsCacheModel",
+    "SyncMetricsModel",
+    "QueryCacheModel",
+    "CacheHitStatsModel",
+    "LicenseModel",
+]
+
+# Force la configuration des mappers dès l'import du module pour éviter
+# les erreurs de résolution tardive des références entre modèles.
+configure_mappers()

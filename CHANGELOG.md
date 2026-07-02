@@ -5,6 +5,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Unreleased] — M11 Monétisation & Exploration Premium
 
+### Added
+- PDS-80 : ADR-027 Mécanisme de clé API — Documente le choix d'un token opaque UUID v4 hashé SHA-256 pour protéger l'endpoint d'exploration. Justifie le rejet de JWT, PASETO, et Redis. Détaille le format, le stockage en table `licenses`, la transmission via header `X-API-Key`, le rate limiting par clé, et le hachage SHA-256. Lien : `Doc/30-decisions/adr/0027-cle-api-exploration.md`.
+- PDS-81 : Backend Licence API — Implémente l'infrastructure de gestion des licences pour les services payants (ADR-027). Contient : modèle SQLAlchemy `LicenseModel` (table `licenses`), port `LicenseRepositoryPort`, repository `SqlAlchemyLicenseRepository`, dépendance FastAPI `require_license` pour valider le header `X-API-Key`. Tests : 10 tests unitaires couvrant find_by_key_hash, increment_usage, create, reset_monthly_usage. Traçabilité : SPEC-008 §3 & §4, ADR-027.
+
 ## [1.1.4] - 2026-07-01
 ### Added
 - PDS-102 : Frontend recherche migré vers la multi-sélection de tags (`selectedTags`) avec URL partageable/réhydratable (`tags=` pour multi, `tag=` conservé en legacy mono-tag), compatibilité ascendante des anciens liens `tag=...`, adaptation du mock API au filtrage multi-tags (OR), et extension des tests frontend (FiltersPanel, search-context, search-api) pour couvrir le nouveau comportement.

@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, configure_mappers, sessionmaker
 
 from app.core.config import get_settings
 
@@ -29,6 +29,58 @@ _ensure_sqlite_directory(settings.database_url)
 
 engine = create_engine(settings.database_url, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+
+
+def reconfigure_for_test(database_url: str) -> None:
+    """Reconfigure l'engine/session SQLAlchemy pour un test sans recharger les modules.
+
+    Cette fonction conserve le meme objet ``SessionLocal`` (importe partout)
+    et met a jour son bind vers un nouvel engine. Cela evite les importlib.reload
+    en cascade tout en gardant l'isolation des tests par base SQLite temporaire.
+    """
+    global settings, engine
+
+    _ensure_sqlite_directory(database_url)
+
+    new_engine = create_engine(database_url, future=True)
+    SessionLocal.configure(bind=new_engine)
+
+    old_engine = engine
+    engine = new_engine
+
+    settings = get_settings()
+    settings.database_url = database_url
+
+    old_engine.dispose()
+
+
+def _ensure_models_registered() -> None:
+    """Garantit l'import et l'enregistrement de tous les modeles SQLAlchemy.
+
+    CRITIQUE: cette fonction doit etre appelee AVANT toute instanciation de
+    modele ou configuration de mapper, afin d'eviter les erreurs de resolution
+    des references anticipees.
+
+    Le mode Declarative de SQLAlchemy 2.0 evalue tardivement les references
+    relationnelles declarees sous forme de chaines. Lors de l'instanciation
+    d'un modele, SQLAlchemy declenche mapper._post_configure_properties() puis
+    tente de resoudre l'ensemble des references. Si un modele cible (ex:
+    ResourceModel) n'est pas encore importe, SQLAlchemy leve InvalidRequestError.
+
+    En important tous les modeles ici, le registry contient toutes les classes
+    avant la configuration effective des mappers.
+
+    Documentation:
+    https://docs.sqlalchemy.org/en/20/orm/relationships.html#late-evaluation
+    """
+    # noqa: F401, E402 (import pour effets de bord - enregistrement mappers)
+    # Import pour side effects: enregistre les classes SQLAlchemy dans le registry.
+    import importlib
+
+    importlib.import_module("app.infrastructure.persistence.models")
+
+    # Force la validation des relations apres import des modeles.
+    configure_mappers()
 
 
 def _migrate_add_source_column() -> None:
@@ -67,28 +119,14 @@ def _migrate_add_source_column() -> None:
 
 
 def create_schema() -> None:
-    from app.infrastructure.persistence.models import (
-        CacheHitStatsModel,
-        DatasetModel,
-        FacetsCacheModel,
-        OrganizationModel,
-        QueryCacheModel,
-        ResourceModel,
-        SyncMetricsModel,
-        SyncStateModel,
-    )
+    """Crée le schéma de la base de données (tables, indexes, FTS5).
 
-    # Reference explicite pour enregistrement SQLAlchemy (side-effect obligatoire)
-    _ = (
-        CacheHitStatsModel,
-        DatasetModel,
-        OrganizationModel,
-        QueryCacheModel,
-        ResourceModel,
-        SyncStateModel,
-        FacetsCacheModel,
-        SyncMetricsModel,
-    )
+    Les modèles sont importés lors de l'appel (lazy) pour éviter les problèmes
+    d'initialisation des mappers SQLAlchemy avec les forward references.
+    Voir: https://docs.sqlalchemy.org/en/20/orm/relationships.html
+    """
+    # Garantit l'enregistrement des modeles AVANT toute configuration des mappers.
+    _ensure_models_registered()
 
     Base.metadata.create_all(bind=engine)
 
@@ -99,9 +137,6 @@ def create_schema() -> None:
     # Creer/migrer l'index FTS5 pour la recherche full-text (PDS-44, PDS-41, PDS-96).
     # FTS5 n'est pas gere par SQLAlchemy → creation en SQL brut.
     # remove_diacritics=2 supprime les accents automatiquement (FR/DE/IT).
-    from app.core.config import get_settings
-
-    settings = get_settings()
     db_path = settings.database_url.removeprefix("sqlite:///")
     if db_path:
         conn = sqlite3.connect(db_path)

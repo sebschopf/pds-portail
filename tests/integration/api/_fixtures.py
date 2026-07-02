@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 from typing import Protocol, cast
 
 from fastapi import FastAPI
@@ -27,7 +26,7 @@ class CacheRepositoryPort(Protocol):
 def configure_api_modules(
     enable_query_cache: bool = False,
 ) -> tuple[DatabaseModulePort, CacheRepositoryPort, FastAPI]:
-    """Recharge les modules relies a la DB pour les tests de lecture API.
+    """Configure un contexte API de test sans rechargement de modules.
 
     Par defaut, le cache applicatif PDS-46 est desactive pour eviter de
     polluer les assertions existantes. Les tests specifiques au cache
@@ -36,53 +35,26 @@ def configure_api_modules(
     import os
 
     import app.core.config as config_module
+    import app.infrastructure.persistence.cache_repository as cache_repository_module
+    import app.infrastructure.persistence.database as database_module
+    import app.main as main_module
 
+    # Efface le cache de config pour prendre en compte les variables d'env du test.
     config_module.get_settings.cache_clear()
 
-    # Desactiver le cache applicatif PDS-46 pour les tests existants
-    if not enable_query_cache:
-        os.environ["QUERY_CACHE_ENABLED"] = "false"
+    # Active/desactive explicitement le cache applicatif pour eviter
+    # toute dependance implicite a l'etat des tests precedents.
+    os.environ["QUERY_CACHE_ENABLED"] = "true" if enable_query_cache else "false"
 
-    import app.application.use_cases.get_dataset_detail as dataset_detail_use_case_module
-    import app.application.use_cases.get_health_status as health_use_case_module
-    import app.application.use_cases.get_resource_detail as resource_detail_use_case_module
-    import app.application.use_cases.search_datasets as search_datasets_use_case_module
-    import app.infrastructure.persistence.cache_read_repository as cache_read_repository_module
-    import app.infrastructure.persistence.cache_repository as cache_repository_module
-    import app.infrastructure.persistence.compare_adapter as compare_adapter_module
-    import app.infrastructure.persistence.database as database_module
-    import app.infrastructure.persistence.dataset_detail_adapter as dataset_detail_adapter_module
-    import app.infrastructure.persistence.models as models_module
-    import app.infrastructure.persistence.query_cache_repository as query_cache_repository_module
-    import app.infrastructure.persistence.search_adapter as search_adapter_module
-    import app.infrastructure.persistence.search_facets as search_facets_module
-    import app.infrastructure.persistence.search_tag_filter as search_tag_filter_module
-    import app.main as main_module
-    import app.presentation.api.v1.router as router_module
-
-    database_module = importlib.reload(database_module)
-    models_module = importlib.reload(models_module)
-    cache_repository_module = importlib.reload(cache_repository_module)
-    cache_read_repository_module = importlib.reload(cache_read_repository_module)
-    query_cache_repository_module = importlib.reload(query_cache_repository_module)
-    search_tag_filter_module = importlib.reload(search_tag_filter_module)
-    search_facets_module = importlib.reload(search_facets_module)
-    search_adapter_module = importlib.reload(search_adapter_module)
-    dataset_detail_adapter_module = importlib.reload(dataset_detail_adapter_module)
-    compare_adapter_module = importlib.reload(compare_adapter_module)
-    search_datasets_use_case_module = importlib.reload(search_datasets_use_case_module)
-    dataset_detail_use_case_module = importlib.reload(dataset_detail_use_case_module)
-    resource_detail_use_case_module = importlib.reload(resource_detail_use_case_module)
-    health_use_case_module = importlib.reload(health_use_case_module)
-    router_module = importlib.reload(router_module)
-    main_module = importlib.reload(main_module)
+    settings = config_module.get_settings()
+    database_module.reconfigure_for_test(settings.database_url)
 
     database_port = cast(DatabaseModulePort, database_module)
     cache_repository = cast(
         CacheRepositoryPort,
         cache_repository_module.SqlAlchemyCacheRepository(),
     )
-    app: FastAPI = main_module.app
+    app: FastAPI = main_module.create_app()
 
     return database_port, cache_repository, app
 

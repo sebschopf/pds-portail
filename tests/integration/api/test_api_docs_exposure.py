@@ -2,30 +2,12 @@
 
 from __future__ import annotations
 
-import importlib
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-
-def _configure_main_module():
-    """Recharge l'application en tenant compte des variables d'environnement."""
-
-    import app.core.config as config_module
-    import app.infrastructure.persistence.database as database_module
-    import app.infrastructure.persistence.models as models_module
-    import app.main as main_module
-
-    config_module.get_settings.cache_clear()
-    database_module = importlib.reload(database_module)
-    # PDS-69 : recharger aussi les modeles pour qu'ils soient lies au nouveau
-    # Base.metadata cree par le reload(database_module). Sans cela, les modeles
-    # restent sur l'ancien Base → create_all() ne cree rien.
-    models_module = importlib.reload(models_module)
-    main_module = importlib.reload(main_module)
-
-    return database_module, main_module
+from ._fixtures import configure_api_modules
 
 
 def test_docs_hidden_when_expose_api_docs_disabled(
@@ -38,10 +20,10 @@ def test_docs_hidden_when_expose_api_docs_disabled(
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
     monkeypatch.setenv("EXPOSE_API_DOCS", "false")
 
-    database_module, main_module = _configure_main_module()
+    database_module, _, app = configure_api_modules()
     database_module.create_schema()
 
-    client = TestClient(main_module.app)
+    client = TestClient(app)
 
     docs_response = client.get("/docs")
     redoc_response = client.get("/redoc")
@@ -62,10 +44,10 @@ def test_docs_exposed_when_expose_api_docs_enabled(
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
     monkeypatch.setenv("EXPOSE_API_DOCS", "true")
 
-    database_module, main_module = _configure_main_module()
+    database_module, _, app = configure_api_modules()
     database_module.create_schema()
 
-    client = TestClient(main_module.app)
+    client = TestClient(app)
 
     docs_response = client.get("/docs")
     redoc_response = client.get("/redoc")

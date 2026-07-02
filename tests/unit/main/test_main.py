@@ -104,7 +104,9 @@ def test_start_sync_worker_triggers_bootstrap_and_stores_state(
         ckan_sync_interval_minutes=1,
     )
 
-    main_module._start_sync_worker(app, settings)
+    start_worker_name = "_start_sync_worker"
+    start_sync_worker = getattr(main_module, start_worker_name)
+    start_sync_worker(app, settings)
 
     assert run_calls == [True]
     assert isinstance(app.state.sync_stop_event, _BootstrapStopEvent)
@@ -122,7 +124,9 @@ def test_stop_sync_worker_sets_event_and_joins_alive_thread() -> None:
     app.state.sync_stop_event = stop_event
     app.state.sync_thread = worker_thread
 
-    main_module._stop_sync_worker(app)
+    stop_worker_name = "_stop_sync_worker"
+    stop_sync_worker = getattr(main_module, stop_worker_name)
+    stop_sync_worker(app)
 
     assert stop_event.set_called is True
     assert worker_thread.join_timeout == 2

@@ -30,6 +30,7 @@ Thumbs.db
 # Doc & backlog (contenu interne)
 Doc/
 backlog/
+prompts/
 
 # Local data / cache SQLite
 data/
@@ -41,4 +42,4 @@ pds_portail_backend.egg-info/
 .mcp.json
 # Fichiers de configuration interne Cline
 .clinerules
-copilot-instructions.md
+.instructions.md

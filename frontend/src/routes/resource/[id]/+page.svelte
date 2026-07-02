@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card, EmptyState, PageLayout } from '$lib';
+	import { Breadcrumb, Card, EmptyState, ExploreDataset, PageLayout } from '$lib';
 	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 	import { getSafeExternalUrl } from '$lib/security/external-url';
 
@@ -112,6 +112,8 @@
 					</p>
 				{/if}
 			</section>
+
+			<ExploreDataset resourceId={resource.id} />
 
 			<nav class="links" aria-label="Navigation ressource">
 				<a href={searchHref}>Retour à la recherche</a>

@@ -14,8 +14,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from io import StringIO
+from socket import timeout as SocketTimeout
 from statistics import mean, median
 from typing import cast
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 from fastapi import HTTPException
@@ -144,16 +146,44 @@ def _load_cached_response(cached_json: str) -> ExploreResourceResponse:
 
 
 def _fetch_resource_content(url: str, timeout_seconds: float) -> str:
-    with urlopen(url, timeout=timeout_seconds) as response:
-        payload = bytearray()
-        while True:
-            chunk = response.read(FETCH_CHUNK_SIZE)
-            if not chunk:
-                break
-            payload.extend(chunk)
-            if len(payload) > MAX_RESOURCE_BYTES:
-                raise HTTPException(status_code=422, detail="Resource exceeds 50 MB limit")
-    return bytes(payload).decode("utf-8-sig")
+    try:
+        with urlopen(url, timeout=timeout_seconds) as response:
+            payload = bytearray()
+            while True:
+                chunk = response.read(FETCH_CHUNK_SIZE)
+                if not chunk:
+                    break
+                payload.extend(chunk)
+                if len(payload) > MAX_RESOURCE_BYTES:
+                    raise HTTPException(status_code=422, detail="Resource exceeds 50 MB limit")
+        return bytes(payload).decode("utf-8-sig")
+    except HTTPError as exc:
+        logger.warning("Failed to fetch resource URL %s: HTTP %s", url, exc.code)
+        raise HTTPException(
+            status_code=422,
+            detail=f"Impossible de recuperer la ressource (HTTP {exc.code})",
+        ) from exc
+    except URLError as exc:
+        if isinstance(exc.reason, TimeoutError | SocketTimeout):
+            logger.warning("Timeout fetching resource URL %s", url)
+            raise HTTPException(
+                status_code=504,
+                detail="Le telechargement de la ressource a expire (timeout)",
+            ) from exc
+        logger.warning("Resource URL unreachable %s: %s", url, exc.reason)
+        raise HTTPException(status_code=422, detail="URL de ressource inaccessible") from exc
+    except TimeoutError as exc:
+        logger.warning("Timeout fetching resource URL %s", url)
+        raise HTTPException(
+            status_code=504,
+            detail="Le telechargement de la ressource a expire (timeout)",
+        ) from exc
+    except UnicodeDecodeError as exc:
+        logger.warning("Failed to decode resource URL %s as UTF-8", url)
+        raise HTTPException(
+            status_code=422,
+            detail="Le contenu de la ressource n'est pas decodable en UTF-8",
+        ) from exc
 
 
 def _parse_resource_content(

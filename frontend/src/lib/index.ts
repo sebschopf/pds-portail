@@ -21,6 +21,7 @@ export { default as Timeline } from './ui/molecules/Timeline.svelte';
 export { default as Card } from './ui/organisms/Card.svelte';
 export { default as CardDataset } from './ui/organisms/CardDataset.svelte';
 export { default as EmptyState } from './ui/organisms/EmptyState.svelte';
+export { default as ExploreDataset } from './ui/organisms/ExploreDataset.svelte';
 export { default as PageLayout } from './ui/organisms/PageLayout.svelte';
 
 // Icônes SVG néo-brutalistes (PDS-67)

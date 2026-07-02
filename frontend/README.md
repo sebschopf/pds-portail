@@ -44,6 +44,7 @@ Endpoints mock disponibles en mode `dev:mock` :
 - `GET /api/v1/search`
 - `GET /api/v1/dataset/:id`
 - `GET /api/v1/resource/:id`
+- `POST /api/v1/resources/:id/explore`
 
 > **Règle absolue : ce mode est interdit en production.**
 >
@@ -52,6 +53,45 @@ Endpoints mock disponibles en mode `dev:mock` :
 > - Ne jamais définir `PUBLIC_USE_MOCK_API=1` dans les variables d'environnement de déploiement.
 
 Voir `.env.example` pour la liste complète des variables d'environnement.
+
+## Exploration premium sur la page ressource (PDS-84)
+
+Le frontend integre un composant d'exploration premium sur la page
+`/resource/[id]` :
+
+- Composant : `src/lib/ui/organisms/ExploreDataset.svelte`
+- Integration vue : `src/routes/resource/[id]/+page.svelte`
+- Proxy API SvelteKit : `src/routes/api/v1/resources/[id]/explore/+server.ts`
+
+### Flux utilisateur
+
+1. L'utilisateur saisit sa cle API dans le formulaire.
+2. Le frontend appelle `POST /api/v1/resources/{id}/explore` avec le header `X-API-Key`.
+3. En succes, le frontend affiche :
+	 - un tableau des colonnes (`name`, `detected_type`, `fill_rate`, `sample_values`)
+	 - des cartes de statistiques pour les colonnes numeriques (`min`, `max`, `mean`, `median`)
+	 - une section d'analyse (`summary`, `capabilities`, `caveats`)
+
+### Gestion d'etat et erreurs
+
+- Etats UI : `locked`, `loading`, `error`, `success`
+- Mapping d'erreurs API :
+	- `401` : cle manquante ou invalide
+	- `429` : quota epuise
+	- `422` : format non supporte
+	- `504` : timeout de telechargement
+
+### Persistance locale
+
+- Cle stockee uniquement apres succes : `localStorage['pds-explore-key']`
+- Au montage du composant, si la cle est presente, une tentative automatique est lancee.
+
+### Accessibilite (WCAG AA)
+
+- Champ de saisie avec `label` explicite
+- Messages d'erreur avec `role='alert'`
+- Tableau natif avec `caption`, `thead`, `tbody`, `scope='col'`
+- Navigation clavier avec soumission par Enter et remise a l'etat `locked` via Escape
 
 ## Building
 

@@ -150,3 +150,48 @@ def test_explore_resource_increments_usage(
         assert lic.used_this_month == 2
     finally:
         session.close()
+
+
+def test_explore_resource_unreachable_url_returns_422(
+    app_with_temp_db: Any,
+    valid_license: LicenseModel,
+    api_key: str,
+) -> None:
+    """POST /resources/{id}/explore URL inaccessible → 422 explicite (pas 500)."""
+
+    assert valid_license is not None
+    _, cache_repository, _ = configure_api_modules()
+
+    org = Organization(
+        id="org-unreachable",
+        name="Test",
+        description="Test",
+        last_synced="2026-07-02T00:00:00Z",
+    )
+    dataset = Dataset(
+        id="ds-unreachable",
+        org_id="org-unreachable",
+        title="Dataset unreachable",
+        created="2026-07-02T00:00:00Z",
+    )
+    resource = Resource(
+        id="res-unreachable",
+        dataset_id="ds-unreachable",
+        name="Resource unreachable",
+        format="CSV",
+        # Port 1 est invalide localement, provoque une erreur d'acces deterministic.
+        url="http://127.0.0.1:1/unreachable.csv",
+    )
+    cache_repository.upsert_normalized_batch(NormalizedBatch([org], [dataset], [resource]))
+
+    client = cast(Any, TestClient(app_with_temp_db))
+    response = cast(
+        Response,
+        client.post(
+            "/api/v1/resources/res-unreachable/explore",
+            headers={"X-API-Key": api_key},
+        ),
+    )
+
+    assert response.status_code == 422
+    assert "inaccessible" in response.json()["detail"].lower()

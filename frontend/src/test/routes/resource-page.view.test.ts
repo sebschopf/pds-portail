@@ -34,6 +34,7 @@ describe('resource/[id] page', () => {
 		expect(view.body).toContain('href="/"');
 		expect(view.body).toContain('Prévisualisation courte');
 		expect(view.body).toContain('Aperçu CSV');
+		expect(view.body).toContain('Exploration des champs');
 	});
 
 	it('affiche les fallbacks non renseigne quand les valeurs sont absentes', () => {

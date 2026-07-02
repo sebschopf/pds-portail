@@ -221,14 +221,32 @@ class ColumnInfo(BaseModel):
     stats: ColumnStats | None = Field(None, description="Statistiques numeriques (si applicable)")
 
 
+class ResourceAnalysis(BaseModel):
+    """Analyse heuristique actionnable de la ressource exploree."""
+
+    summary: str = Field(description="Resume interpretable de la structure detectee")
+    capabilities: list[str] = Field(
+        default_factory=list,
+        description="Usages ou visualisations suggeres a partir des signaux detectes",
+    )
+    caveats: list[str] = Field(
+        default_factory=list,
+        description="Limites et points d'attention observes sur l'aperçu",
+    )
+
+
 class ExploreResourceResponse(BaseModel):
-    """Reponse du parsing d'une ressource (CSV/JSON)."""
+    """Reponse du parsing et de l'analyse d'une ressource (CSV/JSON)."""
 
     resource_id: str = Field(description="ID de la ressource")
     format: str = Field(description="Format du fichier (csv, json)")
     parsed_at: str = Field(description="Horodatage du parsing (ISO 8601)")
     columns: list[ColumnInfo] = Field(default_factory=list, description="Colonnes detectees")
     row_count: int = Field(default=0, description="Nombre de lignes/enregistrements")
+    analysis: ResourceAnalysis | None = Field(
+        default=None,
+        description="Analyse heuristique contextualisee a partir des colonnes detectees",
+    )
     cached: bool = Field(
         default=False,
         description="True si le resultat provient du cache (moins de 24h)",

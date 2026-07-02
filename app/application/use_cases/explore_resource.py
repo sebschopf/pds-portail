@@ -1,4 +1,4 @@
-"""Exploration structurée d'une ressource CSV ou JSON (PDS-82).
+"""Exploration structurée d'une ressource CSV, JSON ou RDF (PDS-82).
 
 Le cas d'usage s'appuie sur le détail ressource existant, parse le contenu
 source avec la stdlib, puis met en cache le résultat sérialisé pendant 24h.
@@ -10,16 +10,21 @@ import csv
 import json
 import logging
 import re
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from io import StringIO
 from statistics import mean, median
+from typing import cast
 from urllib.request import urlopen
 
 from fastapi import HTTPException
+from rdflib import Graph
+from rdflib.namespace import RDF, RDFS, SKOS
 
 from app.application.ports.query_cache_repository import QueryCacheRepositoryPort
 from app.domain.cache_invalidation import CacheEndpointType, build_explore_cache_key
+from app.domain.dataset_analyzer import Analysis, analyse_explored_resource
 from app.presentation.api.v1.schemas import (
     ColumnInfo as ColumnInfoSchema,
 )
@@ -30,6 +35,9 @@ from app.presentation.api.v1.schemas import (
     ExploreResourceResponse,
     ResourceDetailResponse,
 )
+from app.presentation.api.v1.schemas import (
+    ResourceAnalysis as ResourceAnalysisSchema,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +46,10 @@ FETCH_CHUNK_SIZE = 64 * 1024
 
 _INTEGER_PATTERN = re.compile(r"^[+-]?\d+$")
 _FLOAT_PATTERN = re.compile(r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$")
+
+
+def _empty_str_list() -> list[str]:
+    return []
 
 
 @dataclass(slots=True)
@@ -57,7 +69,7 @@ class ColumnInfo:
     name: str
     detected_type: str
     fill_rate: float
-    sample_values: list[str] = field(default_factory=list)
+    sample_values: list[str] = field(default_factory=_empty_str_list)
     stats: ColumnStats | None = None
 
 
@@ -70,6 +82,7 @@ class ExploredResource:
     parsed_at: str
     columns: list[ColumnInfo]
     row_count: int
+    analysis: Analysis | None = None
     cached: bool = False
 
     def to_response_model(self) -> ExploreResourceResponse:
@@ -81,6 +94,7 @@ class ExploredResource:
             parsed_at=self.parsed_at,
             columns=[_column_to_schema(column) for column in self.columns],
             row_count=self.row_count,
+            analysis=_analysis_to_schema(self.analysis),
             cached=self.cached,
         )
 
@@ -115,6 +129,8 @@ def explore_resource(
         raise HTTPException(
             status_code=422, detail=f"Failed to parse resource {detail.id}"
         ) from exc
+
+    explored.analysis = analyse_explored_resource(explored, detail)
 
     response = explored.to_response_model()
     cache.set(cache_key, CacheEndpointType.EXPLORATION, response.model_dump_json())
@@ -151,7 +167,130 @@ def _parse_resource_content(
         return _parse_csv(resource_id, content, parsed_at)
     if format_lower == "json":
         return _parse_json(resource_id, content, parsed_at)
+    if _is_rdf_format(format_lower):
+        return _parse_rdf(resource_id, resource_format, content, parsed_at)
     raise HTTPException(status_code=422, detail=f"Format '{resource_format}' not supported")
+
+
+def _is_rdf_format(format_lower: str) -> bool:
+    return format_lower in {
+        "rdf",
+        "rdf/xml",
+        "xml",
+        "ttl",
+        "turtle",
+        "n3",
+        "json-ld",
+        "jsonld",
+    }
+
+
+def _parse_rdf(
+    resource_id: str,
+    resource_format: str,
+    content: str,
+    parsed_at: str,
+) -> ExploredResource:
+    graph = Graph()
+    rdf_format = _map_rdf_format(resource_format)
+
+    try:
+        if rdf_format is not None:
+            graph.parse(data=content, format=rdf_format)
+        else:
+            _parse_rdf_with_fallback_formats(graph, content)
+    except Exception as exc:  # pragma: no cover - erreurs variees selon parser
+        raise ValueError("Invalid RDF content") from exc
+
+    rdf_type_values = [str(value) for value in graph.objects(None, RDF.type)]
+    dominant_class = _most_frequent_value(rdf_type_values)
+    classes_count = len(set(rdf_type_values))
+    properties_count = len(set(str(predicate) for predicate in graph.predicates()))
+    instances_count = len(set(str(subject) for subject in graph.subjects(RDF.type, None)))
+    namespaces_count = len(list(graph.namespaces()))
+    language_count = len(
+        {
+            language
+            for language in (
+                _extract_label_language(label) for label in graph.objects(None, RDFS.label)
+            )
+            if language
+        }
+    )
+    has_hierarchy = int(
+        any(True for _ in graph.triples((None, SKOS.broader, None)))
+        or any(True for _ in graph.triples((None, SKOS.narrower, None)))
+    )
+
+    row: dict[str, str | int] = {
+        "dominant_class": dominant_class,
+        "classes_count": classes_count,
+        "properties_count": properties_count,
+        "instances_count": instances_count,
+        "namespaces_count": namespaces_count,
+        "language_count": language_count,
+        "has_hierarchy": has_hierarchy,
+    }
+    fieldnames = list(row.keys())
+    return ExploredResource(
+        resource_id=resource_id,
+        format=(resource_format or "rdf").lower(),
+        parsed_at=parsed_at,
+        columns=_build_columns_from_rows(fieldnames, [row]),
+        row_count=len(graph),
+    )
+
+
+def _map_rdf_format(resource_format: str) -> str | None:
+    normalized = resource_format.strip().lower()
+    mapping = {
+        "ttl": "turtle",
+        "turtle": "turtle",
+        "n3": "n3",
+        "json-ld": "json-ld",
+        "jsonld": "json-ld",
+        "rdf/xml": "xml",
+        "xml": "xml",
+    }
+    return mapping.get(normalized)
+
+
+def _parse_rdf_with_fallback_formats(graph: Graph, content: str) -> None:
+    formats_to_try = ["turtle", "xml", "n3", "json-ld"]
+    last_error: Exception | None = None
+    for candidate in formats_to_try:
+        try:
+            graph.parse(data=content, format=candidate)
+            return
+        except Exception as exc:  # pragma: no cover - erreurs parseur dependantes
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+
+
+def _most_frequent_value(values: list[str]) -> str:
+    if not values:
+        return ""
+    frequencies: dict[str, int] = {}
+    for value in values:
+        frequencies[value] = frequencies.get(value, 0) + 1
+    best_value = max(frequencies.items(), key=lambda item: item[1])[0]
+    return _local_name(best_value)
+
+
+def _local_name(value: str) -> str:
+    if "#" in value:
+        return value.rsplit("#", 1)[-1]
+    if "/" in value:
+        return value.rsplit("/", 1)[-1]
+    return value
+
+
+def _extract_label_language(label: object) -> str:
+    """Retourne le tag de langue RDF si disponible."""
+
+    language = getattr(label, "language", None)
+    return language if isinstance(language, str) else ""
 
 
 def _parse_csv(resource_id: str, content: str, parsed_at: str) -> ExploredResource:
@@ -168,12 +307,15 @@ def _parse_csv(resource_id: str, content: str, parsed_at: str) -> ExploredResour
 
 
 def _parse_json(resource_id: str, content: str, parsed_at: str) -> ExploredResource:
-    payload = json.loads(content)
+    payload = cast(object, json.loads(content))
 
     if isinstance(payload, list):
-        if payload and all(isinstance(row, dict) for row in payload):
-            fieldnames = _ordered_union([list(row.keys()) for row in payload])
-            rows = [dict(row) for row in payload]
+        payload_items = cast(list[object], payload)
+
+        if payload_items and all(isinstance(row, dict) for row in payload_items):
+            dict_rows = [cast(dict[str, object], row) for row in payload_items]
+            fieldnames = _ordered_union([list(row.keys()) for row in dict_rows])
+            rows = [dict(row) for row in dict_rows]
             return ExploredResource(
                 resource_id=resource_id,
                 format="json",
@@ -182,18 +324,19 @@ def _parse_json(resource_id: str, content: str, parsed_at: str) -> ExploredResou
                 row_count=len(rows),
             )
 
-        values = [_stringify_value(item) for item in payload]
+        values = [_stringify_value(item) for item in payload_items]
         return ExploredResource(
             resource_id=resource_id,
             format="json",
             parsed_at=parsed_at,
-            columns=[_build_column("value", values, len(payload))],
-            row_count=len(payload),
+            columns=[_build_column("value", values, len(payload_items))],
+            row_count=len(payload_items),
         )
 
     if isinstance(payload, dict):
-        fieldnames = list(payload.keys())
-        rows = [payload]
+        payload_map = cast(dict[str, object], payload)
+        fieldnames = list(payload_map.keys())
+        rows = [payload_map]
         return ExploredResource(
             resource_id=resource_id,
             format="json",
@@ -213,7 +356,7 @@ def _parse_json(resource_id: str, content: str, parsed_at: str) -> ExploredResou
 
 
 def _build_columns_from_rows(
-    fieldnames: list[str], rows: list[dict[str, object]]
+    fieldnames: Sequence[str], rows: Sequence[Mapping[str, object]]
 ) -> list[ColumnInfo]:
     return [
         _build_column(fieldname, [_row_value(row.get(fieldname)) for row in rows], len(rows))
@@ -322,4 +465,14 @@ def _column_to_schema(column: ColumnInfo) -> ColumnInfoSchema:
         fill_rate=column.fill_rate,
         sample_values=column.sample_values,
         stats=stats,
+    )
+
+
+def _analysis_to_schema(analysis: Analysis | None) -> ResourceAnalysisSchema | None:
+    if analysis is None:
+        return None
+    return ResourceAnalysisSchema(
+        summary=analysis.summary,
+        capabilities=analysis.capabilities,
+        caveats=analysis.caveats,
     )

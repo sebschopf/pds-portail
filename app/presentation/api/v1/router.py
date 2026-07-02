@@ -451,19 +451,30 @@ def explore_resource(
     resource_id: str,
     _license_obj: License = Depends(require_license),  # noqa: B008
 ) -> ExploreResourceResponse:
-    """Explore la structure d'une ressource (CSV/JSON) via sa clé API."""
+    """Explore la structure d'une ressource (CSV/JSON/RDF) via sa clé API."""
 
     detail = GetResourceDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(resource_id)
     if not detail:
         raise HTTPException(status_code=404, detail=f"Resource {resource_id} not found")
 
     # Vérifie que le format est supporté
-    supported_formats = ["csv", "json"]
+    supported_formats = [
+        "csv",
+        "json",
+        "rdf",
+        "rdf/xml",
+        "xml",
+        "ttl",
+        "turtle",
+        "n3",
+        "json-ld",
+        "jsonld",
+    ]
     format_lower = (detail.format or "").lower()
     if format_lower not in supported_formats:
         raise HTTPException(
             status_code=422,
-            detail=f"Format '{detail.format}' not supported (csv or json only)",
+            detail=f"Format '{detail.format}' not supported",
         )
 
     return explore_resource_use_case(

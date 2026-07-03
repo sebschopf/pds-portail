@@ -16,12 +16,14 @@ from app.application.use_cases.detect_changes import DetectChangesUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
 from app.application.use_cases.invalidate_cache_after_sync import invalidate_cache_after_sync
 from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
+from app.application.use_cases.send_alerts import SendAlertsUseCase
 from app.core.config import Settings, get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
 from app.infrastructure.persistence.changelog_repository import SqlAlchemyChangeLogRepository
 from app.infrastructure.persistence.database import create_schema
+from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.infrastructure.persistence.watcher_repository import SqlAlchemyWatcherRepository
 from app.presentation.api.security_headers import SecurityHeadersMiddleware
@@ -40,11 +42,19 @@ def _run_sync_cycle(settings: Settings) -> None:
         changelog_repository=SqlAlchemyChangeLogRepository(),
         cache_repository=SqlAlchemyCacheReadRepository(),
     )
+    send_alerts_use_case = SendAlertsUseCase(
+        change_log_repository=SqlAlchemyChangeLogRepository(),
+        watcher_repository=SqlAlchemyWatcherRepository(),
+        cache_repository=SqlAlchemyCacheReadRepository(),
+        magic_link_repository=SqlAlchemyMagicLinkRepository(),
+        settings=settings,
+    )
     use_case = RunSyncCycleUseCase(
         client=CkanHttpClient(),
         repository=SqlAlchemyCacheRepository(),
         settings=settings,
         detect_changes_use_case=detect_changes_use_case,
+        send_alerts_use_case=send_alerts_use_case,
     )
     metrics = use_case.execute()
     # Invalidation du cache applicatif apres sync (PDS-46)

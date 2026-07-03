@@ -6,6 +6,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/app.db"
     ckan_base_url: str = "https://opendata.swiss"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_daily_limit: int = 50
     cors_allowed_origins: str = "http://localhost:5173"
     cors_allowed_origin_regex: str | None = None
     enable_ckan_sync: bool = False

@@ -40,5 +40,11 @@ class ChangeLogRepositoryPort(Protocol):
         Utilisé par le use-case d'envoi d'alertes (PDS-88).
         """
 
+    def find_last_notified_at(self, dataset_id: str) -> str | None:
+        """Retourne le dernier horodatage notified_at pour un dataset donné.
+
+        Utilisé pour appliquer le rate limiting 24h par dataset avant envoi.
+        """
+
     def mark_notified(self, entry_id: str, notified_at: str) -> None:
         """Marque une entrée comme notifiée en renseignant notified_at."""

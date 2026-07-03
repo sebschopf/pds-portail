@@ -315,3 +315,37 @@ class TestChangeLogRepository:
             with SessionLocal() as session:
                 session.query(ChangeLogModel).filter(ChangeLogModel.id == entry.id).delete()
                 session.commit()
+
+    def test_find_last_notified_at_returns_latest_timestamp(
+        self, changelog_repo: SqlAlchemyChangeLogRepository
+    ) -> None:
+        """find_last_notified_at retourne l'horodatage le plus récent pour un dataset."""
+
+        dataset_id = f"ds-last-notified-{uuid.uuid4()}"
+        first = changelog_repo.insert(
+            dataset_id=dataset_id,
+            change_type="metadata_updated",
+            previous_value="2026-01-01",
+            new_value="2026-07-01",
+            detected_at=_iso_now(),
+        )
+        second = changelog_repo.insert(
+            dataset_id=dataset_id,
+            change_type="resource_added",
+            previous_value="1",
+            new_value="2",
+            detected_at=_iso_now(),
+        )
+
+        try:
+            changelog_repo.mark_notified(first.id, "2026-07-02T08:00:00+00:00")
+            changelog_repo.mark_notified(second.id, "2026-07-03T08:00:00+00:00")
+
+            last_notified_at = changelog_repo.find_last_notified_at(dataset_id)
+            assert last_notified_at == "2026-07-03T08:00:00+00:00"
+        finally:
+            with SessionLocal() as session:
+                session.query(ChangeLogModel).filter(
+                    ChangeLogModel.id.in_([first.id, second.id])
+                ).delete(synchronize_session=False)
+                session.commit()

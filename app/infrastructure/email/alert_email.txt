@@ -1,0 +1,14 @@
+Bonjour,
+
+Le dataset {dataset_title} que vous surveillez a été modifié.
+
+Nature du changement : {change_title}
+Score qualité actuel : {quality_score}/100
+
+{change_bullets_text}
+
+Voir la fiche dataset : {dataset_link}
+Voir mes alertes : {alerts_link}
+
+Cet email est envoyé automatiquement par PDS-Portail.
+Se désabonner : {unsubscribe_link}

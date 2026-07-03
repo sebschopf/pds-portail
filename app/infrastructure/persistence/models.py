@@ -249,6 +249,21 @@ class ChangeLogModel(Base):
     notified_at: Mapped[str | None] = mapped_column(String, nullable=True)  # ISO 8601
 
 
+class MagicLinkModel(Base):
+    """Magic link temporaire pour l'accès à /alertes (ADR-030)."""
+
+    __tablename__ = "magic_links"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    watcher_id: Mapped[str] = mapped_column(
+        ForeignKey("watchers.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    expires_at: Mapped[str] = mapped_column(String, nullable=False)
+    used_at: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 # Explicit __all__ to ensure the module is fully loaded before any imports
 # This helps avoid forward reference resolution issues in SQLAlchemy
 __all__ = [
@@ -264,6 +279,7 @@ __all__ = [
     "WatcherModel",
     "WatchedDatasetModel",
     "ChangeLogModel",
+    "MagicLinkModel",
 ]
 
 # Force la configuration des mappers dès l'import du module pour éviter

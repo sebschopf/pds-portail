@@ -167,6 +167,15 @@ def _migrate_add_watcher_tables() -> None:
                 detected_at TEXT NOT NULL,
                 notified_at TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS magic_links (
+                id TEXT PRIMARY KEY,
+                watcher_id TEXT NOT NULL REFERENCES watchers(id) ON DELETE CASCADE,
+                token_hash TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                used_at TEXT
+            );
         """)
         conn.commit()
         logger.debug("Migration PDS-86: tables watcher vérifiées/créées.")

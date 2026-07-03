@@ -22,6 +22,15 @@ def _int(value: int | str) -> int:
     return int(value)
 
 
+class _DetectChangesSpy:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def execute(self) -> dict[str, int]:
+        self.calls += 1
+        return {"inspected_datasets": 0, "changes_detected": 0}
+
+
 # ── Tests bootstrap ────────────────────────────────────────────────────────
 
 
@@ -252,3 +261,23 @@ def test_metrics_aggregate_across_multiple_batches() -> None:
     assert result["errors"] == 0
     assert len(repository.metrics_calls) == 1
     assert repository.metrics_calls[0]["synced_datasets"] == 500
+
+
+def test_cycle_executes_detect_changes_once() -> None:
+    """Le cycle complet appelle la détection des changements en fin d'execution."""
+
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=100)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=1)
+    detect_changes = _DetectChangesSpy()
+
+    use_case = RunSyncCycleUseCase(
+        client=client,
+        repository=repository,
+        settings=settings,
+        detect_changes_use_case=detect_changes,
+    )
+
+    use_case.execute()
+
+    assert detect_changes.calls == 1

@@ -11,6 +11,7 @@ from app.application.use_cases.compare_datasets import (
     CompareDatasetsUseCase,
     InvalidCompareRequestError,
 )
+from app.application.use_cases.detect_changes import DetectChangesUseCase
 from app.application.use_cases.explore_resource import explore_resource as explore_resource_use_case
 from app.application.use_cases.get_dataset_detail import GetDatasetDetailUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
@@ -22,11 +23,13 @@ from app.core.config import get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
+from app.infrastructure.persistence.changelog_repository import SqlAlchemyChangeLogRepository
 from app.infrastructure.persistence.compare_adapter import SqlAlchemyCompareAdapter
 from app.infrastructure.persistence.dataset_detail_adapter import SqlAlchemyDatasetDetailAdapter
 from app.infrastructure.persistence.license_repository import SqlAlchemyLicenseRepository
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.infrastructure.persistence.search_adapter import SqlAlchemySearchAdapter
+from app.infrastructure.persistence.watcher_repository import SqlAlchemyWatcherRepository
 from app.presentation.api.dependencies import require_license_without_quota_check
 from app.presentation.api.v1.schemas import (
     CompareRequest,
@@ -325,10 +328,16 @@ def internal_sync_trigger() -> dict[str, str]:
     from datetime import UTC, datetime
 
     logger.info("CKAN sync triggered manually via /internal/sync")
+    detect_changes_use_case = DetectChangesUseCase(
+        watcher_repository=SqlAlchemyWatcherRepository(),
+        changelog_repository=SqlAlchemyChangeLogRepository(),
+        cache_repository=SqlAlchemyCacheReadRepository(),
+    )
     use_case = RunSyncCycleUseCase(
         client=CkanHttpClient(),
         repository=SqlAlchemyCacheRepository(),
         settings=settings,
+        detect_changes_use_case=detect_changes_use_case,
     )
     metrics = use_case.execute()
 

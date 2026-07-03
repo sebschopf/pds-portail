@@ -45,27 +45,37 @@ class WatcherRepositoryPort(Protocol):
 
         Retourne le watcher créé.
         """
+        ...
 
     def find_by_email(self, email: str) -> Watcher | None:
         """Cherche un watcher par email.
 
         Retourne None si inexistant.
         """
+        ...
 
     def find_by_token(self, token: str) -> Watcher | None:
         """Cherche un watcher par son token d'accès.
 
         Retourne None si inexistant.
         """
+        ...
 
     def find_by_dataset(self, dataset_id: str) -> list[Watcher]:
         """Retourne tous les watchers actifs surveillant un dataset donné."""
+        ...
 
     def list_active(self) -> list[Watcher]:
         """Retourne tous les watchers avec status='active'."""
+        ...
+
+    def list_watched_datasets(self) -> list[WatchedDataset]:
+        """Retourne tous les datasets actuellement surveillés."""
+        ...
 
     def update_status(self, watcher_id: str, status: str) -> None:
         """Met à jour le status d'un watcher (active/cancelled/paused)."""
+        ...
 
     def add_watched_dataset(
         self,
@@ -79,9 +89,11 @@ class WatcherRepositoryPort(Protocol):
 
         Lève une exception si le couple (watcher_id, dataset_id) existe déjà.
         """
+        ...
 
     def remove_watched_dataset(self, watcher_id: str, dataset_id: str) -> None:
         """Supprime la surveillance d'un dataset pour un watcher."""
+        ...
 
     def update_last_known(
         self,
@@ -92,3 +104,4 @@ class WatcherRepositoryPort(Protocol):
         quality_score: float | None,
     ) -> None:
         """Met à jour les dernières valeurs connues d'un dataset surveillé."""
+        ...

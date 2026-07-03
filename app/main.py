@@ -12,6 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
+from app.application.use_cases.detect_changes import DetectChangesUseCase
 from app.application.use_cases.get_health_status import GetHealthStatusUseCase
 from app.application.use_cases.invalidate_cache_after_sync import invalidate_cache_after_sync
 from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
@@ -19,8 +20,10 @@ from app.core.config import Settings, get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
+from app.infrastructure.persistence.changelog_repository import SqlAlchemyChangeLogRepository
 from app.infrastructure.persistence.database import create_schema
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
+from app.infrastructure.persistence.watcher_repository import SqlAlchemyWatcherRepository
 from app.presentation.api.security_headers import SecurityHeadersMiddleware
 from app.presentation.api.v1.router import api_router
 
@@ -32,10 +35,16 @@ def _run_sync_cycle(settings: Settings) -> None:
 
     Invalide le cache applicatif apres sync si des datasets ont ete modifies.
     """
+    detect_changes_use_case = DetectChangesUseCase(
+        watcher_repository=SqlAlchemyWatcherRepository(),
+        changelog_repository=SqlAlchemyChangeLogRepository(),
+        cache_repository=SqlAlchemyCacheReadRepository(),
+    )
     use_case = RunSyncCycleUseCase(
         client=CkanHttpClient(),
         repository=SqlAlchemyCacheRepository(),
         settings=settings,
+        detect_changes_use_case=detect_changes_use_case,
     )
     metrics = use_case.execute()
     # Invalidation du cache applicatif apres sync (PDS-46)
@@ -137,7 +146,9 @@ def create_app() -> FastAPI:
     # Exception handler global : loggue la trace complete et garantit que
     # les headers CORS sont presents meme sur les erreurs 500 (PDS-99).
     @app.exception_handler(Exception)
-    async def global_exception_handler(request: Request, exc: Exception) -> PlainTextResponse:
+    async def global_exception_handler(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: Exception
+    ) -> PlainTextResponse:
         logger.error(
             "Unhandled exception on %s %s: %s\n%s",
             request.method,

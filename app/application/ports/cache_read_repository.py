@@ -3,6 +3,7 @@
 from typing import Protocol
 
 from app.domain.cache_health import CacheCounts
+from app.presentation.api.v1.schemas import DatasetDetailResponse
 
 
 class CacheReadRepositoryPort(Protocol):
@@ -14,4 +15,8 @@ class CacheReadRepositoryPort(Protocol):
 
     def get_cache_counts(self) -> CacheCounts:
         """Retourne les compteurs minimaux pour verifier le cache."""
+        ...
+
+    def get_dataset(self, dataset_id: str) -> DatasetDetailResponse | None:
+        """Retourne le detail complet d'un dataset present dans le cache."""
         ...

@@ -109,6 +109,16 @@ class SqlAlchemyWatcherRepository:
             models = session.execute(stmt).scalars().all()
             return [_model_to_watcher(m) for m in models]
 
+    def list_watched_datasets(self) -> list[WatchedDataset]:
+        """Retourne tous les datasets actuellement surveillés."""
+        with SessionLocal() as session:
+            stmt = select(WatchedDatasetModel).order_by(
+                WatchedDatasetModel.dataset_id,
+                WatchedDatasetModel.watcher_id,
+            )
+            models = session.execute(stmt).scalars().all()
+            return [_model_to_watched_dataset(model) for model in models]
+
     def update_status(self, watcher_id: str, status: str) -> None:
         """Met à jour le status d'un watcher."""
         with SessionLocal() as session:

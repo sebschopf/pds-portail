@@ -7,6 +7,7 @@ la duplication et permettre le test unitaire du cycle complet.
 import logging
 import time as time_module
 from datetime import UTC, datetime
+from typing import Protocol
 
 from app.application.errors.ingestion import CkanRateLimitError, CkanTimeoutError
 from app.application.ports.cache_repository import CacheRepositoryPort
@@ -15,6 +16,12 @@ from app.application.use_cases.sync_ckan_batch import SyncCkanBatchUseCase
 from app.core.config import Settings
 
 logger = logging.getLogger(__name__)
+
+
+class DetectChangesExecutorPort(Protocol):
+    """Contrat minimal pour déclencher la détection des changements en fin de cycle."""
+
+    def execute(self) -> dict[str, int]: ...
 
 
 class RunSyncCycleUseCase:
@@ -30,10 +37,12 @@ class RunSyncCycleUseCase:
         client: CkanClientPort,
         repository: CacheRepositoryPort,
         settings: Settings,
+        detect_changes_use_case: DetectChangesExecutorPort | None = None,
     ) -> None:
         self._client = client
         self._repository = repository
         self._settings = settings
+        self._detect_changes_use_case = detect_changes_use_case
 
     def execute(self) -> dict[str, int | str]:
         """Execute un cycle de sync et retourne les metriques du cycle.
@@ -147,6 +156,9 @@ class RunSyncCycleUseCase:
 
         if total_synced > 0:
             self._repository.rebuild_facets()
+
+        if self._detect_changes_use_case is not None:
+            self._detect_changes_use_case.execute()
 
         metrics["synced_datasets"] = total_synced
         metrics["synced_organizations"] = total_orgs

@@ -118,6 +118,62 @@ def _migrate_add_source_column() -> None:
         conn.close()
 
 
+def _migrate_add_watcher_tables() -> None:
+    """Crée les tables de surveillance si elles sont absentes (PDS-86).
+
+    SQLAlchemy create_all gère la création initiale, mais cette migration
+    garantit la présence des tables sur les bases existantes (idempotente).
+    Utilise CREATE TABLE IF NOT EXISTS pour un fallback sans erreur.
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    settings = get_settings()
+    db_path = settings.database_url.removeprefix("sqlite:///")
+    if not db_path:
+        return
+
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS watchers (
+                id TEXT PRIMARY KEY,
+                email TEXT NOT NULL,
+                polar_subscription_id TEXT,
+                plan TEXT NOT NULL DEFAULT 'monthly',
+                status TEXT NOT NULL DEFAULT 'active',
+                token TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS watched_datasets (
+                id TEXT PRIMARY KEY,
+                watcher_id TEXT NOT NULL REFERENCES watchers(id) ON DELETE CASCADE,
+                dataset_id TEXT NOT NULL,
+                last_known_metadata_modified TEXT,
+                last_known_resource_count INTEGER,
+                last_known_quality_score REAL,
+                created_at TEXT NOT NULL,
+                CONSTRAINT uq_watched_datasets_watcher_dataset UNIQUE (watcher_id, dataset_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS change_log (
+                id TEXT PRIMARY KEY,
+                dataset_id TEXT NOT NULL,
+                change_type TEXT NOT NULL,
+                previous_value TEXT,
+                new_value TEXT,
+                detected_at TEXT NOT NULL,
+                notified_at TEXT
+            );
+        """)
+        conn.commit()
+        logger.debug("Migration PDS-86: tables watcher vérifiées/créées.")
+    finally:
+        conn.close()
+
+
 def create_schema() -> None:
     """Crée le schéma de la base de données (tables, indexes, FTS5).
 
@@ -133,6 +189,9 @@ def create_schema() -> None:
     # Migration PDS-71 : ajouter la colonne `source` aux tables existantes
     # pour preparer le modele multisource (ckan|i14y|metadata.swiss).
     _migrate_add_source_column()
+
+    # Migration PDS-86 : créer les tables de surveillance si absentes.
+    _migrate_add_watcher_tables()
 
     # Creer/migrer l'index FTS5 pour la recherche full-text (PDS-44, PDS-41, PDS-96).
     # FTS5 n'est pas gere par SQLAlchemy → creation en SQL brut.

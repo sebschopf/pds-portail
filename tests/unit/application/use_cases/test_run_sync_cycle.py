@@ -31,6 +31,15 @@ class _DetectChangesSpy:
         return {"inspected_datasets": 0, "changes_detected": 0}
 
 
+class _SendAlertsSpy:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def execute(self) -> dict[str, int]:
+        self.calls += 1
+        return {"datasets_processed": 0, "emails_sent": 0}
+
+
 # ── Tests bootstrap ────────────────────────────────────────────────────────
 
 
@@ -281,3 +290,26 @@ def test_cycle_executes_detect_changes_once() -> None:
     use_case.execute()
 
     assert detect_changes.calls == 1
+
+
+def test_cycle_executes_send_alerts_after_detect_changes() -> None:
+    """Le cycle complet déclenche aussi l'envoi des alertes après la détection."""
+
+    repository = FakeSyncRepository()
+    client = FakeMinimalPayloadClient(count=100)
+    settings = SyncCycleTestSettings(ckan_sync_max_batches_per_run=1)
+    detect_changes = _DetectChangesSpy()
+    send_alerts = _SendAlertsSpy()
+
+    use_case = RunSyncCycleUseCase(
+        client=client,
+        repository=repository,
+        settings=settings,
+        detect_changes_use_case=detect_changes,
+        send_alerts_use_case=send_alerts,
+    )
+
+    use_case.execute()
+
+    assert detect_changes.calls == 1
+    assert send_alerts.calls == 1

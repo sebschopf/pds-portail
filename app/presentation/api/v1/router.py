@@ -19,6 +19,7 @@ from app.application.use_cases.get_resource_detail import GetResourceDetailUseCa
 from app.application.use_cases.invalidate_cache_after_sync import invalidate_cache_after_sync
 from app.application.use_cases.run_sync_cycle import RunSyncCycleUseCase
 from app.application.use_cases.search_datasets import SearchDatasetsUseCase
+from app.application.use_cases.send_alerts import SendAlertsUseCase
 from app.core.config import get_settings
 from app.infrastructure.external.ckan.client import CkanHttpClient
 from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCacheReadRepository
@@ -27,6 +28,7 @@ from app.infrastructure.persistence.changelog_repository import SqlAlchemyChange
 from app.infrastructure.persistence.compare_adapter import SqlAlchemyCompareAdapter
 from app.infrastructure.persistence.dataset_detail_adapter import SqlAlchemyDatasetDetailAdapter
 from app.infrastructure.persistence.license_repository import SqlAlchemyLicenseRepository
+from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.infrastructure.persistence.search_adapter import SqlAlchemySearchAdapter
 from app.infrastructure.persistence.watcher_repository import SqlAlchemyWatcherRepository
@@ -333,11 +335,19 @@ def internal_sync_trigger() -> dict[str, str]:
         changelog_repository=SqlAlchemyChangeLogRepository(),
         cache_repository=SqlAlchemyCacheReadRepository(),
     )
+    send_alerts_use_case = SendAlertsUseCase(
+        change_log_repository=SqlAlchemyChangeLogRepository(),
+        watcher_repository=SqlAlchemyWatcherRepository(),
+        cache_repository=SqlAlchemyCacheReadRepository(),
+        magic_link_repository=SqlAlchemyMagicLinkRepository(),
+        settings=settings,
+    )
     use_case = RunSyncCycleUseCase(
         client=CkanHttpClient(),
         repository=SqlAlchemyCacheRepository(),
         settings=settings,
         detect_changes_use_case=detect_changes_use_case,
+        send_alerts_use_case=send_alerts_use_case,
     )
     metrics = use_case.execute()
 

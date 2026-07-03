@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+  <body style="margin:0;padding:0;background:#f4f7fb;color:#1f2937;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.6;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f4f7fb;padding:20px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;max-width:640px;background:#ffffff;border:1px solid #d8e0ea;border-radius:8px;overflow:hidden;">
+            <tr>
+              <td style="background:#1d4f8c;color:#ffffff;padding:16px 24px;font-size:18px;font-weight:700;letter-spacing:0.2px;">
+                PDS-Portail
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;font-size:16px;">
+                <p style="margin:0 0 16px;">Bonjour,</p>
+                <p style="margin:0 0 16px;">
+                  Le dataset <strong>{dataset_title}</strong> que vous surveillez a été modifié.
+                </p>
+                <p style="margin:0 0 8px;"><strong>Nature du changement :</strong> {change_title}</p>
+                <p style="margin:0 0 16px;"><strong>Score qualité actuel :</strong> {quality_score}/100</p>
+                <ul style="margin:0 0 16px 20px;padding:0;">{change_bullets_html}</ul>
+                <p style="margin:0 0 8px;"><a href="{dataset_link}" style="color:#1d4f8c;font-weight:600;text-decoration:underline;">Voir la fiche dataset</a></p>
+                <p style="margin:0 0 8px;"><a href="{alerts_link}" style="color:#1d4f8c;font-weight:600;text-decoration:underline;">Voir mes alertes</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;background:#f8fafc;border-top:1px solid #d8e0ea;font-size:14px;color:#4b5563;">
+                <p style="margin:0 0 8px;">Cet email est envoyé automatiquement par PDS-Portail.</p>
+                <p style="margin:0;"><a href="{unsubscribe_link}" style="color:#1d4f8c;text-decoration:underline;">Se désabonner</a></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

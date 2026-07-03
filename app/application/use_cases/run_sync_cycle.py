@@ -24,6 +24,12 @@ class DetectChangesExecutorPort(Protocol):
     def execute(self) -> dict[str, int]: ...
 
 
+class SendAlertsExecutorPort(Protocol):
+    """Contrat minimal pour envoyer les alertes en fin de cycle."""
+
+    def execute(self) -> dict[str, int]: ...
+
+
 class RunSyncCycleUseCase:
     """Execute un cycle de synchronisation CKAN (bootstrap ou differentiel).
 
@@ -38,11 +44,13 @@ class RunSyncCycleUseCase:
         repository: CacheRepositoryPort,
         settings: Settings,
         detect_changes_use_case: DetectChangesExecutorPort | None = None,
+        send_alerts_use_case: SendAlertsExecutorPort | None = None,
     ) -> None:
         self._client = client
         self._repository = repository
         self._settings = settings
         self._detect_changes_use_case = detect_changes_use_case
+        self._send_alerts_use_case = send_alerts_use_case
 
     def execute(self) -> dict[str, int | str]:
         """Execute un cycle de sync et retourne les metriques du cycle.
@@ -159,6 +167,9 @@ class RunSyncCycleUseCase:
 
         if self._detect_changes_use_case is not None:
             self._detect_changes_use_case.execute()
+
+        if self._send_alerts_use_case is not None:
+            self._send_alerts_use_case.execute()
 
         metrics["synced_datasets"] = total_synced
         metrics["synced_organizations"] = total_orgs

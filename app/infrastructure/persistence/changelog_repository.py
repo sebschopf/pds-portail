@@ -61,6 +61,21 @@ class SqlAlchemyChangeLogRepository:
             models = session.execute(stmt).scalars().all()
             return [_model_to_entry(m) for m in models]
 
+    def find_last_notified_at(self, dataset_id: str) -> str | None:
+        """Retourne le dernier notified_at connu pour un dataset."""
+        with SessionLocal() as session:
+            stmt = (
+                select(ChangeLogModel.notified_at)
+                .where(
+                    ChangeLogModel.dataset_id == dataset_id,
+                    ChangeLogModel.notified_at.is_not(None),
+                )
+                .order_by(ChangeLogModel.notified_at.desc())
+                .limit(1)
+            )
+            value = session.execute(stmt).scalar_one_or_none()
+            return value
+
     def mark_notified(self, entry_id: str, notified_at: str) -> None:
         """Marque une entrée comme notifiée."""
         with SessionLocal() as session:

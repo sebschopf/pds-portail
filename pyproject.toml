@@ -1,6 +1,6 @@
 [project]
 name = "pds-portail-backend"
-version = "1.1.5"
+version = "1.2.0-dev"
 description = "Backend FastAPI pour l'explorateur Open Data Suisse"
 requires-python = ">=3.11"
 dependencies = [

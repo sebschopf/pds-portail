@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, configure_mappers, mapped_column, relationship
 
 from app.infrastructure.persistence.database import Base
@@ -177,6 +177,78 @@ class LicenseModel(Base):
     expires_at: Mapped[str | None] = mapped_column(String, nullable=True)  # ISO 8601
 
 
+class WatcherModel(Base):
+    """Abonné au service de surveillance des changements de datasets (SPEC-009, PDS-86).
+
+    Le token UUID v4 sert de clé d'accès à l'endpoint /alertes, sans authentification
+    lourde (ADR-028). Le champ polar_subscription_id lie l'abonné à Polar.sh.
+    """
+
+    __tablename__ = "watchers"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    email: Mapped[str] = mapped_column(Text, nullable=False)
+    polar_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    plan: Mapped[str] = mapped_column(String(20), nullable=False, default="monthly")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    token: Mapped[str] = mapped_column(String, nullable=False, unique=True)  # UUID v4
+    created_at: Mapped[str] = mapped_column(String, nullable=False)  # ISO 8601
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)  # ISO 8601
+
+    watched_datasets: Mapped[list["WatchedDatasetModel"]] = relationship(
+        lambda: WatchedDatasetModel,
+        back_populates="watcher",
+        cascade="all, delete-orphan",
+    )
+
+
+class WatchedDatasetModel(Base):
+    """Association entre un watcher et un dataset surveillé (SPEC-009, PDS-86).
+
+    Stocke le dernier état connu du dataset pour détecter les changements
+    (metadata_modified, resource_count, quality_score).
+    Contrainte UNIQUE(watcher_id, dataset_id) évite les doublons.
+    """
+
+    __tablename__ = "watched_datasets"
+    __table_args__ = (
+        UniqueConstraint("watcher_id", "dataset_id", name="uq_watched_datasets_watcher_dataset"),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    watcher_id: Mapped[str] = mapped_column(
+        ForeignKey("watchers.id", ondelete="CASCADE"), nullable=False
+    )
+    dataset_id: Mapped[str] = mapped_column(Text, nullable=False)
+    last_known_metadata_modified: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_known_resource_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_known_quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)  # ISO 8601
+
+    watcher: Mapped[WatcherModel] = relationship(
+        lambda: WatcherModel,
+        back_populates="watched_datasets",
+    )
+
+
+class ChangeLogModel(Base):
+    """Journal des changements détectés sur les datasets surveillés (SPEC-009, PDS-86).
+
+    Chaque entrée décrit un changement atomique (metadata, ressource, qualité).
+    notified_at est NULL tant que l'alerte e-mail n'a pas été envoyée.
+    """
+
+    __tablename__ = "change_log"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    dataset_id: Mapped[str] = mapped_column(Text, nullable=False)
+    change_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    previous_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    new_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    detected_at: Mapped[str] = mapped_column(String, nullable=False)  # ISO 8601
+    notified_at: Mapped[str | None] = mapped_column(String, nullable=True)  # ISO 8601
+
+
 # Explicit __all__ to ensure the module is fully loaded before any imports
 # This helps avoid forward reference resolution issues in SQLAlchemy
 __all__ = [
@@ -189,6 +261,9 @@ __all__ = [
     "QueryCacheModel",
     "CacheHitStatsModel",
     "LicenseModel",
+    "WatcherModel",
+    "WatchedDatasetModel",
+    "ChangeLogModel",
 ]
 
 # Force la configuration des mappers dès l'import du module pour éviter

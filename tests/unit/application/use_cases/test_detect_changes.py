@@ -89,6 +89,9 @@ def _mock_successful_head(
     monkeypatch.setattr("app.application.use_cases.detect_changes.httpx.head", _fake_head)
 
 
+_ = _mock_successful_head
+
+
 @pytest.fixture
 def watched_dataset() -> WatchedDataset:
     return WatchedDataset(

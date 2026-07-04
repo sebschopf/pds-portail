@@ -64,10 +64,6 @@ class SendAlertsUseCase:
                 logger.info("Limite quotidienne SMTP atteinte: %s", self._settings.smtp_daily_limit)
                 break
 
-            if self._is_rate_limited(dataset_id):
-                skipped_rate_limited += 1
-                continue
-
             dataset = self._cache_repository.get_dataset(dataset_id)
             if dataset is None:
                 skipped_missing_dataset += 1
@@ -79,9 +75,14 @@ class SendAlertsUseCase:
                 datasets_processed += 1
                 continue
 
+            sent_for_dataset = 0
+
             for watcher in watchers:
                 if emails_sent >= self._settings.smtp_daily_limit:
                     break
+                if self._is_rate_limited(watcher_id=watcher.id, dataset_id=dataset_id):
+                    skipped_rate_limited += 1
+                    continue
                 # ADR-030: le token permanent watcher.token ne doit jamais quitter le backend.
                 # On émet donc un magic link temporaire dédié à cet email d'alerte.
                 magic_link_token = self._issue_magic_link(watcher)
@@ -93,9 +94,16 @@ class SendAlertsUseCase:
                 )
                 self._send_message(message)
                 emails_sent += 1
+                sent_for_dataset += 1
+                self._watcher_repository.mark_alert_sent(
+                    watcher_id=watcher.id,
+                    dataset_id=dataset_id,
+                    sent_at=self._now_provider().isoformat(),
+                )
 
-            self._mark_entries_notified(entries)
-            datasets_processed += 1
+            if sent_for_dataset > 0:
+                self._mark_entries_notified(entries)
+                datasets_processed += 1
 
         return {
             "datasets_processed": datasets_processed,
@@ -112,12 +120,15 @@ class SendAlertsUseCase:
             grouped[entry.dataset_id].append(entry)
         return dict(grouped)
 
-    def _is_rate_limited(self, dataset_id: str) -> bool:
-        # SPEC-009 / ADR-029: pas plus d'un email d'alerte par dataset sur 24h.
-        last_notified_at = self._change_log_repository.find_last_notified_at(dataset_id)
-        if last_notified_at is None:
+    def _is_rate_limited(self, watcher_id: str, dataset_id: str) -> bool:
+        # PDS-88 strict: pas plus d'un email d'alerte par watcher+dataset sur 24h.
+        last_alert_sent_at = self._watcher_repository.find_last_alert_sent_at(
+            watcher_id=watcher_id,
+            dataset_id=dataset_id,
+        )
+        if last_alert_sent_at is None:
             return False
-        last_notified = self._parse_iso_datetime(last_notified_at)
+        last_notified = self._parse_iso_datetime(last_alert_sent_at)
         return self._now_provider() - last_notified < _RATE_LIMIT_WINDOW
 
     def _issue_magic_link(self, watcher: Watcher) -> str:

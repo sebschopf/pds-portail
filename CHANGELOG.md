@@ -3,14 +3,20 @@
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/) et ce projet respecte le [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — M11 Monétisation & Exploration Premium
+## [Unreleased]
 
 ### Added
-- PDS-86 : Backend Tables surveillance — `WatcherModel`, `WatchedDatasetModel`, `ChangeLogModel`, migrations, repositories.
-- PDS-87 : Backend Détection changements — `DetectChangesUseCase` intégré à `RunSyncCycleUseCase`, 5 types de changements (metadata, ressources, qualité, liens).
-- PDS-88 : Backend Alertes email — `SendAlertsUseCase`, smtplib, templates HTML+texte, déduplication 24h, lien désabonnement.
-- PDS-89 : Backend Endpoints Polar/watchers/alertes — webhook `order.created`, endpoints CRUD watchers, historique alertes.
-- PDS-90 : Frontend WatchDataset + /alertes — modale abonnement Polar (5 CHF/mois), badge Surveillé, page tokenisée avec historique des changements, WCAG AA.
+- PDS-86: tables de surveillance (`watchers`, `watched_datasets`, `change_log`) et repositories associés.
+- PDS-87: `DetectChangesUseCase` branché dans le cycle de sync avec 5 types de changements détectés.
+- PDS-89: endpoints Polar/watchers/alerts (`POST /webhooks/polar`, `POST/GET/DELETE /watchers`, `GET /alerts`).
+- PDS-90: UI de surveillance côté frontend (modale abonnement, badge de suivi, page d'alertes).
+
+### Changed
+- PDS-88: envoi d'alertes email durci avec rate-limit strict par couple watcher+dataset sur 24h.
+- PDS-88: persistance du dernier envoi via `watched_datasets.last_alert_sent_at` pour tracer le throttling par abonné.
+
+### Fixed
+- PDS-88/PDS-89: alignement typage strict (Pylance/mypy), stabilité des fakes de tests et conformité quality gate.
 
 ## [1.1.5] - 2026-07-03
 ### Added

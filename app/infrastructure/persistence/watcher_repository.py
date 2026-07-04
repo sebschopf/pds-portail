@@ -88,6 +88,15 @@ class SqlAlchemyWatcherRepository:
             model = session.execute(stmt).scalar_one_or_none()
             return _model_to_watcher(model) if model else None
 
+    def find_by_polar_subscription_id(self, polar_subscription_id: str) -> Watcher | None:
+        """Cherche un watcher par son identifiant d'abonnement Polar."""
+        with SessionLocal() as session:
+            stmt = select(WatcherModel).where(
+                WatcherModel.polar_subscription_id == polar_subscription_id
+            )
+            model = session.execute(stmt).scalar_one_or_none()
+            return _model_to_watcher(model) if model else None
+
     def find_by_dataset(self, dataset_id: str) -> list[Watcher]:
         """Retourne tous les watchers actifs surveillant un dataset donné."""
         with SessionLocal() as session:
@@ -196,4 +205,29 @@ class SqlAlchemyWatcherRepository:
             model.last_known_metadata_modified = metadata_modified
             model.last_known_resource_count = resource_count
             model.last_known_quality_score = quality_score
+            session.commit()
+
+    def find_last_alert_sent_at(self, watcher_id: str, dataset_id: str) -> str | None:
+        """Retourne la date du dernier email d'alerte envoyé pour ce watcher+dataset."""
+        with SessionLocal() as session:
+            stmt = select(WatchedDatasetModel).where(
+                WatchedDatasetModel.watcher_id == watcher_id,
+                WatchedDatasetModel.dataset_id == dataset_id,
+            )
+            model = session.execute(stmt).scalar_one_or_none()
+            return model.last_alert_sent_at if model else None
+
+    def mark_alert_sent(self, watcher_id: str, dataset_id: str, sent_at: str) -> None:
+        """Enregistre l'horodatage d'alerte envoyé pour ce watcher+dataset."""
+        with SessionLocal() as session:
+            stmt = select(WatchedDatasetModel).where(
+                WatchedDatasetModel.watcher_id == watcher_id,
+                WatchedDatasetModel.dataset_id == dataset_id,
+            )
+            model = session.execute(stmt).scalar_one_or_none()
+            if not model:
+                raise ValueError(
+                    f"Association watcher={watcher_id} / dataset={dataset_id} introuvable."
+                )
+            model.last_alert_sent_at = sent_at
             session.commit()

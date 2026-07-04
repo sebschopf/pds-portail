@@ -1,10 +1,13 @@
 import logging
-from typing import Literal
+import uuid
+from contextlib import suppress
+from typing import Any, Literal, cast
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 from app.application.ports.license_repository import License
+from app.application.ports.watcher_repository import Watcher
 from app.application.use_cases.cached_get_dataset_detail import CachedGetDatasetDetailUseCase
 from app.application.use_cases.cached_search_datasets import CachedSearchDatasetsUseCase
 from app.application.use_cases.compare_datasets import (
@@ -26,9 +29,11 @@ from app.infrastructure.persistence.cache_read_repository import SqlAlchemyCache
 from app.infrastructure.persistence.cache_repository import SqlAlchemyCacheRepository
 from app.infrastructure.persistence.changelog_repository import SqlAlchemyChangeLogRepository
 from app.infrastructure.persistence.compare_adapter import SqlAlchemyCompareAdapter
+from app.infrastructure.persistence.database import SessionLocal
 from app.infrastructure.persistence.dataset_detail_adapter import SqlAlchemyDatasetDetailAdapter
 from app.infrastructure.persistence.license_repository import SqlAlchemyLicenseRepository
 from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
+from app.infrastructure.persistence.models import ChangeLogModel
 from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQueryCacheRepository
 from app.infrastructure.persistence.search_adapter import SqlAlchemySearchAdapter
 from app.infrastructure.persistence.watcher_repository import SqlAlchemyWatcherRepository
@@ -42,6 +47,11 @@ from app.presentation.api.v1.schemas import (
     SearchResponse,
     TopQueriesResponse,
     ZeroResultsResponse,
+)
+from app.presentation.api.v1.webhooks import (
+    PolarWebhookEvent,
+    WebhookVerificationError,
+    verify_polar_webhook,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,6 +81,76 @@ class InternalCacheResponse(BaseModel):
     last_sync: str | None
     cache_populated: bool
     counts: CacheCountsResponse
+
+
+class WatcherCreateRequest(BaseModel):
+    """Requete de creation d'une surveillance dataset."""
+
+    email: str
+    dataset_id: str
+
+
+class WatcherCreateResponse(BaseModel):
+    """Reponse de creation de watcher/surveillance."""
+
+    watcher_id: str
+    email: str
+    token: str
+    dataset_id: str
+    status: str
+
+
+class WatchedDatasetItemResponse(BaseModel):
+    """Element de dataset surveille expose a l'utilisateur."""
+
+    id: str
+    dataset_id: str
+    dataset_title: str | None
+    created_at: str
+
+
+class WatchersListResponse(BaseModel):
+    """Liste des datasets surveilles pour un token watcher."""
+
+    watcher_id: str
+    email: str
+    status: str
+    items: list[WatchedDatasetItemResponse]
+
+
+class AlertItemResponse(BaseModel):
+    """Entree d'alerte pour un changement detecte."""
+
+    id: str
+    dataset_id: str
+    dataset_title: str | None
+    change_type: str
+    previous_value: str | None
+    new_value: str | None
+    detected_at: str
+    notified_at: str | None
+
+
+class AlertsResponse(BaseModel):
+    """Reponse de consultation des alertes d'un watcher."""
+
+    watcher_id: str
+    count: int
+    items: list[AlertItemResponse]
+
+
+def _require_watcher_by_token(token: str) -> tuple[SqlAlchemyWatcherRepository, Watcher]:
+    """Valide le token watcher et retourne (repo, watcher) ou 401."""
+    try:
+        uuid.UUID(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=401, detail="Invalid token") from exc
+
+    watcher_repo = SqlAlchemyWatcherRepository()
+    watcher = watcher_repo.find_by_token(token)
+    if watcher is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return watcher_repo, watcher
 
 
 @api_router.get("/health", response_model=HealthResponse)
@@ -204,6 +284,227 @@ def get_resource(resource_id: str) -> ResourceDetailResponse:
     if not detail:
         raise HTTPException(status_code=404, detail=f"Resource {resource_id} not found")
     return detail
+
+
+@api_router.post("/webhooks/polar")
+async def webhook_polar(
+    request: Request,
+    x_polar_signature: str | None = Header(None, alias="X-Polar-Signature"),
+) -> dict[str, str]:
+    """Endpoint public Polar : vérifie signature puis traite l'événement métier."""
+
+    settings = get_settings()
+    if not settings.polar_webhook_secret:
+        raise HTTPException(status_code=503, detail="POLAR_WEBHOOK_SECRET not configured")
+    if not x_polar_signature:
+        raise HTTPException(status_code=401, detail="Missing X-Polar-Signature header")
+
+    raw_body = await request.body()
+    try:
+        payload = await request.json()
+        event = PolarWebhookEvent(**payload)
+        verify_polar_webhook(
+            body=raw_body,
+            signature_header=x_polar_signature,
+            secret=settings.polar_webhook_secret,
+            timestamp=event.timestamp,
+        )
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid webhook payload") from exc
+    except WebhookVerificationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    watcher_repo = SqlAlchemyWatcherRepository()
+
+    if event.type == "order.created":
+        customer_email = str(event.data.get("customer_email", "")).strip()
+        metadata_raw = event.data.get("metadata")
+        metadata: dict[str, Any] = (
+            cast(dict[str, Any], metadata_raw) if isinstance(metadata_raw, dict) else {}
+        )
+        dataset_id = str(metadata.get("dataset_id", "")).strip()
+        polar_subscription_id = (
+            str(event.data.get("subscription_id")).strip()
+            if event.data.get("subscription_id") is not None
+            else None
+        )
+        if not customer_email or not dataset_id:
+            raise HTTPException(
+                status_code=400,
+                detail="order.created requires customer_email and metadata.dataset_id",
+            )
+
+        watcher = watcher_repo.find_by_email(customer_email)
+        if watcher is None:
+            watcher = watcher_repo.create(
+                email=customer_email,
+                token=str(uuid.uuid4()),
+                polar_subscription_id=polar_subscription_id,
+            )
+
+        detail = GetDatasetDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(dataset_id)
+        if detail is None:
+            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+
+        with suppress(ValueError):
+            watcher_repo.add_watched_dataset(
+                watcher_id=watcher.id,
+                dataset_id=dataset_id,
+                last_known_metadata_modified=detail.modified,
+                last_known_resource_count=len(detail.resources),
+                last_known_quality_score=(
+                    float(detail.quality_score) if detail.quality_score is not None else None
+                ),
+            )
+
+        return {"status": "accepted", "event_type": event.type}
+
+    if event.type == "subscription.cancelled":
+        polar_subscription_id = event.data.get("subscription_id")
+        if not isinstance(polar_subscription_id, str) or not polar_subscription_id.strip():
+            raise HTTPException(
+                status_code=400, detail="subscription.cancelled requires subscription_id"
+            )
+
+        watcher = watcher_repo.find_by_polar_subscription_id(polar_subscription_id.strip())
+        if watcher is not None and watcher.status != "suspended":
+            watcher_repo.update_status(watcher.id, "suspended")
+
+        return {"status": "accepted", "event_type": event.type}
+
+    return {"status": "ignored", "event_type": event.type}
+
+
+@api_router.post("/watchers", response_model=WatcherCreateResponse)
+def create_watcher_watch(request: WatcherCreateRequest) -> WatcherCreateResponse:
+    """Crée un watcher (ou le réutilise) puis ajoute un dataset surveillé."""
+
+    detail = GetDatasetDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(request.dataset_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail=f"Dataset {request.dataset_id} not found")
+
+    watcher_repo = SqlAlchemyWatcherRepository()
+    watcher = watcher_repo.find_by_email(request.email)
+    if watcher is None:
+        watcher = watcher_repo.create(email=request.email, token=str(uuid.uuid4()))
+
+    try:
+        watcher_repo.add_watched_dataset(
+            watcher_id=watcher.id,
+            dataset_id=request.dataset_id,
+            last_known_metadata_modified=detail.modified,
+            last_known_resource_count=len(detail.resources),
+            last_known_quality_score=(
+                float(detail.quality_score) if detail.quality_score is not None else None
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return WatcherCreateResponse(
+        watcher_id=watcher.id,
+        email=watcher.email,
+        token=watcher.token,
+        dataset_id=request.dataset_id,
+        status=watcher.status,
+    )
+
+
+@api_router.get("/watchers", response_model=WatchersListResponse)
+def get_watchers(
+    token: str = Query(..., description="Token UUID du watcher")
+) -> WatchersListResponse:
+    """Retourne les datasets surveillés d'un watcher identifié par token."""
+
+    watcher_repo, watcher = _require_watcher_by_token(token)
+    watched_items = [
+        item for item in watcher_repo.list_watched_datasets() if item.watcher_id == watcher.id
+    ]
+    detail_use_case = GetDatasetDetailUseCase(SqlAlchemyDatasetDetailAdapter())
+    items = [
+        WatchedDatasetItemResponse(
+            id=item.id,
+            dataset_id=item.dataset_id,
+            dataset_title=(
+                detail.title
+                if (detail := detail_use_case.execute(item.dataset_id)) is not None
+                else None
+            ),
+            created_at=item.created_at,
+        )
+        for item in watched_items
+    ]
+    return WatchersListResponse(
+        watcher_id=watcher.id,
+        email=watcher.email,
+        status=watcher.status,
+        items=items,
+    )
+
+
+@api_router.delete("/watchers/{watched_dataset_id}", status_code=204)
+def delete_watcher_watch(
+    watched_dataset_id: str,
+    token: str = Query(..., description="Token UUID du watcher"),
+) -> Response:
+    """Supprime une surveillance dataset à partir de son identifiant."""
+
+    watcher_repo, watcher = _require_watcher_by_token(token)
+    watched_item = next(
+        (
+            item
+            for item in watcher_repo.list_watched_datasets()
+            if item.watcher_id == watcher.id and item.id == watched_dataset_id
+        ),
+        None,
+    )
+    if watched_item is None:
+        raise HTTPException(status_code=404, detail="Watched dataset not found")
+
+    watcher_repo.remove_watched_dataset(watcher_id=watcher.id, dataset_id=watched_item.dataset_id)
+    return Response(status_code=204)
+
+
+@api_router.get("/alerts", response_model=AlertsResponse)
+def get_alerts(token: str = Query(..., description="Token UUID du watcher")) -> AlertsResponse:
+    """Retourne l'historique des changements des datasets surveillés par le watcher."""
+
+    watcher_repo, watcher = _require_watcher_by_token(token)
+    watched_items = [
+        item for item in watcher_repo.list_watched_datasets() if item.watcher_id == watcher.id
+    ]
+    watched_ids = {item.dataset_id for item in watched_items}
+
+    if not watched_ids:
+        return AlertsResponse(watcher_id=watcher.id, count=0, items=[])
+
+    with SessionLocal() as session:
+        rows = (
+            session.query(ChangeLogModel)
+            .filter(ChangeLogModel.dataset_id.in_(watched_ids))
+            .order_by(ChangeLogModel.detected_at.desc())
+            .all()
+        )
+
+    detail_use_case = GetDatasetDetailUseCase(SqlAlchemyDatasetDetailAdapter())
+    items = [
+        AlertItemResponse(
+            id=row.id,
+            dataset_id=row.dataset_id,
+            dataset_title=(
+                detail.title
+                if (detail := detail_use_case.execute(row.dataset_id)) is not None
+                else None
+            ),
+            change_type=row.change_type,
+            previous_value=row.previous_value,
+            new_value=row.new_value,
+            detected_at=row.detected_at,
+            notified_at=row.notified_at,
+        )
+        for row in rows
+    ]
+    return AlertsResponse(watcher_id=watcher.id, count=len(items), items=items)
 
 
 @api_router.post("/compare", response_model=CompareResponse)

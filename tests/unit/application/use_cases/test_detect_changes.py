@@ -10,7 +10,7 @@ import pytest
 
 from app.application.ports.cache_read_repository import CacheReadRepositoryPort
 from app.application.ports.changelog_repository import ChangeLogEntry, ChangeLogRepositoryPort
-from app.application.ports.watcher_repository import WatchedDataset, WatcherRepositoryPort
+from app.application.ports.watcher_repository import WatchedDataset, Watcher, WatcherRepositoryPort
 from app.application.use_cases.detect_changes import DetectChangesUseCase
 from app.presentation.api.v1.schemas import (
     DatasetDetailResponse,
@@ -35,6 +35,10 @@ class _FakeWatcherRepository:
     def list_watched_datasets(self) -> list[WatchedDataset]:
         return self._watched_datasets
 
+    def find_by_polar_subscription_id(self, polar_subscription_id: str) -> Watcher | None:
+        _ = polar_subscription_id
+        return None
+
     def update_last_known(
         self,
         watcher_id: str,
@@ -46,6 +50,13 @@ class _FakeWatcherRepository:
         self.updated_last_known.append(
             (watcher_id, dataset_id, metadata_modified, resource_count, quality_score)
         )
+
+    def find_last_alert_sent_at(self, watcher_id: str, dataset_id: str) -> str | None:
+        _ = (watcher_id, dataset_id)
+        return None
+
+    def mark_alert_sent(self, watcher_id: str, dataset_id: str, sent_at: str) -> None:
+        _ = (watcher_id, dataset_id, sent_at)
 
 
 class _FakeChangeLogRepository:

@@ -154,6 +154,7 @@ def _migrate_add_watcher_tables() -> None:
                 last_known_metadata_modified TEXT,
                 last_known_resource_count INTEGER,
                 last_known_quality_score REAL,
+                last_alert_sent_at TEXT,
                 created_at TEXT NOT NULL,
                 CONSTRAINT uq_watched_datasets_watcher_dataset UNIQUE (watcher_id, dataset_id)
             );
@@ -183,6 +184,25 @@ def _migrate_add_watcher_tables() -> None:
         conn.close()
 
 
+def _migrate_add_watched_datasets_alert_timestamp() -> None:
+    """Ajoute `last_alert_sent_at` sur watched_datasets si absent (PDS-88 strict)."""
+    settings = get_settings()
+    db_path = settings.database_url.removeprefix("sqlite:///")
+    if not db_path:
+        return
+
+    conn = sqlite3.connect(db_path)
+    try:
+        try:
+            conn.execute("ALTER TABLE watched_datasets ADD COLUMN last_alert_sent_at TEXT")
+        except sqlite3.OperationalError as exc:
+            if "duplicate column name" not in str(exc).lower():
+                raise
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def create_schema() -> None:
     """Crée le schéma de la base de données (tables, indexes, FTS5).
 
@@ -201,6 +221,7 @@ def create_schema() -> None:
 
     # Migration PDS-86 : créer les tables de surveillance si absentes.
     _migrate_add_watcher_tables()
+    _migrate_add_watched_datasets_alert_timestamp()
 
     # Creer/migrer l'index FTS5 pour la recherche full-text (PDS-44, PDS-41, PDS-96).
     # FTS5 n'est pas gere par SQLAlchemy → creation en SQL brut.

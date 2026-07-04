@@ -241,6 +241,31 @@ class TestWatchedDatasets:
                 ).delete()
                 session.commit()
 
+    def test_mark_and_find_last_alert_sent_at(
+        self,
+        watcher_repo: SqlAlchemyWatcherRepository,
+        created_watcher: Watcher,
+    ) -> None:
+        """Le timestamp d'alerte est persiste par couple watcher+dataset."""
+        dataset_id = f"ds-alert-sent-{uuid.uuid4()}"
+        watched = watcher_repo.add_watched_dataset(
+            watcher_id=created_watcher.id,
+            dataset_id=dataset_id,
+        )
+
+        try:
+            assert watcher_repo.find_last_alert_sent_at(created_watcher.id, dataset_id) is None
+
+            sent_at = "2026-07-04T08:00:00+00:00"
+            watcher_repo.mark_alert_sent(created_watcher.id, dataset_id, sent_at)
+            assert watcher_repo.find_last_alert_sent_at(created_watcher.id, dataset_id) == sent_at
+        finally:
+            with SessionLocal() as session:
+                session.query(WatchedDatasetModel).filter(
+                    WatchedDatasetModel.id == watched.id
+                ).delete()
+                session.commit()
+
 
 class TestChangeLogRepository:
     """Tests du journal des changements détectés."""

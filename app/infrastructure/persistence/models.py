@@ -223,6 +223,7 @@ class WatchedDatasetModel(Base):
     last_known_metadata_modified: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_known_resource_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_known_quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_alert_sent_at: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)  # ISO 8601
 
     watcher: Mapped[WatcherModel] = relationship(

@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     query_cache_ttl_seconds: int = 86400  # 24h (ADR-007)
     query_cache_enabled: bool = True  # Feature flag cache applicatif (PDS-46)
     internal_api_token: str | None = None  # Token pour endpoints /internal/* protégés (PDS-46)
+    polar_api_key: str | None = None
+    polar_webhook_secret: str | None = None
+    polar_organization_id: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

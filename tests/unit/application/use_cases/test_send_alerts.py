@@ -39,8 +39,13 @@ class _FakeCacheRepository:
 
 
 class _FakeWatcherRepository:
-    def __init__(self, watchers_by_dataset: dict[str, list[Watcher]]) -> None:
+    def __init__(
+        self,
+        watchers_by_dataset: dict[str, list[Watcher]],
+        last_alert_sent_at: Mapping[tuple[str, str], str | None],
+    ) -> None:
         self._watchers_by_dataset = watchers_by_dataset
+        self._last_alert_sent_at = dict(last_alert_sent_at)
 
     def create(
         self,
@@ -58,6 +63,10 @@ class _FakeWatcherRepository:
 
     def find_by_token(self, token: str) -> Watcher | None:
         _ = token
+        return None
+
+    def find_by_polar_subscription_id(self, polar_subscription_id: str) -> Watcher | None:
+        _ = polar_subscription_id
         return None
 
     def find_by_dataset(self, dataset_id: str) -> list[Watcher]:
@@ -107,6 +116,12 @@ class _FakeWatcherRepository:
         quality_score: float | None,
     ) -> None:
         _ = (watcher_id, dataset_id, metadata_modified, resource_count, quality_score)
+
+    def find_last_alert_sent_at(self, watcher_id: str, dataset_id: str) -> str | None:
+        return self._last_alert_sent_at.get((watcher_id, dataset_id))
+
+    def mark_alert_sent(self, watcher_id: str, dataset_id: str, sent_at: str) -> None:
+        self._last_alert_sent_at[(watcher_id, dataset_id)] = sent_at
 
 
 class _FakeChangeLogRepository:
@@ -320,12 +335,16 @@ def _build_use_case(
     entries: list[ChangeLogEntry],
     watchers_by_dataset: dict[str, list[Watcher]],
     last_notified_at: Mapping[str, str | None],
+    last_alert_sent_at: Mapping[tuple[str, str], str | None],
     dataset_detail: DatasetDetailResponse,
     settings: Settings,
     fixed_now: datetime,
 ) -> tuple[SendAlertsUseCase, _FakeChangeLogRepository, _FakeMagicLinkRepository]:
     cache_repository = _FakeCacheRepository(datasets={dataset_detail.id: dataset_detail})
-    watcher_repository = _FakeWatcherRepository(watchers_by_dataset=watchers_by_dataset)
+    watcher_repository = _FakeWatcherRepository(
+        watchers_by_dataset=watchers_by_dataset,
+        last_alert_sent_at=last_alert_sent_at,
+    )
     changelog_repository = _FakeChangeLogRepository(
         entries=entries,
         last_notified_at=last_notified_at,
@@ -372,6 +391,7 @@ def test_send_alerts_sends_email_with_magic_link_and_unsubscribe(
         entries=entries,
         watchers_by_dataset={dataset_detail.id: [active_watcher]},
         last_notified_at={},
+        last_alert_sent_at={},
         dataset_detail=dataset_detail,
         settings=settings,
         fixed_now=fixed_now,
@@ -403,6 +423,11 @@ def test_send_alerts_sends_email_with_magic_link_and_unsubscribe(
     assert "permanent-token-active" not in sent_message.as_string()
     assert "Dataset 1" in plain_body
     assert "Dernière mise à jour modifiée" in plain_body
+    assert magic_link_repository.create_calls[0]["created_at"] == fixed_now.isoformat()
+    assert (
+        magic_link_repository.create_calls[0]["expires_at"]
+        == (fixed_now + timedelta(minutes=15)).isoformat()
+    )
 
 
 def test_send_alerts_ignores_suspended_watchers(
@@ -435,6 +460,7 @@ def test_send_alerts_ignores_suspended_watchers(
         entries=entries,
         watchers_by_dataset={dataset_detail.id: [active_watcher, suspended_watcher]},
         last_notified_at={},
+        last_alert_sent_at={},
         dataset_detail=dataset_detail,
         settings=settings,
         fixed_now=fixed_now,
@@ -471,12 +497,15 @@ def test_send_alerts_skips_dataset_notified_within_24h(
             notified_at=None,
         )
     ]
-    last_notified_at = {dataset_detail.id: (fixed_now - timedelta(hours=1)).isoformat()}
+    last_alert_sent_at = {
+        (active_watcher.id, dataset_detail.id): (fixed_now - timedelta(hours=1)).isoformat()
+    }
 
     use_case, changelog_repository, _ = _build_use_case(
         entries=entries,
         watchers_by_dataset={dataset_detail.id: [active_watcher]},
-        last_notified_at=last_notified_at,
+        last_notified_at={},
+        last_alert_sent_at=last_alert_sent_at,
         dataset_detail=dataset_detail,
         settings=settings,
         fixed_now=fixed_now,
@@ -528,6 +557,7 @@ def test_send_alerts_groups_multiple_changes_single_email(
         entries=entries,
         watchers_by_dataset={dataset_detail.id: [active_watcher]},
         last_notified_at={},
+        last_alert_sent_at={},
         dataset_detail=dataset_detail,
         settings=settings,
         fixed_now=fixed_now,
@@ -587,6 +617,7 @@ def test_send_alerts_stops_at_daily_limit(
             second_dataset.id: [active_watcher],
         },
         last_notified_at={},
+        last_alert_sent_at={},
         dataset_detail=dataset_detail,
         settings=limited_settings,
         fixed_now=fixed_now,

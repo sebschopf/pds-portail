@@ -61,6 +61,10 @@ class WatcherRepositoryPort(Protocol):
         """
         ...
 
+    def find_by_polar_subscription_id(self, polar_subscription_id: str) -> Watcher | None:
+        """Cherche un watcher par son identifiant d'abonnement Polar."""
+        ...
+
     def find_by_dataset(self, dataset_id: str) -> list[Watcher]:
         """Retourne tous les watchers actifs surveillant un dataset donné."""
         ...
@@ -104,4 +108,12 @@ class WatcherRepositoryPort(Protocol):
         quality_score: float | None,
     ) -> None:
         """Met à jour les dernières valeurs connues d'un dataset surveillé."""
+        ...
+
+    def find_last_alert_sent_at(self, watcher_id: str, dataset_id: str) -> str | None:
+        """Retourne la date du dernier email d'alerte envoyé pour ce watcher+dataset."""
+        ...
+
+    def mark_alert_sent(self, watcher_id: str, dataset_id: str, sent_at: str) -> None:
+        """Enregistre l'horodatage d'envoi d'une alerte pour ce watcher+dataset."""
         ...

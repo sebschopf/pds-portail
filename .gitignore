@@ -43,3 +43,6 @@ pds_portail_backend.egg-info/
 # Fichiers de configuration interne Cline
 .clinerules
 .instructions.md
+.github/instructions/
+copilot-instructions.md
+.vscode/

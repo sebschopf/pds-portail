@@ -3,6 +3,7 @@ import type { PageLoad } from './$types';
 import type { DatasetDetailContract } from '$lib/contracts/dataset-detail';
 import { isDatasetDetailContract } from '$lib/contracts/dataset-detail';
 import { normalizeSearchContext } from '$lib/navigation/search-context';
+import { PUBLIC_POLAR_PRODUCT_ID } from '$env/static/public';
 
 type DatasetPageData = {
 	datasetId: string;
@@ -10,6 +11,7 @@ type DatasetPageData = {
 	searchContext?: string | null;
 	dataset?: DatasetDetailContract;
 	errorMessage?: string;
+	polar_product_id?: string;
 };
 
 export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) => {
@@ -22,7 +24,8 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 		return {
 			datasetId,
 			status: 'not-found',
-			...contextData
+			...contextData,
+			polar_product_id: PUBLIC_POLAR_PRODUCT_ID
 		};
 	}
 
@@ -31,7 +34,8 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 			datasetId,
 			status: 'error',
 			...contextData,
-			errorMessage: `Erreur API ${response.status}`
+			errorMessage: `Erreur API ${response.status}`,
+			polar_product_id: PUBLIC_POLAR_PRODUCT_ID
 		};
 	}
 
@@ -40,7 +44,8 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 		return {
 			datasetId,
 			status: 'contract-error',
-			...contextData
+			...contextData,
+			polar_product_id: PUBLIC_POLAR_PRODUCT_ID
 		};
 	}
 
@@ -48,6 +53,7 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 		datasetId,
 		status: 'ok',
 		...contextData,
-		dataset: payload
+		dataset: payload,
+		polar_product_id: PUBLIC_POLAR_PRODUCT_ID
 	};
 };

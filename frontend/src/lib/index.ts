@@ -4,6 +4,7 @@
 // Atoms
 export { default as Button } from './ui/atoms/Button.svelte';
 export { default as Input } from './ui/atoms/Input.svelte';
+export { default as Modal } from './ui/atoms/Modal.svelte';
 export { default as Skeleton } from './ui/atoms/Skeleton.svelte';
 export { default as StateBadge } from './ui/atoms/StateBadge.svelte';
 
@@ -16,6 +17,7 @@ export { default as ResourceList } from './ui/molecules/ResourceList.svelte';
 export { default as SkeletonCard } from './ui/molecules/SkeletonCard.svelte';
 export { default as StructureBlock } from './ui/molecules/StructureBlock.svelte';
 export { default as Timeline } from './ui/molecules/Timeline.svelte';
+export { default as WatchDataset } from './ui/molecules/WatchDataset.svelte';
 
 // Organisms
 export { default as Card } from './ui/organisms/Card.svelte';

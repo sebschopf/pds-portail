@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Breadcrumb, Card, EmptyState, PageLayout, QualityBlock, ResourceList, StructureBlock } from '$lib';
+	import { Breadcrumb, Card, EmptyState, PageLayout, QualityBlock, ResourceList, StructureBlock, WatchDataset } from '$lib';
 	import { appendSearchContext, buildSearchHref } from '$lib/navigation/search-context';
 
 	let { data } = $props();
@@ -67,6 +67,14 @@
 			</EmptyState>
 		{:else if dataset}
 			<h3 class="title">{dataset.title}</h3>
+
+			{#if data.polar_product_id}
+				<WatchDataset
+					dataset_id={dataset.id}
+					dataset_title={dataset.title}
+					polar_product_id={data.polar_product_id}
+				/>
+			{/if}
 
 			<section class="access-modes" aria-label="Modes d'accès du dataset">
 				<h4 class="access-title">Modes d'accès</h4>

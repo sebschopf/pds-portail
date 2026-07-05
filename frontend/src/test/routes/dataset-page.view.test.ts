@@ -60,6 +60,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: defaultDataset
 				}
 			}
@@ -89,6 +90,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: defaultDataset
 				}
 			}
@@ -106,6 +108,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: { ...defaultDataset, freshness_days: 5 }
 				}
 			}
@@ -121,6 +124,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: { ...defaultDataset, freshness_days: 90 }
 				}
 			}
@@ -136,6 +140,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: { ...defaultDataset, freshness_days: 250 }
 				}
 			}
@@ -151,7 +156,8 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
-					dataset: incompleteDataset
+					dataset: incompleteDataset,
+					polar_product_id: 'product_test'
 				}
 			}
 		});
@@ -165,6 +171,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: { ...defaultDataset, completeness: 80, quality_score: 85 }
 				}
 			}
@@ -181,6 +188,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: { ...defaultDataset, quality_score: 25, completeness: 20, freshness_days: 400 }
 				}
 			}
@@ -197,6 +205,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: defaultDataset
 				}
 			}
@@ -224,6 +233,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: defaultDataset
 				}
 			}
@@ -241,6 +251,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					searchContext: 'q=mobilite&sort=quality_desc&page=2&org=org-1&fmt=CSV&tag=transport',
 					dataset: defaultDataset
 				}
@@ -261,6 +272,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: {
 						...incompleteDataset,
 						dataset_structure: { fields: [], formats: [], update_frequency: null, last_updated: null }
@@ -281,7 +293,8 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-2',
 					status: 'ok',
-					dataset: incompleteDataset
+					dataset: incompleteDataset,
+					polar_product_id: 'product_test'
 				}
 			}
 		});
@@ -296,6 +309,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: defaultDataset
 				}
 			}
@@ -313,6 +327,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'ok',
+				polar_product_id: 'product_test',
 					dataset: defaultDataset
 				}
 			}
@@ -327,6 +342,7 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-1',
 					status: 'error',
+				polar_product_id: 'product_test',
 					errorMessage: 'Erreur API 500'
 				}
 			}
@@ -341,7 +357,8 @@ describe('dataset/[id] page', () => {
 			props: {
 				data: {
 					datasetId: 'dataset-introuvable',
-					status: 'not-found'
+					status: 'not-found',
+					polar_product_id: 'product_test'
 				}
 			}
 		});
@@ -356,7 +373,8 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-2',
 					status: 'ok',
-					dataset: incompleteDataset
+					dataset: incompleteDataset,
+					polar_product_id: 'product_test'
 				}
 			}
 		});
@@ -373,7 +391,8 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-2',
 					status: 'ok',
-					dataset: incompleteDataset
+					dataset: incompleteDataset,
+					polar_product_id: 'product_test'
 				}
 			}
 		});
@@ -387,7 +406,8 @@ describe('dataset/[id] page', () => {
 				data: {
 					datasetId: 'dataset-2',
 					status: 'ok',
-					dataset: incompleteDataset
+					dataset: incompleteDataset,
+					polar_product_id: 'product_test'
 				}
 			}
 		});

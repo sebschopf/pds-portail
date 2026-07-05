@@ -10,7 +10,7 @@
 	}: {
 		dataset_id: string;
 		dataset_title: string;
-		polar_product_id: string; // 'product_xxx' from Polar environment
+		polar_product_id?: string; // 'product_xxx' from Polar environment (optional)
 	} = $props();
 
 	let watchState: WatchDatasetState = $state('idle');
@@ -51,6 +51,12 @@
 	function handlePolarCheckout() {
 		if (!email || !email.includes('@')) {
 			error = 'Veuillez entrer une adresse email valide.';
+			return;
+		}
+
+		if (!polar_product_id) {
+			error = 'Service de paiement indisponible. Veuillez réessayer plus tard.';
+			watchState = 'error';
 			return;
 		}
 
@@ -110,7 +116,7 @@
 			</button>
 		</div>
 	{:else if watchState === 'idle' || watchState === 'error'}
-		<Button label="Surveiller ce dataset" variant="primary" onclick={openModal} />
+		<Button label="Surveiller ce dataset" variant="primary" onclick={openModal} disabled={!polar_product_id} />
 		{#if watchState === 'error' && error}
 			<p class="error-message" role="alert">{error}</p>
 		{/if}
@@ -149,7 +155,7 @@
 					<Button
 				label={watchState === 'pending' ? 'Redirection vers Polar...' : 'Procéder au paiement'}
 				variant="primary"
-				disabled={watchState === 'pending' || !email}
+				disabled={watchState === 'pending' || !email || !polar_product_id}
 						onclick={handlePolarCheckout}
 					/>
 					<button class="cancel-btn" onclick={closeModal} disabled={watchState === 'pending'}>

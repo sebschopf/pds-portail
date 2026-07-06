@@ -25,6 +25,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-111/PDS-112: séparation de configuration `\.env.local` (dev) et `\.env.test` (tests) pour supprimer les dépendances implicites au `.env` local pendant les quality gates; ajout de `INTERNAL_API_TOKEN` dans le template d'environnement.
 
 ### Fixed
+- PDS-119: consommation de magic link durcie contre l'enumeration par message d'erreur unifie (`Magic link invalide`) pour tous les rejets 401.
 - PDS-88/PDS-89: alignement typage strict (Pylance/mypy), stabilité des fakes de tests et conformité quality gate.
 - PDS-116: un webhook `order.created` sur dataset inconnu n'écrit plus d'état partiel côté watcher, et un watcher suspendu peut être réactivé proprement sur repaiement.
 - PDS-115: le token watcher local n'est plus seulement lu par le frontend `/alertes`, il est aussi persisté automatiquement après un accès serveur réussi.

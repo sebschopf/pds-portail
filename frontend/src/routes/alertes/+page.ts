@@ -21,14 +21,7 @@ export const load: PageLoad<AlertsPageData> = async ({ url, fetch }) => {
 			);
 
 			if (!consumeRes.ok) {
-				const detail = await consumeRes.json().catch(() => ({}));
-				const apiDetail: string = (detail as { detail?: string })?.detail ?? '';
-				let errorMessage = 'Le lien email est invalide ou a expiré.';
-				if (apiDetail.includes('expiré')) {
-					errorMessage = 'Le lien email a expiré (validité 15 minutes). Demandez un nouveau lien.';
-				} else if (apiDetail.includes('déjà utilisé')) {
-					errorMessage = 'Ce lien email a déjà été utilisé. Demandez un nouveau lien.';
-				}
+				const errorMessage = 'Le lien email est invalide ou expiré. Demandez un nouveau lien.';
 				return { status: 'not-authenticated', errorMessage };
 			}
 

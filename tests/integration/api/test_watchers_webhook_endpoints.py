@@ -365,7 +365,7 @@ def test_magic_link_consume_valid(watchers_api_ctx: dict[str, Any]) -> None:
 
 
 def test_magic_link_consume_expired(watchers_api_ctx: dict[str, Any]) -> None:
-    """GET /api/v1/magic-link/consume rejette un magic link expiré."""
+    """GET /api/v1/magic-link/consume rejette un magic link expiré (message unifié)."""
     import hashlib
 
     app = watchers_api_ctx["app"]
@@ -395,11 +395,11 @@ def test_magic_link_consume_expired(watchers_api_ctx: dict[str, Any]) -> None:
     )
 
     assert response.status_code == 401
-    assert "expiré" in response.json()["detail"].lower()
+    assert response.json()["detail"] == "Magic link invalide"
 
 
 def test_magic_link_consume_already_used(watchers_api_ctx: dict[str, Any]) -> None:
-    """GET /api/v1/magic-link/consume rejette un magic link déjà utilisé."""
+    """GET /api/v1/magic-link/consume rejette un magic link déjà utilisé (message unifié)."""
     import hashlib
 
     app = watchers_api_ctx["app"]
@@ -434,11 +434,11 @@ def test_magic_link_consume_already_used(watchers_api_ctx: dict[str, Any]) -> No
     )
 
     assert response.status_code == 401
-    assert "déjà utilisé" in response.json()["detail"].lower()
+    assert response.json()["detail"] == "Magic link invalide"
 
 
 def test_magic_link_consume_watcher_suspended(watchers_api_ctx: dict[str, Any]) -> None:
-    """GET /api/v1/magic-link/consume rejette si le watcher est suspendu."""
+    """GET /api/v1/magic-link/consume rejette si le watcher est suspendu (message unifié)."""
     import hashlib
 
     app = watchers_api_ctx["app"]
@@ -469,7 +469,7 @@ def test_magic_link_consume_watcher_suspended(watchers_api_ctx: dict[str, Any]) 
     )
 
     assert response.status_code == 401
-    assert "refusé" in response.json()["detail"].lower()
+    assert response.json()["detail"] == "Magic link invalide"
 
 
 def test_magic_link_request_sends_email(watchers_api_ctx: dict[str, Any]) -> None:

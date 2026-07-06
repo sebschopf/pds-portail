@@ -74,12 +74,12 @@ describe('alertes (+page.ts) load', () => {
 		expect(data.watchers?.email).toBe('test@example.ch');
 	});
 
-	it('affiche un message si le magic link est expiré', async () => {
+	it('affiche un message générique si le magic link est rejeté', async () => {
 		const mockFetch = vi.fn((url: string) => {
 			if (url.includes('/api/v1/magic-link/consume')) {
 				return Promise.resolve(
 					new Response(
-						JSON.stringify({ detail: 'Magic link expiré' }),
+						JSON.stringify({ detail: 'Magic link invalide' }),
 						{ status: 401 }
 					)
 				);
@@ -93,15 +93,15 @@ describe('alertes (+page.ts) load', () => {
 		} as never);
 
 		expect(data.status).toBe('not-authenticated');
-		expect(data.errorMessage).toContain('expiré');
+		expect(data.errorMessage).toContain('invalide ou expiré');
 	});
 
-	it('affiche un message si le magic link a déjà été utilisé', async () => {
+	it('affiche le même message générique pour un second rejet magic link', async () => {
 		const mockFetch = vi.fn((url: string) => {
 			if (url.includes('/api/v1/magic-link/consume')) {
 				return Promise.resolve(
 					new Response(
-						JSON.stringify({ detail: 'Magic link déjà utilisé' }),
+						JSON.stringify({ detail: 'Magic link invalide' }),
 						{ status: 401 }
 					)
 				);
@@ -115,7 +115,7 @@ describe('alertes (+page.ts) load', () => {
 		} as never);
 
 		expect(data.status).toBe('not-authenticated');
-		expect(data.errorMessage).toContain('déjà été utilisé');
+		expect(data.errorMessage).toContain('invalide ou expiré');
 	});
 
 	it('charge les données watchers et alerts quand un token URL valide est fourni', async () => {

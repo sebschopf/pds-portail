@@ -1013,23 +1013,24 @@ def consume_magic_link(
     token_hash = hashlib.sha256(magic.encode("utf-8")).hexdigest()
     magic_link_repo = SqlAlchemyMagicLinkRepository()
     magic_link = magic_link_repo.find_by_token_hash(token_hash)
+    invalid_magic_link_detail = "Magic link invalide"
 
     if magic_link is None:
-        raise HTTPException(status_code=401, detail="Magic link invalide")
+        raise HTTPException(status_code=401, detail=invalid_magic_link_detail)
 
     now_iso = datetime.now(UTC).isoformat()
 
     if magic_link.expires_at < now_iso:
-        raise HTTPException(status_code=401, detail="Magic link expiré")
+        raise HTTPException(status_code=401, detail=invalid_magic_link_detail)
 
     if magic_link.used_at is not None:
-        raise HTTPException(status_code=401, detail="Magic link déjà utilisé")
+        raise HTTPException(status_code=401, detail=invalid_magic_link_detail)
 
     watcher_repo = SqlAlchemyWatcherRepository()
     watcher = watcher_repo.find_by_id(magic_link.watcher_id)
 
     if watcher is None or watcher.status != "active":
-        raise HTTPException(status_code=401, detail="Accès refusé")
+        raise HTTPException(status_code=401, detail=invalid_magic_link_detail)
 
     # Marque le magic link comme consommé (usage unique ADR-030)
     magic_link_repo.mark_used(magic_link.id, now_iso)

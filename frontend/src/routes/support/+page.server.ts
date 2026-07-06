@@ -212,7 +212,16 @@ export const actions = {
 		);
 
 		if (response.ok) {
-			throw redirect(303, `/support?email=${encodeURIComponent(email)}&notice=resent`);
+			let notice = 'resent';
+			try {
+				const body = (await response.json()) as { dispatch_status?: string };
+				if (body.dispatch_status === 'queued') {
+					notice = 'queued';
+				}
+			} catch {
+				// Conserver le succes par defaut si la reponse backend est absente ou invalide.
+			}
+			throw redirect(303, `/support?email=${encodeURIComponent(email)}&notice=${notice}`);
 		}
 
 		if (response.status === 409) {

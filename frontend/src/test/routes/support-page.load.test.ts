@@ -130,4 +130,94 @@ describe('support (+page.server.ts) load', () => {
 			} as never)
 		).rejects.toMatchObject({ status: 303, location: '/support?email=watcher%40example.ch&notice=resent' });
 	});
+
+	it('redirige avec notice queued quand le backend retourne dispatch_status queued', async () => {
+		vi.stubEnv('INTERNAL_API_TOKEN', 'support-token-test');
+
+		const fetchMock = vi.fn(() =>
+			Promise.resolve(new Response(JSON.stringify({ dispatch_status: 'queued' }), { status: 200 }))
+		);
+		const formData = new FormData();
+		formData.set('email', 'watcher@example.ch');
+		formData.set('watcher_id', 'watcher-1');
+
+		await expect(
+			actions.resend({
+				request: new Request('http://localhost:5173/support?/resend', {
+					method: 'POST',
+					body: formData
+				}),
+				fetch: fetchMock
+			} as never)
+		).rejects.toMatchObject({
+			status: 303,
+			location: '/support?email=watcher%40example.ch&notice=queued'
+		});
+	});
+
+	it('redirige avec notice suspended quand le backend retourne 409', async () => {
+		vi.stubEnv('INTERNAL_API_TOKEN', 'support-token-test');
+
+		const fetchMock = vi.fn(() => Promise.resolve(new Response('{}', { status: 409 })));
+		const formData = new FormData();
+		formData.set('email', 'watcher@example.ch');
+		formData.set('watcher_id', 'watcher-1');
+
+		await expect(
+			actions.resend({
+				request: new Request('http://localhost:5173/support?/resend', {
+					method: 'POST',
+					body: formData
+				}),
+				fetch: fetchMock
+			} as never)
+		).rejects.toMatchObject({
+			status: 303,
+			location: '/support?email=watcher%40example.ch&notice=suspended'
+		});
+	});
+
+	it('redirige avec notice rate-limited quand le backend retourne 429', async () => {
+		vi.stubEnv('INTERNAL_API_TOKEN', 'support-token-test');
+
+		const fetchMock = vi.fn(() => Promise.resolve(new Response('{}', { status: 429 })));
+		const formData = new FormData();
+		formData.set('email', 'watcher@example.ch');
+		formData.set('watcher_id', 'watcher-1');
+
+		await expect(
+			actions.resend({
+				request: new Request('http://localhost:5173/support?/resend', {
+					method: 'POST',
+					body: formData
+				}),
+				fetch: fetchMock
+			} as never)
+		).rejects.toMatchObject({
+			status: 303,
+			location: '/support?email=watcher%40example.ch&notice=rate-limited'
+		});
+	});
+
+	it('redirige avec notice error quand le backend retourne une erreur non geree', async () => {
+		vi.stubEnv('INTERNAL_API_TOKEN', 'support-token-test');
+
+		const fetchMock = vi.fn(() => Promise.resolve(new Response('{}', { status: 500 })));
+		const formData = new FormData();
+		formData.set('email', 'watcher@example.ch');
+		formData.set('watcher_id', 'watcher-1');
+
+		await expect(
+			actions.resend({
+				request: new Request('http://localhost:5173/support?/resend', {
+					method: 'POST',
+					body: formData
+				}),
+				fetch: fetchMock
+			} as never)
+		).rejects.toMatchObject({
+			status: 303,
+			location: '/support?email=watcher%40example.ch&notice=error'
+		});
+	});
 });

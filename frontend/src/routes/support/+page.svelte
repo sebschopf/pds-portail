@@ -49,6 +49,7 @@
 
 	const noticeLabels: Record<string, string> = {
 		resent: 'Magic link renvoyé avec succès.',
+		queued: 'Magic link mis en file d attente: verifier la configuration SMTP.',
 		suspended: 'Le watcher est suspendu: aucun renvoi effectué.',
 		'rate-limited': 'Renvoi temporairement limité pour éviter les doublons.',
 		'not-configured': 'Le module support n\'est pas configuré sur le serveur.',

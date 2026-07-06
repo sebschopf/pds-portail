@@ -327,3 +327,58 @@ def test_internal_support_rejects_invalid_auth_and_suspended_resend(
         json={"reason": "incident_paid_no_access"},
     )
     assert suspended_resend_response.status_code == 409
+
+
+def test_internal_support_resend_returns_queued_when_dispatch_degraded(
+    monkeypatch: pytest.MonkeyPatch,
+    support_api_ctx: dict[str, Any],
+) -> None:
+    """Le support renvoie un statut queued si l envoi email est degrade."""
+
+    def _fake_dispatch_magic_link_email(
+        *,
+        watcher: Any,
+        subject: str,
+        template_name: str,
+        email_kind: str,
+        template_context: dict[str, str],
+    ) -> str:
+        del watcher, subject, template_name, email_kind, template_context
+        return "queued"
+
+    monkeypatch.setattr(
+        "app.presentation.api.v1.router._dispatch_magic_link_email",
+        _fake_dispatch_magic_link_email,
+    )
+
+    app = support_api_ctx["app"]
+    dataset_id = support_api_ctx["dataset_id"]
+    secret = support_api_ctx["secret"]
+    token = support_api_ctx["internal_token"]
+    email = "queued-support@example.ch"
+    subscription_id = "sub_queued_001"
+    client = cast(_SupportHttpClient, TestClient(app))
+    watcher_repo = SqlAlchemyWatcherRepository()
+
+    create_response = _create_watcher_via_webhook(
+        client, dataset_id, secret, email, subscription_id
+    )
+    assert create_response.status_code == 200
+
+    watcher = watcher_repo.find_by_email(email)
+    assert watcher is not None
+
+    resend_response = client.post(
+        f"/api/v1/internal/support/watchers/{watcher.id}/magic-link/resend",
+        headers={
+            **_support_headers(token, request_id="req-support-queued"),
+            "Content-Type": "application/json",
+        },
+        json={"reason": "incident_paid_no_access"},
+    )
+
+    assert resend_response.status_code == 200
+    payload = resend_response.json()
+    assert payload["dispatch_status"] == "queued"
+    assert payload["audit_id"]
+    assert payload["issued_at"]

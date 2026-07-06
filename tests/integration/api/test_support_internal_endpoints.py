@@ -342,12 +342,28 @@ def test_internal_support_resend_returns_queued_when_dispatch_degraded(
         template_name: str,
         email_kind: str,
         template_context: dict[str, str],
+        smtp_host: str | None,
+        smtp_port: int,
+        smtp_user: str | None,
+        smtp_password: str | None,
+        smtp_from: str | None,
     ) -> str:
-        del watcher, subject, template_name, email_kind, template_context
+        del (
+            watcher,
+            subject,
+            template_name,
+            email_kind,
+            template_context,
+            smtp_host,
+            smtp_port,
+            smtp_user,
+            smtp_password,
+            smtp_from,
+        )
         return "queued"
 
     monkeypatch.setattr(
-        "app.presentation.api.v1.router._dispatch_magic_link_email",
+        "app.presentation.api.v1.router_support._dispatch_magic_link_email",
         _fake_dispatch_magic_link_email,
     )
 

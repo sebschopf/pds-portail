@@ -4,6 +4,8 @@ Normalisent et enrichissent les reponses CKAN via les indicateurs de qualite
 et la structure dataset explicitee.
 """
 
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 
@@ -235,13 +237,20 @@ class ResourceAnalysis(BaseModel):
     )
 
 
+def _empty_column_info_list() -> list[ColumnInfo]:
+    return []
+
+
 class ExploreResourceResponse(BaseModel):
     """Reponse du parsing et de l'analyse d'une ressource (CSV/JSON)."""
 
     resource_id: str = Field(description="ID de la ressource")
     format: str = Field(description="Format du fichier (csv, json)")
     parsed_at: str = Field(description="Horodatage du parsing (ISO 8601)")
-    columns: list[ColumnInfo] = Field(default_factory=list, description="Colonnes detectees")
+    columns: list[ColumnInfo] = Field(
+        default_factory=_empty_column_info_list,
+        description="Colonnes detectees",
+    )
     row_count: int = Field(default=0, description="Nombre de lignes/enregistrements")
     analysis: ResourceAnalysis | None = Field(
         default=None,
@@ -251,3 +260,210 @@ class ExploreResourceResponse(BaseModel):
         default=False,
         description="True si le resultat provient du cache (moins de 24h)",
     )
+
+
+# --- Schemas router v1 (watchers/internal/sync) ---
+
+
+class HealthResponse(BaseModel):
+    """Reponse minimale de sante service/cache."""
+
+    status: str
+    last_sync: str | None
+
+
+class CacheCountsResponse(BaseModel):
+    """Compteurs minimaux du cache."""
+
+    organizations: int
+    datasets: int
+    resources: int
+
+
+class InternalCacheResponse(BaseModel):
+    """Vue interne pour verifier qu'un cache peuple est consultable."""
+
+    status: str
+    last_sync: str | None
+    cache_populated: bool
+    counts: CacheCountsResponse
+
+
+class WatcherCreateRequest(BaseModel):
+    """Requete de creation d'une surveillance dataset."""
+
+    email: str
+    dataset_id: str
+
+
+class WatcherCreateResponse(BaseModel):
+    """Reponse de creation de watcher/surveillance."""
+
+    watcher_id: str
+    email: str
+    token: str
+    dataset_id: str
+    status: str
+
+
+class WatchedDatasetItemResponse(BaseModel):
+    """Element de dataset surveille expose a l'utilisateur."""
+
+    id: str
+    dataset_id: str
+    dataset_title: str | None
+    created_at: str
+
+
+class WatchersListResponse(BaseModel):
+    """Liste des datasets surveilles pour un token watcher."""
+
+    watcher_id: str
+    email: str
+    status: str
+    items: list[WatchedDatasetItemResponse]
+
+
+class AlertItemResponse(BaseModel):
+    """Entree d'alerte pour un changement detecte."""
+
+    id: str
+    dataset_id: str
+    dataset_title: str | None
+    change_type: str
+    previous_value: str | None
+    new_value: str | None
+    detected_at: str
+    notified_at: str | None
+
+
+class AlertsResponse(BaseModel):
+    """Reponse de consultation des alertes d'un watcher."""
+
+    watcher_id: str
+    count: int
+    items: list[AlertItemResponse]
+
+
+class MagicLinkConsumeResponse(BaseModel):
+    """Réponse après consommation réussie d'un magic link (ADR-030)."""
+
+    token: str
+    watcher_id: str
+    email: str
+    status: str
+
+
+class MagicLinkRequestBody(BaseModel):
+    """Corps de la requête pour demander un nouveau magic link par email."""
+
+    email: str
+
+
+class InternalSupportWatcherLookupResponse(BaseModel):
+    """Vue redigée pour retrouver un watcher par email côté support."""
+
+    watcher_id: str
+    watcher_status: str
+    subscription_id_present: bool
+    watched_datasets_count: int
+    last_webhook_at: str | None
+    last_magic_link_at: str | None
+
+
+class InternalSupportSubscriptionResponse(BaseModel):
+    """Etat redigé d'un abonnement watcher pour le support interne."""
+
+    watcher_id: str
+    subscription_state: str
+    subscription_id_masked: str | None
+    updated_at: str
+
+
+class InternalSupportWebhookEventResponse(BaseModel):
+    """Evenement webhook redigé expose par le support interne."""
+
+    event_type: str
+    received_at: str
+    delivery_status: str
+    correlation_id: str | None
+
+
+class InternalSupportWebhookEventsResponse(BaseModel):
+    """Historique recent des webhooks Polar associes a un watcher."""
+
+    watcher_id: str
+    items: list[InternalSupportWebhookEventResponse]
+
+
+class InternalSupportMagicLinkStateResponse(BaseModel):
+    """Etat des magic links temporaires pour le support interne."""
+
+    watcher_id: str
+    last_issued_at: str | None
+    last_used_at: str | None
+    active_unexpired_count: int
+    expired_unconsumed_count: int
+
+
+class InternalSupportEmailDeliverabilityResponse(BaseModel):
+    """Indicateurs rediges sur l'envoi email pour un watcher."""
+
+    watcher_id: str
+    last_send_status: str | None
+    last_send_at: str | None
+    provider_message_id_masked: str | None
+    recent_error_code: str | None
+    recent_error_count_24h: int
+
+
+class InternalSupportMagicLinkResendRequest(BaseModel):
+    """Corps de la requête de renvoi de magic link support."""
+
+    reason: str
+
+
+class InternalSupportMagicLinkResendResponse(BaseModel):
+    """Réponse auditee d'un renvoi de magic link support."""
+
+    audit_id: str
+    dispatch_status: str
+    issued_at: str
+
+
+class SyncStatusResponse(BaseModel):
+    """Etat de la synchronisation CKAN incrementale."""
+
+    ckan_offset: int
+    updated_at: str | None
+
+
+class SyncMetricsItem(BaseModel):
+    """Metriques d'un cycle de sync unique (PDS-45)."""
+
+    id: int
+    synced_datasets: int
+    synced_organizations: int
+    synced_resources: int
+    errors: int
+    mode: str
+    duration_ms: int
+    started_at: str
+    completed_at: str
+
+
+class SyncMetricsResponse(BaseModel):
+    """Historique des metriques d'ingestion (PDS-45)."""
+
+    items: list[SyncMetricsItem]
+    total: int
+
+
+class CacheStatsResponse(BaseModel):
+    """Statistiques de hit/miss du cache applicatif (PDS-46)."""
+
+    hits: int
+    misses: int
+    stale_entries: int
+    total_entries: int
+    hit_ratio: float

@@ -265,6 +265,50 @@ class MagicLinkModel(Base):
     used_at: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
+class SupportAuditModel(Base):
+    """Journal d'audit redige des consultations et actions du support interne."""
+
+    __tablename__ = "support_audit"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    timestamp: Mapped[str] = mapped_column(String, nullable=False)
+    route: Mapped[str] = mapped_column(Text, nullable=False)
+    method: Mapped[str] = mapped_column(String(10), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(40), nullable=False)
+    operator_id: Mapped[str] = mapped_column(Text, nullable=False)
+    watcher_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email_hash_prefix: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    request_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class SupportWebhookEventModel(Base):
+    """Evenement webhook Polar redige pour le diagnostic support interne."""
+
+    __tablename__ = "support_webhook_events"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    watcher_id: Mapped[str | None] = mapped_column(Text, nullable=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    received_at: Mapped[str] = mapped_column(String, nullable=False)
+    delivery_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    correlation_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class SupportEmailEventModel(Base):
+    """Evenement d'envoi email redige pour le diagnostic support interne."""
+
+    __tablename__ = "support_email_events"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    watcher_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    email_kind: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    provider_message_id_masked: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 # Explicit __all__ to ensure the module is fully loaded before any imports
 # This helps avoid forward reference resolution issues in SQLAlchemy
 __all__ = [
@@ -281,6 +325,9 @@ __all__ = [
     "WatchedDatasetModel",
     "ChangeLogModel",
     "MagicLinkModel",
+    "SupportAuditModel",
+    "SupportWebhookEventModel",
+    "SupportEmailEventModel",
 ]
 
 # Force la configuration des mappers dès l'import du module pour éviter

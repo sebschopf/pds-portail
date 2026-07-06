@@ -10,6 +10,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-87: `DetectChangesUseCase` branché dans le cycle de sync avec 5 types de changements détectés.
 - PDS-89: endpoints Polar/watchers/alerts (`POST /webhooks/polar`, `POST/GET/DELETE /watchers`, `GET /alerts`).
 - PDS-90: UI de surveillance côté frontend (modale abonnement, badge de suivi, page d'alertes).
+- PDS-111: module support interne protégé — diagnostics redigés par email, renvoi magic link audité, page SSR support et tests associés, sans exposition du token interne côté navigateur.
 - PDS-114: décision V1 checkout/webhooks Polar stabilisée dans la documentation. ADR-034 acte désormais le checkout frontend hébergé via `PUBLIC_POLAR_PRODUCT_ID` et le mapping webhook minimal `order.created` / `subscription.cancelled`, tandis que SPEC-012 devient un vrai plan de convergence M11.
 - PDS-91: ADR-029 et la documentation d'exploitation réalignées sur la réalité d'envoi email `smtplib` + SMTP Brevo, avec couverture explicite de l'email d'alerte et de l'email de bienvenue à magic link.
 - PDS-117.1: flux magic link bout en bout — endpoints `GET /api/v1/magic-link/consume` et `POST /api/v1/magic-link` (anti-énumération), validation hash/expiration/usage-unique/watcher-actif, intégration frontend `/alertes?magic=...`, templates email HTML/TXT, 7 tests backend + 113 tests frontend, conformité SPEC-003/004/006 design system.

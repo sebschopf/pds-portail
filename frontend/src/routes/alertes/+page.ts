@@ -10,29 +10,76 @@ interface AlertsPageData {
 }
 
 export const load: PageLoad<AlertsPageData> = async ({ url, fetch }) => {
-	// Get token from URL or we'll let the client handle localStorage
 	const urlToken = url.searchParams.get('token');
+	const magicToken = url.searchParams.get('magic');
+
+	// Flux magic link : consommation du lien email (ADR-030)
+	if (magicToken) {
+		try {
+			const consumeRes = await fetch(
+				`/api/v1/magic-link/consume?magic=${encodeURIComponent(magicToken)}`
+			);
+
+			if (!consumeRes.ok) {
+				const detail = await consumeRes.json().catch(() => ({}));
+				const apiDetail: string = (detail as { detail?: string })?.detail ?? '';
+				let errorMessage = 'Le lien email est invalide ou a expiré.';
+				if (apiDetail.includes('expiré')) {
+					errorMessage = 'Le lien email a expiré (validité 15 minutes). Demandez un nouveau lien.';
+				} else if (apiDetail.includes('déjà utilisé')) {
+					errorMessage = 'Ce lien email a déjà été utilisé. Demandez un nouveau lien.';
+				}
+				return { status: 'not-authenticated', errorMessage };
+			}
+
+			const consumed = (await consumeRes.json()) as { token: string; watcher_id: string };
+			const token: string = consumed.token;
+
+			// Charge les données avec le token permanent récupéré
+			const [watchersRes, alertsRes] = await Promise.all([
+				fetch(`/api/v1/watchers?token=${encodeURIComponent(token)}`),
+				fetch(`/api/v1/alerts?token=${encodeURIComponent(token)}`)
+			]);
+
+			if (!watchersRes.ok) {
+				return { status: 'error', errorMessage: 'Impossible de charger vos alertes.' };
+			}
+
+			const watchersData: WatchersResponse = await watchersRes.json();
+			const alertsData: AlertsResponse = alertsRes.ok
+				? await alertsRes.json()
+				: { watcher_id: consumed.watcher_id, count: 0, items: [] };
+
+			return {
+				status: 'success',
+				watchers: watchersData,
+				alerts: alertsData,
+				token
+			};
+		} catch (error) {
+			console.error('Erreur consommation magic link:', error);
+			return {
+				status: 'error',
+				errorMessage: 'Impossible de traiter le lien email. Veuillez réessayer.'
+			};
+		}
+	}
 
 	if (!urlToken) {
-		// Client will check localStorage
-		return {
-			status: 'not-authenticated',
-			token: undefined
-		};
+		// Le client gérera la récupération depuis localStorage (onMount dans +page.svelte)
+		return { status: 'not-authenticated', token: undefined };
 	}
 
 	try {
-		// If we have a token, try to load the data server-side
 		const token = urlToken;
 
-		// Fetch watcher data
 		const watchersRes = await fetch(`/api/v1/watchers?token=${encodeURIComponent(token)}`);
 		if (!watchersRes.ok) {
 			if (watchersRes.status === 401 || watchersRes.status === 403) {
 				return {
 					status: 'not-authenticated',
 					token: undefined,
-					errorMessage: 'Token invalide ou expiré'
+					errorMessage: 'Token invalide'
 				};
 			}
 			throw new Error(`Watchers API error: ${watchersRes.status}`);
@@ -40,7 +87,6 @@ export const load: PageLoad<AlertsPageData> = async ({ url, fetch }) => {
 
 		const watchersData: WatchersResponse = await watchersRes.json();
 
-		// Fetch alerts history
 		const alertsRes = await fetch(`/api/v1/alerts?token=${encodeURIComponent(token)}`);
 		if (!alertsRes.ok) {
 			throw new Error(`Alerts API error: ${alertsRes.status}`);
@@ -52,7 +98,7 @@ export const load: PageLoad<AlertsPageData> = async ({ url, fetch }) => {
 			status: 'success',
 			watchers: watchersData,
 			alerts: alertsData,
-			token: token
+			token
 		};
 	} catch (error) {
 		console.error('Error loading alerts page:', error);

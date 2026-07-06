@@ -9,14 +9,39 @@ describe('alertes (+page.svelte)', () => {
 			props: {
 				data: {
 					status: 'not-authenticated',
+					errorMessage: undefined,
 					token: undefined
 				}
 			}
 		});
 
 		expect(view.body).toContain('Accéder à vos alertes');
-		expect(view.body).toContain('adresse email');
-		expect(view.body).toContain('Envoyer le lien');
+	expect(view.body).toContain('Si un token d\'accès est enregistré localement');
+	expect(view.body).toContain('Par lien email');
+	});
+
+	it('affiche un message de suspension quand le watcher est suspendu', () => {
+		const view = render(AlertesPage, {
+			props: {
+				data: {
+					status: 'success',
+					token: 'token-123',
+					watchers: {
+						watcher_id: 'watcher-1',
+						email: 'test@example.ch',
+						status: 'suspended',
+						items: []
+					},
+					alerts: {
+						watcher_id: 'watcher-1',
+						count: 0,
+						items: []
+					}
+				}
+			}
+		});
+
+		expect(view.body).toContain('Votre abonnement est actuellement suspendu');
 	});
 
 	it('affiche les datasets surveillés et l\'historique des changements quand authentifié', () => {
@@ -26,33 +51,22 @@ describe('alertes (+page.svelte)', () => {
 					status: 'success',
 					token: 'token-123',
 					watchers: {
-						watcher: {
-							id: 'watcher-1',
-							email: 'test@example.ch',
-							plan: 'monthly',
-							status: 'active',
-							token: 'token-123',
-							created_at: '2026-01-01T00:00:00Z',
-							updated_at: '2026-01-01T00:00:00Z'
-						},
-						watched_datasets: [
+						watcher_id: 'watcher-1',
+						email: 'test@example.ch',
+						status: 'active',
+						items: [
 							{
 								id: 'watched-1',
-								watcher_id: 'watcher-1',
 								dataset_id: 'dataset-1',
 								dataset_title: 'Test Dataset',
-								last_known_metadata_modified: '2026-01-01',
-								last_known_resource_count: 5,
-								last_known_quality_score: 85.5,
 								created_at: '2026-01-01T00:00:00Z'
 							}
 						]
 					},
 					alerts: {
-						changes: [],
-						dataset_details: {
-							'dataset-1': { title: 'Test Dataset', id: 'dataset-1' }
-						}
+						watcher_id: 'watcher-1',
+						count: 0,
+						items: []
 					}
 				}
 			}
@@ -85,43 +99,33 @@ describe('alertes (+page.svelte)', () => {
 					status: 'success',
 					token: 'token-123',
 					watchers: {
-						watcher: {
-							id: 'watcher-1',
-							email: 'test@example.ch',
-							plan: 'monthly',
-							status: 'active',
-							token: 'token-123',
-							created_at: '2026-01-01T00:00:00Z',
-							updated_at: '2026-01-01T00:00:00Z'
-						},
-						watched_datasets: [
+						watcher_id: 'watcher-1',
+						email: 'test@example.ch',
+						status: 'active',
+						items: [
 							{
 								id: 'watched-1',
-								watcher_id: 'watcher-1',
 								dataset_id: 'dataset-1',
 								dataset_title: 'Test Dataset',
-								last_known_metadata_modified: '2026-01-01',
-								last_known_resource_count: 5,
-								last_known_quality_score: 85.5,
 								created_at: '2026-01-01T00:00:00Z'
 							}
 						]
 					},
 					alerts: {
-						changes: [
+						watcher_id: 'watcher-1',
+						count: 1,
+						items: [
 							{
 								id: 'change-1',
 								dataset_id: 'dataset-1',
+								dataset_title: 'Test Dataset',
 								change_type: 'metadata_updated',
 								previous_value: 'Old',
 								new_value: 'New',
 								detected_at: '2026-01-05T12:00:00Z',
 								notified_at: '2026-01-05T12:05:00Z'
 							}
-						],
-						dataset_details: {
-							'dataset-1': { title: 'Test Dataset', id: 'dataset-1' }
-						}
+						]
 					}
 				}
 			}
@@ -138,27 +142,22 @@ describe('alertes (+page.svelte)', () => {
 					status: 'success',
 					token: 'token-123',
 					watchers: {
-						watcher: {
-							id: 'watcher-1',
-							email: 'test@example.ch',
-							plan: 'monthly',
-							status: 'active',
-							token: 'token-123',
-							created_at: '2026-01-01T00:00:00Z',
-							updated_at: '2026-01-01T00:00:00Z'
-						},
-						watched_datasets: []
+						watcher_id: 'watcher-1',
+						email: 'test@example.ch',
+						status: 'active',
+						items: []
 					},
 					alerts: {
-						changes: [],
-						dataset_details: {}
+						watcher_id: 'watcher-1',
+						count: 0,
+						items: []
 					}
 				}
 			}
 		});
 
 		expect(view.body).toContain('Paramètres d\'abonnement');
-		expect(view.body).toContain('Se désabonner de tous les alertes');
+		expect(view.body).toContain('Le token d\'accès actuel permet de consulter vos alertes');
 	});
 
 	it('inclut un titre h1 pour l\'accessibilité', () => {
@@ -168,20 +167,15 @@ describe('alertes (+page.svelte)', () => {
 					status: 'success',
 					token: 'token-123',
 					watchers: {
-						watcher: {
-							id: 'watcher-1',
-							email: 'test@example.ch',
-							plan: 'monthly',
-							status: 'active',
-							token: 'token-123',
-							created_at: '2026-01-01T00:00:00Z',
-							updated_at: '2026-01-01T00:00:00Z'
-						},
-						watched_datasets: []
+						watcher_id: 'watcher-1',
+						email: 'test@example.ch',
+						status: 'active',
+						items: []
 					},
 					alerts: {
-						changes: [],
-						dataset_details: {}
+						watcher_id: 'watcher-1',
+						count: 0,
+						items: []
 					}
 				}
 			}

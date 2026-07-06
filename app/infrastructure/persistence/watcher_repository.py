@@ -74,6 +74,13 @@ class SqlAlchemyWatcherRepository:
             session.refresh(model)
             return _model_to_watcher(model)
 
+    def find_by_id(self, watcher_id: str) -> Watcher | None:
+        """Cherche un watcher par son identifiant interne."""
+        with SessionLocal() as session:
+            stmt = select(WatcherModel).where(WatcherModel.id == watcher_id)
+            model = session.execute(stmt).scalar_one_or_none()
+            return _model_to_watcher(model) if model else None
+
     def find_by_email(self, email: str) -> Watcher | None:
         """Cherche un watcher par email."""
         with SessionLocal() as session:
@@ -136,6 +143,17 @@ class SqlAlchemyWatcherRepository:
             if not model:
                 raise ValueError(f"Watcher {watcher_id} introuvable.")
             model.status = status
+            model.updated_at = _now_iso()
+            session.commit()
+
+    def update_subscription(self, watcher_id: str, polar_subscription_id: str | None) -> None:
+        """Met à jour l'identifiant d'abonnement Polar d'un watcher."""
+        with SessionLocal() as session:
+            stmt = select(WatcherModel).where(WatcherModel.id == watcher_id)
+            model = session.execute(stmt).scalar_one_or_none()
+            if not model:
+                raise ValueError(f"Watcher {watcher_id} introuvable.")
+            model.polar_subscription_id = polar_subscription_id
             model.updated_at = _now_iso()
             session.commit()
 

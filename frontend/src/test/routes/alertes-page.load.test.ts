@@ -12,46 +12,142 @@ describe('alertes (+page.ts) load', () => {
 		expect(data.status).toBe('not-authenticated');
 	});
 
-	it('charge les données watchers et alerts quand un token URL valide est fourni', async () => {
+	it('consomme un magic link valide et charge les données (ADR-030)', async () => {
+		const mockConsumed = {
+			token: 'permanent-token-123',
+			watcher_id: 'watcher-1',
+			email: 'test@example.ch',
+			status: 'active'
+		};
+
 		const mockWatchers = {
-			watcher: {
-				id: 'watcher-1',
-				email: 'test@example.ch',
-				plan: 'monthly' as const,
-				status: 'active' as const,
-				token: 'token-123',
-				created_at: '2026-01-01T00:00:00Z',
-				updated_at: '2026-01-01T00:00:00Z'
-			},
-			watched_datasets: [
+			watcher_id: 'watcher-1',
+			email: 'test@example.ch',
+			status: 'active' as const,
+			items: [
 				{
 					id: 'watched-1',
-					watcher_id: 'watcher-1',
 					dataset_id: 'dataset-1',
 					dataset_title: 'Test Dataset',
-					last_known_metadata_modified: '2026-01-01',
-					last_known_resource_count: 5,
-					last_known_quality_score: 85.5,
 					created_at: '2026-01-01T00:00:00Z'
 				}
 			]
 		};
 
 		const mockAlerts = {
-			changes: [
+			watcher_id: 'watcher-1',
+			count: 1,
+			items: [
 				{
 					id: 'change-1',
 					dataset_id: 'dataset-1',
+					dataset_title: 'Test Dataset',
 					change_type: 'metadata_updated' as const,
 					previous_value: 'Old title',
 					new_value: 'New title',
 					detected_at: '2026-01-05T12:00:00Z',
 					notified_at: '2026-01-05T12:05:00Z'
 				}
-			],
-			dataset_details: {
-				'dataset-1': { title: 'Test Dataset', id: 'dataset-1' }
+			]
+		};
+
+		const mockFetch = vi.fn((url: string) => {
+			if (url.includes('/api/v1/magic-link/consume')) {
+				return Promise.resolve(new Response(JSON.stringify(mockConsumed), { status: 200 }));
 			}
+			if (url.includes('/api/v1/watchers')) {
+				return Promise.resolve(new Response(JSON.stringify(mockWatchers), { status: 200 }));
+			}
+			if (url.includes('/api/v1/alerts')) {
+				return Promise.resolve(new Response(JSON.stringify(mockAlerts), { status: 200 }));
+			}
+			return Promise.resolve(new Response('Not found', { status: 404 }));
+		});
+
+		const data = await load({
+			url: new URL('http://localhost:5173/alertes?magic=magic-token-brut'),
+			fetch: mockFetch
+		} as never);
+
+		expect(data.status).toBe('success');
+		expect(data.token).toBe('permanent-token-123');
+		expect(data.watchers?.email).toBe('test@example.ch');
+	});
+
+	it('affiche un message si le magic link est expiré', async () => {
+		const mockFetch = vi.fn((url: string) => {
+			if (url.includes('/api/v1/magic-link/consume')) {
+				return Promise.resolve(
+					new Response(
+						JSON.stringify({ detail: 'Magic link expiré' }),
+						{ status: 401 }
+					)
+				);
+			}
+			return Promise.resolve(new Response('Not found', { status: 404 }));
+		});
+
+		const data = await load({
+			url: new URL('http://localhost:5173/alertes?magic=expired-token'),
+			fetch: mockFetch
+		} as never);
+
+		expect(data.status).toBe('not-authenticated');
+		expect(data.errorMessage).toContain('expiré');
+	});
+
+	it('affiche un message si le magic link a déjà été utilisé', async () => {
+		const mockFetch = vi.fn((url: string) => {
+			if (url.includes('/api/v1/magic-link/consume')) {
+				return Promise.resolve(
+					new Response(
+						JSON.stringify({ detail: 'Magic link déjà utilisé' }),
+						{ status: 401 }
+					)
+				);
+			}
+			return Promise.resolve(new Response('Not found', { status: 404 }));
+		});
+
+		const data = await load({
+			url: new URL('http://localhost:5173/alertes?magic=used-token'),
+			fetch: mockFetch
+		} as never);
+
+		expect(data.status).toBe('not-authenticated');
+		expect(data.errorMessage).toContain('déjà été utilisé');
+	});
+
+	it('charge les données watchers et alerts quand un token URL valide est fourni', async () => {
+		const mockWatchers = {
+			watcher_id: 'watcher-1',
+			email: 'test@example.ch',
+			status: 'active' as const,
+			items: [
+				{
+					id: 'watched-1',
+					dataset_id: 'dataset-1',
+					dataset_title: 'Test Dataset',
+					created_at: '2026-01-01T00:00:00Z'
+				}
+			]
+		};
+
+		const mockAlerts = {
+			watcher_id: 'watcher-1',
+			count: 1,
+			items: [
+				{
+					id: 'change-1',
+					dataset_id: 'dataset-1',
+					dataset_title: 'Test Dataset',
+					change_type: 'metadata_updated' as const,
+					previous_value: 'Old title',
+					new_value: 'New title',
+					detected_at: '2026-01-05T12:00:00Z',
+					notified_at: '2026-01-05T12:05:00Z'
+				}
+			]
 		};
 
 		const mockFetch = vi.fn((url: string) => {
@@ -71,9 +167,9 @@ describe('alertes (+page.ts) load', () => {
 
 		expect(data.status).toBe('success');
 		expect(data.token).toBe('token-123');
-		expect(data.watchers?.watcher.email).toBe('test@example.ch');
-		expect(data.watchers?.watched_datasets).toHaveLength(1);
-		expect(data.alerts?.changes).toHaveLength(1);
+		expect(data.watchers?.email).toBe('test@example.ch');
+		expect(data.watchers?.items).toHaveLength(1);
+		expect(data.alerts?.items).toHaveLength(1);
 	});
 
 	it('retourne not-authenticated quand le token est invalide (401)', async () => {
@@ -87,7 +183,7 @@ describe('alertes (+page.ts) load', () => {
 		} as never);
 
 		expect(data.status).toBe('not-authenticated');
-		expect(data.errorMessage).toContain('Token invalide');
+		expect(data.errorMessage).toBe('Token invalide');
 	});
 
 	it('retourne error en cas de problème serveur', async () => {

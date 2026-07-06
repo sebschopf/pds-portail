@@ -88,6 +88,103 @@ def test_webhook_order_created_creates_watcher(watchers_api_ctx: dict[str, Any])
     assert watched[0].dataset_id == dataset_id
 
 
+def test_webhook_order_created_reuses_watcher_and_syncs_subscription(
+    watchers_api_ctx: dict[str, Any],
+) -> None:
+    """order.created réactive un watcher existant et synchronise son subscription_id."""
+
+    app = watchers_api_ctx["app"]
+    dataset_id = watchers_api_ctx["dataset_id"]
+    secret = watchers_api_ctx["secret"]
+
+    watcher_repo = SqlAlchemyWatcherRepository()
+    existing = watcher_repo.create(
+        email="watcher-existing@example.com",
+        token="958c3c2a-1687-4dc6-8fd1-98ed8bd6ab4a",
+    )
+    watcher_repo.update_status(existing.id, "suspended")
+
+    payload: dict[str, Any] = {
+        "id": "evt-order-created-002",
+        "type": "order.created",
+        "data": {
+            "customer_email": "watcher-existing@example.com",
+            "subscription_id": "sub_existing_002",
+            "metadata": {"dataset_id": dataset_id},
+        },
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+    client = cast(Any, TestClient(app))
+    response = cast(
+        Response,
+        client.post(
+            "/api/v1/webhooks/polar",
+            content=body,
+            headers={
+                "Content-Type": "application/json",
+                "X-Polar-Signature": _signed_header(secret, body),
+            },
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "accepted"
+
+    updated = watcher_repo.find_by_email("watcher-existing@example.com")
+    assert updated is not None
+    assert updated.id == existing.id
+    assert updated.status == "active"
+    assert updated.polar_subscription_id == "sub_existing_002"
+
+    watched = [
+        item for item in watcher_repo.list_watched_datasets() if item.watcher_id == existing.id
+    ]
+    assert len(watched) == 1
+    assert watched[0].dataset_id == dataset_id
+
+
+def test_webhook_order_created_rejects_unknown_dataset_without_creating_watcher(
+    watchers_api_ctx: dict[str, Any],
+) -> None:
+    """order.created invalide ne doit pas créer de watcher orphelin si le dataset est inconnu."""
+
+    app = watchers_api_ctx["app"]
+    secret = watchers_api_ctx["secret"]
+    email = "unknown-dataset@example.com"
+    payload: dict[str, Any] = {
+        "id": "evt-order-created-unknown-dataset",
+        "type": "order.created",
+        "data": {
+            "customer_email": email,
+            "subscription_id": "sub_unknown_dataset",
+            "metadata": {"dataset_id": "dataset-introuvable"},
+        },
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+
+    client = cast(Any, TestClient(app))
+    response = cast(
+        Response,
+        client.post(
+            "/api/v1/webhooks/polar",
+            content=body,
+            headers={
+                "Content-Type": "application/json",
+                "X-Polar-Signature": _signed_header(secret, body),
+            },
+        ),
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Dataset dataset-introuvable not found"
+
+    watcher_repo = SqlAlchemyWatcherRepository()
+    assert watcher_repo.find_by_email(email) is None
+
+
 def test_webhook_subscription_cancelled_suspends_watcher(
     watchers_api_ctx: dict[str, Any],
 ) -> None:
@@ -218,3 +315,230 @@ def test_invalid_token_rejected_for_watchers_and_alerts(
 
     bad_alerts = cast(Response, client.get("/api/v1/alerts?token=invalid-token"))
     assert bad_alerts.status_code == 401
+
+
+def test_magic_link_consume_valid(watchers_api_ctx: dict[str, Any]) -> None:
+    """GET /api/v1/magic-link/consume consomme un magic link valide."""
+    import hashlib
+
+    app = watchers_api_ctx["app"]
+    client = cast(Any, TestClient(app))
+
+    # Crée un watcher actif
+    watcher = SqlAlchemyWatcherRepository().create(
+        email="magic@example.com",
+        token="permanent-token-123",
+    )
+
+    # Génère un magic link
+    raw_token = "magic-brut-token-456"
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    from datetime import UTC, datetime, timedelta
+
+    from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
+
+    magic_link_repo = SqlAlchemyMagicLinkRepository()
+    now = datetime.now(UTC)
+    magic_link_repo.create(
+        watcher_id=watcher.id,
+        token_hash=token_hash,
+        created_at=now.isoformat(),
+        expires_at=(now + timedelta(minutes=15)).isoformat(),
+    )
+
+    # Consomme le magic link
+    response = cast(
+        Response,
+        client.get(f"/api/v1/magic-link/consume?magic={raw_token}"),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["token"] == "permanent-token-123"
+    assert payload["watcher_id"] == watcher.id
+    assert payload["email"] == "magic@example.com"
+    assert payload["status"] == "active"
+
+    # Vérifie que le magic link est marqué comme consommé
+    used_link = magic_link_repo.find_by_token_hash(token_hash)
+    assert used_link is not None
+    assert used_link.used_at is not None
+
+
+def test_magic_link_consume_expired(watchers_api_ctx: dict[str, Any]) -> None:
+    """GET /api/v1/magic-link/consume rejette un magic link expiré."""
+    import hashlib
+
+    app = watchers_api_ctx["app"]
+    client = cast(Any, TestClient(app))
+
+    watcher = SqlAlchemyWatcherRepository().create(
+        email="expired@example.com",
+        token="permanent-token-456",
+    )
+
+    raw_token = "expired-magic-token"
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    from datetime import UTC, datetime, timedelta
+
+    from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
+
+    magic_link_repo = SqlAlchemyMagicLinkRepository()
+    now = datetime.now(UTC)
+    magic_link_repo.create(
+        watcher_id=watcher.id,
+        token_hash=token_hash,
+        created_at=now.isoformat(),
+        expires_at=(now - timedelta(minutes=1)).isoformat(),  # Expiré
+    )
+
+    response = cast(
+        Response,
+        client.get(f"/api/v1/magic-link/consume?magic={raw_token}"),
+    )
+
+    assert response.status_code == 401
+    assert "expiré" in response.json()["detail"].lower()
+
+
+def test_magic_link_consume_already_used(watchers_api_ctx: dict[str, Any]) -> None:
+    """GET /api/v1/magic-link/consume rejette un magic link déjà utilisé."""
+    import hashlib
+
+    app = watchers_api_ctx["app"]
+    client = cast(Any, TestClient(app))
+
+    watcher = SqlAlchemyWatcherRepository().create(
+        email="used@example.com",
+        token="permanent-token-789",
+    )
+
+    raw_token = "used-magic-token"
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    from datetime import UTC, datetime, timedelta
+
+    from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
+
+    magic_link_repo = SqlAlchemyMagicLinkRepository()
+    now = datetime.now(UTC)
+    magic_link_repo.create(
+        watcher_id=watcher.id,
+        token_hash=token_hash,
+        created_at=now.isoformat(),
+        expires_at=(now + timedelta(minutes=15)).isoformat(),
+    )
+
+    # Marque comme utilisé
+    link = magic_link_repo.find_by_token_hash(token_hash)
+    assert link is not None
+    magic_link_repo.mark_used(link.id, now.isoformat())
+
+    response = cast(
+        Response,
+        client.get(f"/api/v1/magic-link/consume?magic={raw_token}"),
+    )
+
+    assert response.status_code == 401
+    assert "déjà utilisé" in response.json()["detail"].lower()
+
+
+def test_magic_link_consume_watcher_suspended(watchers_api_ctx: dict[str, Any]) -> None:
+    """GET /api/v1/magic-link/consume rejette si le watcher est suspendu."""
+    import hashlib
+
+    app = watchers_api_ctx["app"]
+    client = cast(Any, TestClient(app))
+
+    watcher = SqlAlchemyWatcherRepository().create(
+        email="suspended@example.com",
+        token="permanent-token-suspended",
+    )
+    SqlAlchemyWatcherRepository().update_status(watcher.id, "suspended")
+
+    raw_token = "suspended-magic-token"
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    from datetime import UTC, datetime, timedelta
+
+    from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
+
+    magic_link_repo = SqlAlchemyMagicLinkRepository()
+    now = datetime.now(UTC)
+    magic_link_repo.create(
+        watcher_id=watcher.id,
+        token_hash=token_hash,
+        created_at=now.isoformat(),
+        expires_at=(now + timedelta(minutes=15)).isoformat(),
+    )
+
+    response = cast(
+        Response,
+        client.get(f"/api/v1/magic-link/consume?magic={raw_token}"),
+    )
+
+    assert response.status_code == 401
+    assert "refusé" in response.json()["detail"].lower()
+
+
+def test_magic_link_request_sends_email(watchers_api_ctx: dict[str, Any]) -> None:
+    """POST /api/v1/magic-link demande un magic link et retourne 200."""
+
+    app = watchers_api_ctx["app"]
+    client = cast(Any, TestClient(app))
+
+    SqlAlchemyWatcherRepository().create(
+        email="request@example.com",
+        token="permanent-token-request",
+    )
+
+    response = cast(
+        Response,
+        client.post(
+            "/api/v1/magic-link",
+            json={"email": "request@example.com"},
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "sent"
+
+
+def test_magic_link_request_anti_enumeration(watchers_api_ctx: dict[str, Any]) -> None:
+    """POST /api/v1/magic-link retourne toujours 200 même pour un email inexistant (ADR-030)."""
+
+    app = watchers_api_ctx["app"]
+    client = cast(Any, TestClient(app))
+
+    response = cast(
+        Response,
+        client.post(
+            "/api/v1/magic-link",
+            json={"email": "nonexistent@example.com"},
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "sent"
+
+
+def test_magic_link_request_inactive_watcher(watchers_api_ctx: dict[str, Any]) -> None:
+    """POST /api/v1/magic-link retourne 200 mais n'envoie rien si le watcher est inactif."""
+
+    app = watchers_api_ctx["app"]
+    client = cast(Any, TestClient(app))
+
+    watcher = SqlAlchemyWatcherRepository().create(
+        email="inactive@example.com",
+        token="permanent-token-inactive",
+    )
+    SqlAlchemyWatcherRepository().update_status(watcher.id, "suspended")
+
+    response = cast(
+        Response,
+        client.post(
+            "/api/v1/magic-link",
+            json={"email": "inactive@example.com"},
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "sent"

@@ -69,6 +69,10 @@ class _FakeWatcherRepository:
         _ = polar_subscription_id
         return None
 
+    def find_by_id(self, watcher_id: str) -> Watcher | None:
+        _ = watcher_id
+        return None
+
     def find_by_dataset(self, dataset_id: str) -> list[Watcher]:
         watchers = self._watchers_by_dataset.get(dataset_id, [])
         return [watcher for watcher in watchers if watcher.status == "active"]

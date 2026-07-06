@@ -47,6 +47,13 @@ class WatcherRepositoryPort(Protocol):
         """
         ...
 
+    def find_by_id(self, watcher_id: str) -> Watcher | None:
+        """Cherche un watcher par son identifiant interne.
+
+        Retourne None si inexistant.
+        """
+        ...
+
     def find_by_email(self, email: str) -> Watcher | None:
         """Cherche un watcher par email.
 

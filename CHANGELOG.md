@@ -10,13 +10,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-87: `DetectChangesUseCase` branché dans le cycle de sync avec 5 types de changements détectés.
 - PDS-89: endpoints Polar/watchers/alerts (`POST /webhooks/polar`, `POST/GET/DELETE /watchers`, `GET /alerts`).
 - PDS-90: UI de surveillance côté frontend (modale abonnement, badge de suivi, page d'alertes).
+- PDS-114: décision V1 checkout/webhooks Polar stabilisée dans la documentation. ADR-034 acte désormais le checkout frontend hébergé via `PUBLIC_POLAR_PRODUCT_ID` et le mapping webhook minimal `order.created` / `subscription.cancelled`, tandis que SPEC-012 devient un vrai plan de convergence M11.
+- PDS-91: ADR-029 et la documentation d'exploitation réalignées sur la réalité d'envoi email `smtplib` + SMTP Brevo, avec couverture explicite de l'email d'alerte et de l'email de bienvenue à magic link.
+- PDS-117.1: flux magic link bout en bout — endpoints `GET /api/v1/magic-link/consume` et `POST /api/v1/magic-link` (anti-énumération), validation hash/expiration/usage-unique/watcher-actif, intégration frontend `/alertes?magic=...`, templates email HTML/TXT, 7 tests backend + 113 tests frontend, conformité SPEC-003/004/006 design system.
 
 ### Changed
 - PDS-88: envoi d'alertes email durci avec rate-limit strict par couple watcher+dataset sur 24h.
 - PDS-88: persistance du dernier envoi via `watched_datasets.last_alert_sent_at` pour tracer le throttling par abonné.
+- PDS-115: la page `/alertes` est désormais alignée sur le contrat V1 réellement livré. Un accès réussi via `?token=` persiste le token watcher en `localStorage`, et le frontend signale explicitement que le flux `?magic=` n'est pas encore livré de bout en bout.
+- PDS-116: le webhook `order.created` valide désormais le dataset avant toute mutation, réutilise/réactive correctement un watcher existant et resynchronise `polar_subscription_id` lors d'un repaiement.
+- Roadmap M11 mise à jour: PDS-114, PDS-116 et PDS-115 sont clôturées, et l'écart restant est désormais tracé dans `PDS-117.1` pour le flux magic link complet.
 
 ### Fixed
 - PDS-88/PDS-89: alignement typage strict (Pylance/mypy), stabilité des fakes de tests et conformité quality gate.
+- PDS-116: un webhook `order.created` sur dataset inconnu n'écrit plus d'état partiel côté watcher, et un watcher suspendu peut être réactivé proprement sur repaiement.
+- PDS-115: le token watcher local n'est plus seulement lu par le frontend `/alertes`, il est aussi persisté automatiquement après un accès serveur réussi.
 
 ## [1.1.5] - 2026-07-03
 ### Added

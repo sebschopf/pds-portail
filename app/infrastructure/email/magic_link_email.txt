@@ -1,0 +1,13 @@
+Bonjour,
+
+Vous avez demandé un lien d'accès à vos alertes PDS-Portail.
+
+Cliquez sur le lien ci-dessous pour accéder à vos surveillances :
+
+{alerts_link}
+
+Ce lien est valable 15 minutes et à usage unique.
+
+Si vous n'avez pas fait cette demande, ignorez cet email.
+
+— L'équipe PDS-Portail

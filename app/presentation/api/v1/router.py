@@ -139,6 +139,21 @@ class AlertsResponse(BaseModel):
     items: list[AlertItemResponse]
 
 
+class MagicLinkConsumeResponse(BaseModel):
+    """Réponse après consommation réussie d'un magic link (ADR-030)."""
+
+    token: str
+    watcher_id: str
+    email: str
+    status: str
+
+
+class MagicLinkRequestBody(BaseModel):
+    """Corps de la requête pour demander un nouveau magic link par email."""
+
+    email: str
+
+
 def _require_watcher_by_token(token: str) -> tuple[SqlAlchemyWatcherRepository, Watcher]:
     """Valide le token watcher et retourne (repo, watcher) ou 401."""
     try:
@@ -442,6 +457,10 @@ async def webhook_polar(
                 detail="order.created requires customer_email and metadata.dataset_id",
             )
 
+        detail = GetDatasetDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(dataset_id)
+        if detail is None:
+            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+
         watcher = watcher_repo.find_by_email(customer_email)
         if watcher is None:
             watcher = watcher_repo.create(
@@ -449,10 +468,12 @@ async def webhook_polar(
                 token=str(uuid.uuid4()),
                 polar_subscription_id=polar_subscription_id,
             )
-
-        detail = GetDatasetDetailUseCase(SqlAlchemyDatasetDetailAdapter()).execute(dataset_id)
-        if detail is None:
-            raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+        else:
+            if polar_subscription_id and watcher.polar_subscription_id != polar_subscription_id:
+                watcher_repo.update_subscription(watcher.id, polar_subscription_id)
+            if watcher.status != "active":
+                watcher_repo.update_status(watcher.id, "active")
+            watcher = watcher_repo.find_by_email(customer_email) or watcher
 
         with suppress(ValueError):
             watcher_repo.add_watched_dataset(
@@ -620,6 +641,130 @@ def get_alerts(token: str = Query(..., description="Token UUID du watcher")) -> 
         for row in rows
     ]
     return AlertsResponse(watcher_id=watcher.id, count=len(items), items=items)
+
+
+@api_router.get("/magic-link/consume", response_model=MagicLinkConsumeResponse)
+def consume_magic_link(
+    magic: str = Query(..., description="Token magic link brut issu du lien email"),
+) -> MagicLinkConsumeResponse:
+    """Consomme un magic link temporaire et retourne le token watcher permanent (ADR-030).
+
+    Vérifie le hash SHA-256, l'expiration (15 min), l'usage unique et le statut watcher.
+    Marque used_at à la première et unique utilisation.
+    """
+    import hashlib
+    from datetime import UTC, datetime
+
+    token_hash = hashlib.sha256(magic.encode("utf-8")).hexdigest()
+    magic_link_repo = SqlAlchemyMagicLinkRepository()
+    magic_link = magic_link_repo.find_by_token_hash(token_hash)
+
+    if magic_link is None:
+        raise HTTPException(status_code=401, detail="Magic link invalide")
+
+    now_iso = datetime.now(UTC).isoformat()
+
+    if magic_link.expires_at < now_iso:
+        raise HTTPException(status_code=401, detail="Magic link expiré")
+
+    if magic_link.used_at is not None:
+        raise HTTPException(status_code=401, detail="Magic link déjà utilisé")
+
+    watcher_repo = SqlAlchemyWatcherRepository()
+    watcher = watcher_repo.find_by_id(magic_link.watcher_id)
+
+    if watcher is None or watcher.status != "active":
+        raise HTTPException(status_code=401, detail="Accès refusé")
+
+    # Marque le magic link comme consommé (usage unique ADR-030)
+    magic_link_repo.mark_used(magic_link.id, now_iso)
+
+    return MagicLinkConsumeResponse(
+        token=watcher.token,
+        watcher_id=watcher.id,
+        email=watcher.email,
+        status=watcher.status,
+    )
+
+
+@api_router.post("/magic-link", status_code=200)
+def request_magic_link(body: MagicLinkRequestBody) -> dict[str, str]:
+    """Génère et envoie un magic link par email à un watcher actif (ADR-030).
+
+    Retourne toujours {"status": "sent"} pour éviter l'énumération d'emails.
+    Si le watcher n'existe pas ou est inactif, la réponse est identique.
+    """
+    import hashlib
+    import smtplib
+    import ssl
+    from datetime import UTC, datetime, timedelta
+    from email.message import EmailMessage
+    from pathlib import Path
+
+    settings = get_settings()
+
+    # Anti-énumération : on répond toujours de la même façon
+    _status_sent: dict[str, str] = {"status": "sent"}
+
+    watcher_repo = SqlAlchemyWatcherRepository()
+    watcher = watcher_repo.find_by_email(body.email.strip())
+
+    if watcher is None or watcher.status != "active":
+        return _status_sent
+
+    if (
+        not settings.smtp_host
+        or not settings.smtp_user
+        or not settings.smtp_password
+        or not settings.smtp_from
+    ):
+        logger.warning("Config SMTP incomplète, magic link non envoyé pour %s", watcher.email)
+        return _status_sent
+
+    try:
+        token = str(uuid.uuid4())
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        now = datetime.now(UTC)
+        expires_at = now + timedelta(minutes=15)
+
+        magic_link_repo = SqlAlchemyMagicLinkRepository()
+        magic_link_repo.create(
+            watcher_id=watcher.id,
+            token_hash=token_hash,
+            created_at=now.isoformat(),
+            expires_at=expires_at.isoformat(),
+        )
+
+        alerts_link = f"https://pds-portail.ch/alertes?magic={token}"
+        template_dir = Path(__file__).resolve().parents[2] / "infrastructure" / "email"
+        html_path = template_dir / "magic_link_email.html"
+        text_path = template_dir / "magic_link_email.txt"
+
+        if not html_path.exists() or not text_path.exists():
+            logger.warning("Templates magic_link_email manquants: %s", template_dir)
+            return _status_sent
+
+        context = {"alerts_link": alerts_link}
+        html_body = html_path.read_text(encoding="utf-8").format(**context)
+        text_body = text_path.read_text(encoding="utf-8").format(**context)
+
+        message = EmailMessage()
+        message["Subject"] = "[PDS-Portail] Votre lien d'accès aux alertes"
+        message["From"] = settings.smtp_from
+        message["To"] = watcher.email
+        message.set_content(text_body)
+        message.add_alternative(html_body, subtype="html")
+
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+            server.starttls(context=ssl.create_default_context())
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.send_message(message)
+
+        logger.info("Magic link envoyé à %s (watcher_id=%s)", watcher.email, watcher.id)
+    except Exception as exc:
+        logger.error("Erreur envoi magic link à %s: %s", watcher.email, exc, exc_info=True)
+
+    return _status_sent
 
 
 @api_router.post("/compare", response_model=CompareResponse)

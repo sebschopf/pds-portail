@@ -1,26 +1,100 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Button, PageLayout, Card, EmptyState } from '$lib';
 	import type { PageData } from './$types';
-	import type { WatchedDataset, ChangeLog } from '$lib/types/watchers';
+	import type { ChangeLog } from '$lib/types/watchers';
 
 	let { data } = $props();
 
-	let authEmail = $state('');
-	let authLoading = $state(false);
-	let authError = $state<string | null>(null);
 	let isAuthenticated = $derived(data.status === 'success');
-	let unsubscribeLoading = $state(false);
+	let watcherStatus = $derived(data.watchers?.status ?? null);
 	let unsubscribeError = $state<string | null>(null);
+	let magicLinkEmail = $state('');
+	let magicLinkLoading = $state(false);
+	let magicLinkMessage = $state<string | null>(null);
 
 	const pageTitle = $derived(isAuthenticated ? 'Mes alertes - PDS Portail' : 'Alertes datasets - PDS Portail');
+
+	function storeWatcherTokens(token: string, datasetIds: string[]) {
+		localStorage.setItem('pds-watcher-token', token);
+
+		for (const datasetId of datasetIds) {
+			localStorage.setItem(`pds-watcher-${datasetId}`, token);
+		}
+	}
+
+	function findStoredWatcherToken(): string | null {
+		const directToken = localStorage.getItem('pds-watcher-token');
+		if (directToken) {
+			return directToken;
+		}
+
+		for (let index = 0; index < localStorage.length; index += 1) {
+			const key = localStorage.key(index);
+			if (!key || !key.startsWith('pds-watcher-')) {
+				continue;
+			}
+
+			const token = localStorage.getItem(key);
+			if (token) {
+				return token;
+			}
+		}
+
+		return null;
+	}
+
+	onMount(() => {
+		if (data.status === 'success' && data.token && data.watchers?.items) {
+			storeWatcherTokens(
+				data.token,
+				data.watchers.items.map((item) => item.dataset_id)
+			);
+			return;
+		}
+
+		if (data.status !== 'not-authenticated') {
+			return;
+		}
+
+		const storedToken = findStoredWatcherToken();
+		if (storedToken) {
+			window.location.href = `/alertes?token=${encodeURIComponent(storedToken)}`;
+		}
+	});
+
+	async function handleRequestMagicLink(event: Event) {
+		event.preventDefault();
+		magicLinkLoading = true;
+		magicLinkMessage = null;
+		try {
+			const res = await fetch('/api/v1/magic-link', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: magicLinkEmail })
+			});
+
+			if (res.ok) {
+				magicLinkMessage = `Un lien d'accès a été envoyé à ${magicLinkEmail}. Vérifiez votre boîte email (validité 15 minutes).`;
+				magicLinkEmail = '';
+			} else {
+				magicLinkMessage = 'Une erreur est survenue. Veuillez réessayer.';
+			}
+		} catch (err) {
+			console.error('Magic link request error:', err);
+			magicLinkMessage = 'Erreur de connexion. Veuillez réessayer.';
+		} finally {
+			magicLinkLoading = false;
+		}
+	}
 
 	/**
 	 * Get grouped changes by dataset
 	 */
 	function getChangesByDataset(): Record<string, ChangeLog[]> {
-		if (!data.alerts?.changes) return {};
+		if (!data.alerts?.items) return {};
 
-		return data.alerts.changes.reduce(
+		return data.alerts.items.reduce(
 			(acc, change) => {
 				if (!acc[change.dataset_id]) {
 					acc[change.dataset_id] = [];
@@ -36,98 +110,24 @@
 	 * Get dataset title from alerts or watched_datasets
 	 */
 	function getDatasetTitle(datasetId: string): string {
-		if (data.alerts?.dataset_details?.[datasetId]?.title) {
-			return data.alerts.dataset_details[datasetId].title;
+		const alerted = data.alerts?.items.find((item) => item.dataset_id === datasetId);
+		if (alerted?.dataset_title) {
+			return alerted.dataset_title;
 		}
-		const watched = data.watchers?.watched_datasets.find((w) => w.dataset_id === datasetId);
+		const watched = data.watchers?.items.find((w) => w.dataset_id === datasetId);
 		return watched?.dataset_title || datasetId;
-	}
-
-	/**
-	 * Handle email submission for authentication
-	 */
-	async function handleEmailAuth() {
-		if (!authEmail || !authEmail.includes('@')) {
-			authError = 'Veuillez entrer une adresse email valide.';
-			return;
-		}
-
-		authLoading = true;
-		authError = null;
-
-		try {
-			const res = await fetch('/api/v1/watchers/auth-link', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email: authEmail })
-			});
-
-			if (!res.ok) {
-				if (res.status === 404) {
-					authError = 'Aucun abonnement trouvé pour cette adresse email.';
-				} else {
-					authError = 'Impossible d\'envoyer le lien de connexion.';
-				}
-				return;
-			}
-
-			// Success - show success message
-			authError = `Un lien de connexion a été envoyé à ${authEmail}. Vérifiez votre boîte mail.`;
-			authEmail = '';
-		} catch (err) {
-			console.error('Auth error:', err);
-			authError = 'Erreur de connexion.';
-		} finally {
-			authLoading = false;
-		}
-	}
-
-	/**
-	 * Handle unsubscribe from all alerts
-	 */
-	async function handleUnsubscribeAll() {
-		if (
-			!confirm(
-				'Êtes-vous sûr de vouloir vous désabonner de tous les alertes ? Vous arrêterez la surveillance de tous vos datasets.'
-			)
-		) {
-			return;
-		}
-
-		unsubscribeLoading = true;
-		unsubscribeError = null;
-
-		try {
-			const res = await fetch(`/api/v1/watchers?token=${encodeURIComponent(data.token || '')}`, {
-				method: 'DELETE'
-			});
-
-			if (!res.ok) {
-				unsubscribeError = 'Impossible de se désabonner.';
-				return;
-			}
-
-			// Clear token and redirect
-			localStorage.removeItem('pds-watcher-token');
-			window.location.href = '/?alert=unsubscribed';
-		} catch (err) {
-			console.error('Unsubscribe error:', err);
-			unsubscribeError = 'Erreur de connexion.';
-		} finally {
-			unsubscribeLoading = false;
-		}
 	}
 
 	/**
 	 * Handle remove single watched dataset
 	 */
-	async function handleRemoveWatch(datasetId: string, datasetTitle: string) {
+	async function handleRemoveWatch(watchedDatasetId: string, datasetTitle: string) {
 		if (!confirm(`Êtes-vous sûr d'arrêter la surveillance de "${datasetTitle}" ?`)) {
 			return;
 		}
 
 		try {
-			const res = await fetch(`/api/v1/watchers/${datasetId}?token=${encodeURIComponent(data.token || '')}`, {
+			const res = await fetch(`/api/v1/watchers/${watchedDatasetId}?token=${encodeURIComponent(data.token || '')}`, {
 				method: 'DELETE'
 			});
 
@@ -189,39 +189,48 @@
 			<Card title="Accéder à vos alertes">
 				<div class="auth-form">
 					<p class="auth-intro">
-						Entrez votre adresse email pour recevoir un lien de connexion sécurisé.
+						Deux façons d'accéder à vos alertes :
 					</p>
 
-					<div class="form-group">
-						<label for="auth-email" class="form-label">Adresse email</label>
-						<input
-							id="auth-email"
-							type="email"
-							placeholder="vous@exemple.ch"
-							bind:value={authEmail}
-							disabled={authLoading}
-							class="form-input"
-						/>
+					<div class="auth-methods">
+						<div class="auth-method">
+							<h3>1. Par navigateur reconnu</h3>
+							<p>Si un token d'accès est enregistré localement, PDS-Portail tentera de vous reconnecter automatiquement.</p>
+						</div>
+
+						<div class="auth-method">
+							<h3>2. Par lien email</h3>
+							<p>Demandez un lien d'accès temporaire valable 15 minutes. Vous le recevrez par email.</p>
+							<form onsubmit={handleRequestMagicLink} class="magic-link-form">
+								<input
+									type="email"
+									placeholder="Votre adresse email"
+									aria-label="Votre adresse email"
+									bind:value={magicLinkEmail}
+									required
+									disabled={magicLinkLoading}
+								/>
+								<button type="submit" disabled={magicLinkLoading || !magicLinkEmail}>
+									{magicLinkLoading ? 'Envoi...' : 'Demander un lien'}
+								</button>
+							</form>
+							{#if magicLinkMessage}
+								<p class={magicLinkMessage.includes('erreur') ? 'error-message' : 'success-message'}>
+									{magicLinkMessage}
+								</p>
+							{/if}
+						</div>
 					</div>
 
-					{#if authError}
-						<p class={authError.includes('envoyé') ? 'success-message' : 'error-message'} role="alert">
-							{authError}
-						</p>
+					{#if data.errorMessage}
+						<p class="error-message" role="alert">{data.errorMessage}</p>
 					{/if}
-
-					<Button
-						label={authLoading ? 'Envoi en cours...' : 'Envoyer le lien'}
-						variant="primary"
-						disabled={authLoading || !authEmail}
-						onclick={handleEmailAuth}
-					/>
 				</div>
 			</Card>
 		{:else if data.status === 'success'}
 			<!-- Authenticated: Show alerts and watched datasets -->
 			<Card title="Vos datasets surveillés">
-				{#if !data.watchers?.watched_datasets || data.watchers.watched_datasets.length === 0}
+				{#if !data.watchers?.items || data.watchers.items.length === 0}
 					<EmptyState
 						title="Aucun dataset surveillé"
 						description="Vous ne surveillez actuellement aucun dataset. Retournez sur les fiches dataset pour en ajouter à la surveillance."
@@ -232,7 +241,7 @@
 					</EmptyState>
 				{:else}
 					<div class="datasets-list">
-						{#each data.watchers.watched_datasets as watched (watched.id)}
+						{#each data.watchers.items as watched (watched.id)}
 							<article class="dataset-card">
 								<div class="card-header">
 									<div class="card-title-section">
@@ -241,7 +250,7 @@
 									</div>
 									<button
 										class="remove-btn"
-										onclick={() => handleRemoveWatch(watched.dataset_id, getDatasetTitle(watched.dataset_id))}
+										onclick={() => handleRemoveWatch(watched.id, getDatasetTitle(watched.dataset_id))}
 										aria-label="Arrêter la surveillance de {getDatasetTitle(watched.dataset_id)}"
 									>
 										Arrêter la surveillance
@@ -253,18 +262,6 @@
 										<strong>Commencée le :</strong>
 										{formatDate(watched.created_at)}
 									</p>
-									{#if watched.last_known_quality_score !== null}
-										<p>
-											<strong>Score qualité :</strong>
-											{watched.last_known_quality_score}/100
-										</p>
-									{/if}
-									{#if watched.last_known_resource_count !== null}
-										<p>
-											<strong>Ressources :</strong>
-											{watched.last_known_resource_count}
-										</p>
-									{/if}
 								</div>
 
 								<!-- Changes history for this dataset -->
@@ -304,22 +301,21 @@
 				{/if}
 			</Card>
 
-			<!-- Unsubscribe section -->
+			<!-- Subscription information -->
 			<Card title="Paramètres d'abonnement">
 				<div class="settings-section">
+					<p class="settings-text">Vous êtes inscrit avec l'adresse <strong>{data.watchers?.email}</strong>.</p>
+					{#if watcherStatus === 'suspended'}
+						<p class="warning-message" role="status">
+							Votre abonnement est actuellement suspendu. Les alertes restent en pause tant que Polar n'a pas réactivé le watcher.
+						</p>
+					{/if}
 					<p class="settings-text">
-						Vous êtes inscrit avec l'adresse <strong>{data.watchers?.watcher.email}</strong>.
+						Le token d'accès actuel permet de consulter vos alertes et de gérer vos surveillances existantes.
 					</p>
 					{#if unsubscribeError}
 						<p class="error-message" role="alert">{unsubscribeError}</p>
 					{/if}
-					<button
-						class="unsubscribe-btn"
-						onclick={handleUnsubscribeAll}
-						disabled={unsubscribeLoading}
-					>
-						{unsubscribeLoading ? 'Désabonnement en cours...' : 'Se désabonner de tous les alertes'}
-					</button>
 				</div>
 			</Card>
 		{/if}
@@ -340,66 +336,91 @@
 	}
 
 	.auth-form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
+		padding: var(--space-3) 0;
 	}
 
 	.auth-intro {
-		margin: 0;
-		color: var(--color-on-surface-secondary);
-		line-height: var(--line-height-relaxed);
+		margin-bottom: var(--space-3);
+		font-size: clamp(0.875rem, 1rem, 1.125rem);
+		color: var(--color-on-surface-variant);
 	}
 
-	.form-group {
+	.auth-methods {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
+		gap: var(--space-4);
+		margin-bottom: var(--space-4);
 	}
 
-	.form-label {
-		font-weight: 500;
-		font-size: clamp(0.75rem, 0.9rem, 1rem);
-	}
-
-	.form-input {
-		border: var(--border-thin) solid var(--color-border);
-		background: var(--color-surface);
+	.auth-method {
+		padding: var(--space-4);
+		background: var(--color-surface-variant);
 		border-radius: var(--radius-none);
-		padding: var(--space-3) var(--space-4);
-		min-height: var(--size-control-md);
-		color: var(--color-on-surface);
-		font-size: var(--font-size-ui);
 	}
 
-	.form-input:focus-visible {
-		outline: var(--outline-focus) solid var(--color-focus-ring);
-		outline-offset: var(--outline-offset);
+	.auth-method h3 {
+		margin: 0 0 var(--space-2) 0;
+		font-size: clamp(1rem, 1.1rem, 1.25rem);
+		font-weight: 600;
 	}
 
-	.form-input:disabled {
-		opacity: 0.6;
+	.auth-method p {
+		margin: 0 0 var(--space-3) 0;
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		color: var(--color-on-surface-variant);
+	}
+
+	.magic-link-form {
+		display: flex;
+		gap: var(--space-2);
+		flex-wrap: wrap;
+	}
+
+	.magic-link-form input {
+		flex: 1;
+		min-width: clamp(12rem, 50%, 25rem);
+		padding: var(--space-2) var(--space-3);
+		border: var(--border-thin) solid var(--color-outline);
+		border-radius: var(--radius-none);
+		font-size: clamp(0.875rem, 1rem, 1.125rem);
+	}
+
+	.magic-link-form button {
+		padding: var(--space-2) var(--space-4);
+		background: var(--color-primary);
+		color: white;
+		border: none;
+		border-radius: var(--radius-none);
+		font-weight: 600;
+		cursor: pointer;
+		transition: background var(--duration-fast) var(--easing-standard);
+	}
+
+	.magic-link-form button:hover:not(:disabled) {
+		background: var(--color-primary-container);
+	}
+
+	.magic-link-form button:disabled {
+		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
 	.error-message {
-		padding: var(--space-2) var(--space-3);
-		background: var(--color-error-subtle);
-		border-left: 3px solid var(--color-error);
-		color: var(--color-on-surface);
-		font-size: clamp(0.75rem, 0.9rem, 1rem);
-		margin: 0;
-		border-radius: var(--radius-none);
+		color: var(--color-error);
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		margin: var(--space-3) 0 0 0;
 	}
 
 	.success-message {
-		padding: var(--space-2) var(--space-3);
-		background: var(--color-success-subtle);
-		border-left: 3px solid var(--color-success);
-		color: var(--color-on-surface);
-		font-size: clamp(0.75rem, 0.9rem, 1rem);
-		margin: 0;
-		border-radius: var(--radius-none);
+		color: var(--color-success);
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		margin: var(--space-3) 0 0 0;
+	}
+
+	.warning-message {
+		color: var(--color-warning);
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		margin-bottom: var(--space-3);
 	}
 
 	.datasets-list {
@@ -409,12 +430,9 @@
 	}
 
 	.dataset-card {
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-none);
 		padding: var(--space-4);
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
+		border: var(--border-thin) solid var(--color-outline);
+		border-radius: var(--radius-none);
 		background: var(--color-surface);
 	}
 
@@ -423,6 +441,7 @@
 		justify-content: space-between;
 		align-items: flex-start;
 		gap: var(--space-3);
+		margin-bottom: var(--space-3);
 	}
 
 	.card-title-section {
@@ -431,96 +450,84 @@
 
 	.dataset-title {
 		margin: 0 0 var(--space-1) 0;
-		font-size: var(--font-size-heading-md);
-		font-weight: 700;
+		font-size: clamp(1.05rem, 1.15rem, 1.3rem);
+		font-weight: 600;
 	}
 
 	.dataset-id {
 		margin: 0;
-		font-size: clamp(0.75rem, 0.85rem, 1rem);
-		color: var(--color-on-surface-muted);
+		font-size: clamp(0.75rem, 0.85rem, 0.95rem);
+		color: var(--color-on-surface-variant);
 	}
 
 	.remove-btn {
 		padding: var(--space-2) var(--space-3);
-		background: transparent;
-		border: 1px solid var(--color-error);
+		background: var(--color-surface-variant);
+		border: var(--border-thin) solid var(--color-outline);
 		border-radius: var(--radius-none);
-		color: var(--color-error);
-		font-weight: 500;
 		cursor: pointer;
-		transition: background-color 140ms ease;
-		white-space: nowrap;
+		font-size: clamp(0.85rem, 0.9rem, 1rem);
+		transition: background var(--duration-fast) var(--easing-standard);
 	}
 
 	.remove-btn:hover {
-		background: var(--color-error-subtle);
-	}
-
-	.remove-btn:focus-visible {
-		outline: var(--outline-focus) solid var(--color-focus-ring);
-		outline-offset: var(--outline-offset);
+		background: var(--color-error-container);
 	}
 
 	.card-metadata {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: var(--space-2);
-		font-size: clamp(0.75rem, 0.9rem, 1rem);
+		margin-bottom: var(--space-3);
 	}
 
 	.card-metadata p {
 		margin: 0;
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		color: var(--color-on-surface-variant);
 	}
 
 	.changes-section {
-		border-top: 1px solid var(--color-border);
-		padding-top: var(--space-3);
+		margin-top: var(--space-4);
 	}
 
 	.changes-section h4 {
-		margin: 0 0 var(--space-2) 0;
-		font-size: var(--font-size-ui);
+		margin: 0 0 var(--space-3) 0;
+		font-size: clamp(0.95rem, 1rem, 1.1rem);
 		font-weight: 600;
 	}
 
 	.changes-list {
 		list-style: none;
-		padding: 0;
 		margin: 0;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
 	}
 
 	.change-item {
-		padding: var(--space-2) var(--space-3);
-		background: var(--color-surface-muted);
+		padding: var(--space-3);
+		background: var(--color-surface-variant);
 		border-radius: var(--radius-none);
-		border-left: 3px solid var(--color-primary);
 	}
 
 	.change-header {
 		display: flex;
 		justify-content: space-between;
-		align-items: baseline;
-		gap: var(--space-2);
-		margin-bottom: var(--space-1);
+		align-items: center;
+		margin-bottom: var(--space-2);
 	}
 
 	.change-header strong {
-		color: var(--color-on-surface);
+		font-weight: 600;
 	}
 
 	.change-date {
-		font-size: clamp(0.75rem, 0.85rem, 1rem);
-		color: var(--color-on-surface-muted);
+		font-size: clamp(0.75rem, 0.85rem, 0.95rem);
+		color: var(--color-on-surface-variant);
 	}
 
 	.change-details {
-		margin: var(--space-1) 0 0 0;
-		font-size: clamp(0.75rem, 0.9rem, 1rem);
-		color: var(--color-on-surface-secondary);
+		margin: var(--space-2) 0 0 0;
+		font-size: clamp(0.85rem, 0.9rem, 1rem);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-1);
@@ -528,85 +535,30 @@
 
 	.old-value,
 	.new-value {
-		display: block;
-		padding: var(--space-1) var(--space-2);
-		background: var(--color-surface);
-		border-radius: var(--radius-none);
 		font-family: monospace;
+		word-break: break-all;
 	}
 
 	.notified-info {
-		margin: var(--space-1) 0 0 0;
-		font-size: clamp(0.75rem, 0.85rem, 1rem);
-		color: var(--color-on-surface-muted);
+		margin: var(--space-2) 0 0 0;
+		font-size: clamp(0.75rem, 0.85rem, 0.95rem);
+		color: var(--color-on-surface-variant);
 		font-style: italic;
 	}
 
 	.no-changes {
-		margin: var(--space-2) 0 0 0;
-		color: var(--color-on-surface-muted);
-		font-size: clamp(0.75rem, 0.9rem, 1rem);
+		margin: 0;
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		color: var(--color-on-surface-variant);
 	}
 
 	.settings-section {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
+		padding: var(--space-3) 0;
 	}
 
 	.settings-text {
-		margin: 0;
-		color: var(--color-on-surface-secondary);
-	}
-
-	.unsubscribe-btn {
-		padding: var(--space-3) var(--space-4);
-		background: var(--color-error-subtle);
-		border: 1px solid var(--color-error);
-		border-radius: var(--radius-none);
-		color: var(--color-error);
-		font-weight: 600;
-		cursor: pointer;
-		transition: background-color 140ms ease, color 140ms ease;
-	}
-
-	.unsubscribe-btn:hover:not(:disabled) {
-		background: var(--color-error);
-		color: white;
-	}
-
-	.unsubscribe-btn:focus-visible {
-		outline: var(--outline-focus) solid var(--color-focus-ring);
-		outline-offset: var(--outline-offset);
-	}
-
-	.unsubscribe-btn:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	/* Mobile adaptation */
-	@media (max-width: 40rem) {
-		h1 {
-			font-size: var(--font-size-display-metric);
-		}
-
-		.card-header {
-			flex-direction: column;
-			align-items: flex-start;
-		}
-
-		.remove-btn {
-			align-self: flex-start;
-		}
-
-		.card-metadata {
-			grid-template-columns: 1fr;
-		}
-
-		.change-header {
-			flex-direction: column;
-			align-items: flex-start;
-		}
+		margin: var(--space-2) 0;
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		color: var(--color-on-surface);
 	}
 </style>

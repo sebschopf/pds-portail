@@ -1,0 +1,24 @@
+Bienvenue sur PDS-Portail !
+
+Merci de vous être inscrit à la surveillance du dataset "{dataset_title}".
+
+À partir de maintenant, vous recevrez une alerte email à chaque modification de ce dataset :
+- Mise à jour des métadonnées
+- Ajout ou suppression de ressources
+- Évolution du score de qualité
+- Changements détectés dans les fichiers
+
+Accéder à votre tableau de bord de surveillance :
+{alerts_link}
+
+Plus d'informations sur ce dataset :
+{dataset_link}
+
+---
+
+Gérer votre surveillance (ajouter/supprimer des datasets) :
+{alerts_link}
+
+Cordialement,
+L'équipe PDS-Portail
+https://pds-portail.ch

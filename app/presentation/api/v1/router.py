@@ -153,6 +153,114 @@ def _require_watcher_by_token(token: str) -> tuple[SqlAlchemyWatcherRepository, 
     return watcher_repo, watcher
 
 
+def _send_welcome_email_for_watcher(
+    watcher: Watcher,
+    dataset: DatasetDetailResponse,
+) -> None:
+    """Envoie un email de bienvenue avec magic link après inscription Polar (PDS-90).
+
+    Utile uniquement après order.created. Les erreurs sont loggées mais ne bloquent
+    pas la réponse HTTP 200 au webhook Polar (idempotence).
+    """
+    import hashlib
+    import logging
+    import smtplib
+    import ssl
+    from datetime import UTC, datetime, timedelta
+    from email.message import EmailMessage
+    from pathlib import Path
+
+    logger = logging.getLogger(__name__)
+    settings = get_settings()
+
+    # Vérifications minimales
+    if (
+        not settings.smtp_host
+        or not settings.smtp_user
+        or not settings.smtp_password
+        or not settings.smtp_from
+    ):
+        logger.warning(
+            "Impossible d'envoyer email bienvenue pour %s: config SMTP incomplète",
+            watcher.email,
+        )
+        return
+
+    try:
+        # Génère un magic link temporaire (15 minutes)
+        token = str(uuid.uuid4())
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        now = datetime.now(UTC)
+        expires_at = now + timedelta(minutes=15)
+
+        magic_link_repo = SqlAlchemyMagicLinkRepository()
+        magic_link_repo.create(
+            watcher_id=watcher.id,
+            token_hash=token_hash,
+            created_at=now.isoformat(),
+            expires_at=expires_at.isoformat(),
+        )
+
+        # Construit les URLs
+        alerts_link = f"https://pds-portail.ch/alertes?magic={token}"
+        dataset_link = f"https://pds-portail.ch/dataset/{dataset.id}"
+
+        # Charge les templates
+        template_dir = Path(__file__).resolve().parents[2] / "infrastructure" / "email"
+        html_template_path = template_dir / "welcome_email.html"
+        text_template_path = template_dir / "welcome_email.txt"
+
+        if not html_template_path.exists() or not text_template_path.exists():
+            logger.warning(
+                "Templates email bienvenue manquants: %s, %s",
+                html_template_path,
+                text_template_path,
+            )
+            return
+
+        html_content = html_template_path.read_text(encoding="utf-8")
+        text_content = text_template_path.read_text(encoding="utf-8")
+
+        # Render templates using str.format (cohérent avec SendAlertsUseCase)
+        context = {
+            "dataset_title": dataset.title,
+            "alerts_link": alerts_link,
+            "dataset_link": dataset_link,
+        }
+
+        html_body = html_content.format(**context)
+        text_body = text_content.format(**context)
+
+        # Construit le message email
+        message = EmailMessage()
+        message["Subject"] = f"[PDS-Portail] Bienvenue ! Surveillance activée pour {dataset.title}"
+        message["From"] = settings.smtp_from
+        message["To"] = watcher.email
+        message.set_content(text_body)
+        message.add_alternative(html_body, subtype="html")
+
+        # Envoie l'email
+        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+            server.starttls(context=ssl.create_default_context())
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.send_message(message)
+
+        logger.info(
+            "Email bienvenue envoyé à %s pour dataset %s (watcher_id=%s)",
+            watcher.email,
+            dataset.id,
+            watcher.id,
+        )
+    except Exception as exc:
+        # Les erreurs d'email ne doivent pas bloquer la réponse HTTP
+        logger.error(
+            "Erreur lors de l'envoi de l'email bienvenue à %s: %s",
+            watcher.email,
+            exc,
+            exc_info=True,
+        )
+
+
 @api_router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     """Expose l'etat du service et le dernier horodatage de synchronisation."""
@@ -356,6 +464,13 @@ async def webhook_polar(
                     float(detail.quality_score) if detail.quality_score is not None else None
                 ),
             )
+
+        # Envoie l'email de bienvenue avec magic link (PDS-90 SPEC-009)
+        # Les erreurs d'email ne bloquent pas la réponse (idempotence webhook)
+        try:
+            _send_welcome_email_for_watcher(watcher, detail)
+        except Exception as exc:
+            logger.warning("Erreur email bienvenue (webhook continue): %s", exc)
 
         return {"status": "accepted", "event_type": event.type}
 

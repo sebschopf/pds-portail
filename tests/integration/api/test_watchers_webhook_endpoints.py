@@ -14,6 +14,7 @@ from httpx import Response
 
 from app.infrastructure.persistence.changelog_repository import SqlAlchemyChangeLogRepository
 from app.infrastructure.persistence.watcher_repository import SqlAlchemyWatcherRepository
+from tests.utils.time import get_now, iso_at_offset
 
 from ._fixtures import configure_api_modules, populate_cache_nominale
 
@@ -333,17 +334,15 @@ def test_magic_link_consume_valid(watchers_api_ctx: dict[str, Any]) -> None:
     # Génère un magic link
     raw_token = "magic-brut-token-456"
     token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-    from datetime import UTC, datetime, timedelta
-
     from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
 
     magic_link_repo = SqlAlchemyMagicLinkRepository()
-    now = datetime.now(UTC)
+    now = get_now(lambda: datetime(2099, 1, 1, 12, 0, tzinfo=UTC))
     magic_link_repo.create(
         watcher_id=watcher.id,
         token_hash=token_hash,
-        created_at=now.isoformat(),
-        expires_at=(now + timedelta(minutes=15)).isoformat(),
+        created_at=iso_at_offset(now),
+        expires_at=iso_at_offset(now, minutes=15),
     )
 
     # Consomme le magic link
@@ -379,17 +378,15 @@ def test_magic_link_consume_expired(watchers_api_ctx: dict[str, Any]) -> None:
 
     raw_token = "expired-magic-token"
     token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-    from datetime import UTC, datetime, timedelta
-
     from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
 
     magic_link_repo = SqlAlchemyMagicLinkRepository()
-    now = datetime.now(UTC)
+    now = get_now(lambda: datetime(2000, 1, 1, 12, 0, tzinfo=UTC))
     magic_link_repo.create(
         watcher_id=watcher.id,
         token_hash=token_hash,
-        created_at=now.isoformat(),
-        expires_at=(now - timedelta(minutes=1)).isoformat(),  # Expiré
+        created_at=iso_at_offset(now),
+        expires_at=iso_at_offset(now, minutes=-1),  # Expiré
     )
 
     response = cast(
@@ -415,23 +412,21 @@ def test_magic_link_consume_already_used(watchers_api_ctx: dict[str, Any]) -> No
 
     raw_token = "used-magic-token"
     token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-    from datetime import UTC, datetime, timedelta
-
     from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
 
     magic_link_repo = SqlAlchemyMagicLinkRepository()
-    now = datetime.now(UTC)
+    now = get_now(lambda: datetime(2099, 1, 2, 12, 0, tzinfo=UTC))
     magic_link_repo.create(
         watcher_id=watcher.id,
         token_hash=token_hash,
-        created_at=now.isoformat(),
-        expires_at=(now + timedelta(minutes=15)).isoformat(),
+        created_at=iso_at_offset(now),
+        expires_at=iso_at_offset(now, minutes=15),
     )
 
     # Marque comme utilisé
     link = magic_link_repo.find_by_token_hash(token_hash)
     assert link is not None
-    magic_link_repo.mark_used(link.id, now.isoformat())
+    magic_link_repo.mark_used(link.id, iso_at_offset(now))
 
     response = cast(
         Response,
@@ -457,17 +452,15 @@ def test_magic_link_consume_watcher_suspended(watchers_api_ctx: dict[str, Any]) 
 
     raw_token = "suspended-magic-token"
     token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-    from datetime import UTC, datetime, timedelta
-
     from app.infrastructure.persistence.magic_link_repository import SqlAlchemyMagicLinkRepository
 
     magic_link_repo = SqlAlchemyMagicLinkRepository()
-    now = datetime.now(UTC)
+    now = get_now(lambda: datetime(2099, 1, 3, 12, 0, tzinfo=UTC))
     magic_link_repo.create(
         watcher_id=watcher.id,
         token_hash=token_hash,
-        created_at=now.isoformat(),
-        expires_at=(now + timedelta(minutes=15)).isoformat(),
+        created_at=iso_at_offset(now),
+        expires_at=iso_at_offset(now, minutes=15),
     )
 
     response = cast(

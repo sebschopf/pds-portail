@@ -20,6 +20,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-88: persistance du dernier envoi via `watched_datasets.last_alert_sent_at` pour tracer le throttling par abonné.
 - PDS-115: la page `/alertes` est désormais alignée sur le contrat V1 réellement livré. Un accès réussi via `?token=` persiste le token watcher en `localStorage`, et le frontend signale explicitement que le flux `?magic=` n'est pas encore livré de bout en bout.
 - PDS-116: le webhook `order.created` valide désormais le dataset avant toute mutation, réutilise/réactive correctement un watcher existant et resynchronise `polar_subscription_id` lors d'un repaiement.
+- PDS-118: refactor des tests magic link pour clocks contrôlables et horodatages déterministes.
 - Roadmap M11 mise à jour: PDS-114, PDS-116 et PDS-115 sont clôturées, et l'écart restant est désormais tracé dans `PDS-117.1` pour le flux magic link complet.
 - PDS-111/PDS-112: séparation de configuration `\.env.local` (dev) et `\.env.test` (tests) pour supprimer les dépendances implicites au `.env` local pendant les quality gates; ajout de `INTERNAL_API_TOKEN` dans le template d'environnement.
 

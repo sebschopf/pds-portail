@@ -42,7 +42,7 @@ git clone git@tangled.org:did:plc:nbr4gz4cedmnw2jizmjsuspr && cd pds-portail
 uv sync --frozen
 
 # Copier la configuration
-cp .env.example .env
+cp .env.example .env.local
 
 # Lancer le serveur (port 8000 par défaut)
 uv run uvicorn app.main:app --reload
@@ -117,7 +117,7 @@ Le fichier `.github/workflows/ci.yml` est destiné à GitHub Actions. Si le dép
 
 ## Variables d'environnement
 
-### Backend (.env)
+### Backend (.env.local)
 
 | Variable | Défaut | Description |
 |---|---|---|
@@ -125,6 +125,12 @@ Le fichier `.github/workflows/ci.yml` est destiné à GitHub Actions. Si le dép
 | `CKAN_BASE_URL` | `https://opendata.swiss` | API CKAN source |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Origines autorisées (prod: Vercel) |
 | `EXPOSE_API_DOCS` | `true` | `/docs`, `/redoc`, OpenAPI (false en prod) |
+
+### Isolation tests backend (.env.test)
+
+- La suite pytest isole la configuration via `PDS_ENV_FILES=.env.test`.
+- Objectif: eviter toute dependance implicite au `.env.local` du poste.
+- Recommandation: si un `.env.test` est utilise localement, ne jamais y mettre de secrets reels.
 
 ### Frontend (.env.local)
 

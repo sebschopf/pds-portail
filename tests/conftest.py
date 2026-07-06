@@ -6,6 +6,7 @@ from collections.abc import Generator
 import pytest
 
 import app.infrastructure.persistence.database as persistence_database
+from app.core.config import get_settings
 
 # CRITICAL: Ensure all models are registered at module import time
 # BEFORE any test file tries to import them. This avoids SQLAlchemy
@@ -23,6 +24,17 @@ def setup_database_global() -> Generator[None, None, None]:
     Crée toutes les tables SQLAlchemy et les indexes, évite les race conditions.
     Cleanup: supprime la BD de test après la session pour isoler les exécutions.
     """
+    # Force une configuration de test dédiée pour éviter les dépendances
+    # implicites au .env/.env.local du poste développeur.
+    os.environ["PDS_ENV_FILES"] = ".env.test"
+    for variable in (
+        "INTERNAL_API_TOKEN",
+        "SUPPORT_INTERNAL_USERNAME",
+        "SUPPORT_INTERNAL_PASSWORD",
+    ):
+        os.environ.pop(variable, None)
+
+    get_settings.cache_clear()
     persistence_database.create_schema()
     yield
 

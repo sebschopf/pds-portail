@@ -1,4 +1,6 @@
+import os
 from functools import lru_cache
+from typing import Any, cast
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -30,7 +32,7 @@ class Settings(BaseSettings):
     polar_organization_id: str | None = None
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env.local", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -56,4 +58,12 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+    settings_factory = cast(Any, Settings)
+    env_files_raw = os.getenv("PDS_ENV_FILES")
+    if env_files_raw is None:
+        return settings_factory()
+
+    env_files = tuple(item.strip() for item in env_files_raw.split(",") if item.strip())
+    if not env_files:
+        return settings_factory(_env_file=None)
+    return settings_factory(_env_file=env_files)

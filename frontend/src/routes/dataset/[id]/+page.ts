@@ -3,6 +3,7 @@ import type { PageLoad } from './$types';
 import type { DatasetDetailContract } from '$lib/contracts/dataset-detail';
 import { isDatasetDetailContract } from '$lib/contracts/dataset-detail';
 import { normalizeSearchContext } from '$lib/navigation/search-context';
+import { env } from '$env/dynamic/public';
 
 type DatasetPageData = {
 	datasetId: string;
@@ -17,8 +18,8 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 	const datasetId = params.id;
 	const searchContext = normalizeSearchContext(url?.searchParams?.get('ctx'));
 	const contextData = searchContext ? { searchContext } : {};
-	// Load Polar product ID from environment (Vite replaces import.meta.env.PUBLIC_*)
-	const polarProductId = import.meta.env.PUBLIC_POLAR_PRODUCT_ID || undefined;
+	// Read Polar product ID from dynamic public env to avoid build-time drift.
+	const polarProductId = env.PUBLIC_POLAR_PRODUCT_ID || undefined;
 	const response = await fetch(`/api/v1/dataset/${encodeURIComponent(datasetId)}`);
 
 	if (response.status === 404) {

@@ -21,11 +21,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-115: la page `/alertes` est désormais alignée sur le contrat V1 réellement livré. Un accès réussi via `?token=` persiste le token watcher en `localStorage`, et le frontend signale explicitement que le flux `?magic=` n'est pas encore livré de bout en bout.
 - PDS-116: le webhook `order.created` valide désormais le dataset avant toute mutation, réutilise/réactive correctement un watcher existant et resynchronise `polar_subscription_id` lors d'un repaiement.
 - Roadmap M11 mise à jour: PDS-114, PDS-116 et PDS-115 sont clôturées, et l'écart restant est désormais tracé dans `PDS-117.1` pour le flux magic link complet.
+- PDS-111/PDS-112: séparation de configuration `\.env.local` (dev) et `\.env.test` (tests) pour supprimer les dépendances implicites au `.env` local pendant les quality gates; ajout de `INTERNAL_API_TOKEN` dans le template d'environnement.
 
 ### Fixed
 - PDS-88/PDS-89: alignement typage strict (Pylance/mypy), stabilité des fakes de tests et conformité quality gate.
 - PDS-116: un webhook `order.created` sur dataset inconnu n'écrit plus d'état partiel côté watcher, et un watcher suspendu peut être réactivé proprement sur repaiement.
 - PDS-115: le token watcher local n'est plus seulement lu par le frontend `/alertes`, il est aussi persisté automatiquement après un accès serveur réussi.
+- PDS-111/PDS-112: durcissement final du module support interne — garde Basic Auth serveur sur `/support`, traitement explicite `dispatch_status=queued` côté action support, tests d'erreurs supplémentaires (frontend/backend) et runbook de dépannage dédié (`R002` §4.7).
 
 ## [1.1.5] - 2026-07-03
 ### Added

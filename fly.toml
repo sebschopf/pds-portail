@@ -1,5 +1,12 @@
 # Configuration Fly.io pour PDS-Portail Backend
 # Documentation: https://fly.io/docs/reference/configuration/
+#
+# Secrets (ne jamais committer):
+# Configurer via: fly secrets set VAR_NAME=value
+#   - POLAR_SECRET_KEY (Polar API key for webhook verification)
+#   - POLAR_WEBHOOK_SECRET (Polar webhook signing secret)
+#   - SMTP_USER (Brevo SMTP username)
+#   - SMTP_PASSWORD (Brevo SMTP password)
 
 app = "pds-portail-backend"
 primary_region = "cdg"
@@ -19,6 +26,12 @@ primary_region = "cdg"
   CKAN_SYNC_BATCH_DELAY_SECONDS = "1.0"
   EXPOSE_API_DOCS = "false"
   PYTHON_VERSION = "3.12"
+  # Polar integration (dataset surveillance)
+  PUBLIC_POLAR_PRODUCT_ID = "product_watch_monthly"
+  SMTP_HOST = "smtp-relay.brevo.com"
+  SMTP_PORT = "587"
+  SMTP_FROM = "schopfer@moustik.site"
+  SMTP_DAILY_LIMIT = "50"
 
 [http_service]
   internal_port = 8080

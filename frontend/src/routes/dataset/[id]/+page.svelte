@@ -68,11 +68,12 @@
 		{:else if dataset}
 			<h3 class="title">{dataset.title}</h3>
 
-			{#if data.polar_product_id}
+			{#if data.polar_product_id || data.polar_checkout_url}
 				<WatchDataset
 					dataset_id={dataset.id}
 					dataset_title={dataset.title}
 					polar_product_id={data.polar_product_id}
+					polar_checkout_url={data.polar_checkout_url}
 				/>
 			{/if}
 

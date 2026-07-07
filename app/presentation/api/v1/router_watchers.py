@@ -161,7 +161,7 @@ async def webhook_polar(
 
         return {"status": "accepted", "event_type": event.type}
 
-    if event.type == "subscription.cancelled":
+    if event.type in ("subscription.cancelled", "subscription.canceled"):
         polar_subscription_id = event.data.get("subscription_id")
         if not isinstance(polar_subscription_id, str) or not polar_subscription_id.strip():
             raise HTTPException(

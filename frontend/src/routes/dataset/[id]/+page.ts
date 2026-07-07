@@ -12,6 +12,7 @@ type DatasetPageData = {
 	dataset?: DatasetDetailContract;
 	errorMessage?: string;
 	polar_product_id?: string;
+	polar_checkout_url?: string;
 };
 
 export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) => {
@@ -20,6 +21,7 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 	const contextData = searchContext ? { searchContext } : {};
 	// Read Polar product ID from dynamic public env to avoid build-time drift.
 	const polarProductId = env.PUBLIC_POLAR_PRODUCT_ID || undefined;
+	const polarCheckoutUrl = env.PUBLIC_POLAR_CHECKOUT_URL || undefined;
 	const response = await fetch(`/api/v1/dataset/${encodeURIComponent(datasetId)}`);
 
 	if (response.status === 404) {
@@ -27,7 +29,8 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 			datasetId,
 			status: 'not-found',
 			...contextData,
-			polar_product_id: polarProductId
+			polar_product_id: polarProductId,
+			polar_checkout_url: polarCheckoutUrl
 		};
 	}
 
@@ -37,7 +40,8 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 			status: 'error',
 			...contextData,
 			errorMessage: `Erreur API ${response.status}`,
-			polar_product_id: polarProductId
+			polar_product_id: polarProductId,
+			polar_checkout_url: polarCheckoutUrl
 		};
 	}
 
@@ -47,7 +51,8 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 			datasetId,
 			status: 'contract-error',
 			...contextData,
-			polar_product_id: polarProductId
+			polar_product_id: polarProductId,
+			polar_checkout_url: polarCheckoutUrl
 		};
 	}
 
@@ -56,6 +61,7 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 		status: 'ok',
 		...contextData,
 		dataset: payload,
-		polar_product_id: polarProductId
+		polar_product_id: polarProductId,
+		polar_checkout_url: polarCheckoutUrl
 	};
 };

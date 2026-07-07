@@ -6,11 +6,13 @@
 	let {
 		dataset_id,
 		dataset_title,
-		polar_product_id
+		polar_product_id,
+		polar_checkout_url
 	}: {
 		dataset_id: string;
 		dataset_title: string;
-		polar_product_id?: string; // 'product_xxx' from Polar environment (optional)
+		polar_product_id?: string; // Legacy mode: product_xxx
+		polar_checkout_url?: string; // Preferred mode: https://buy.polar.sh/...
 	} = $props();
 
 	let watchState: WatchDatasetState = $state('idle');
@@ -19,7 +21,7 @@
 	let modalOpen = $state(false);
 	let isWatched = $state(false);
 
-	const POLAR_CHECKOUT_BASE = 'https://checkout.polar.sh';
+	const POLAR_CHECKOUT_BASE = 'https://buy.polar.sh';
 	const storageKey = $derived(`pds-watcher-${dataset_id}`);
 
 	// Polar product ID should be configured per environment
@@ -54,7 +56,7 @@
 			return;
 		}
 
-		if (!polar_product_id) {
+		if (!polar_product_id && !polar_checkout_url) {
 			error = 'Service de paiement indisponible. Veuillez réessayer plus tard.';
 			watchState = 'error';
 			return;
@@ -63,9 +65,15 @@
 		watchState = 'pending';
 		error = null;
 
-		// Build Polar Checkout URL with custom data
-		const checkoutUrl = new URL(`${POLAR_CHECKOUT_BASE}/checkout`);
-		checkoutUrl.searchParams.set('productId', polar_product_id);
+		// Preferred flow: hosted checkout link from Polar dashboard (buy.polar.sh/...)
+		// Fallback: legacy productId query flow.
+		const checkoutUrl = polar_checkout_url
+			? new URL(polar_checkout_url)
+			: new URL(`${POLAR_CHECKOUT_BASE}/checkout`);
+
+		if (!polar_checkout_url && polar_product_id) {
+			checkoutUrl.searchParams.set('productId', polar_product_id);
+		}
 		checkoutUrl.searchParams.set('customerEmail', email);
 		checkoutUrl.searchParams.set('customerName', ''); // Empty, user will fill in Polar
 		checkoutUrl.searchParams.set('metadata[dataset_id]', dataset_id);
@@ -116,7 +124,12 @@
 			</button>
 		</div>
 	{:else if watchState === 'idle' || watchState === 'error'}
-		<Button label="Surveiller ce dataset" variant="primary" onclick={openModal} disabled={!polar_product_id} />
+		<Button
+			label="Surveiller ce dataset"
+			variant="primary"
+			onclick={openModal}
+			disabled={!polar_product_id && !polar_checkout_url}
+		/>
 		{#if watchState === 'error' && error}
 			<p class="error-message" role="alert">{error}</p>
 		{/if}
@@ -155,7 +168,7 @@
 					<Button
 				label={watchState === 'pending' ? 'Redirection vers Polar...' : 'Procéder au paiement'}
 				variant="primary"
-				disabled={watchState === 'pending' || !email || !polar_product_id}
+					disabled={watchState === 'pending' || !email || (!polar_product_id && !polar_checkout_url)}
 						onclick={handlePolarCheckout}
 					/>
 					<button class="cancel-btn" onclick={closeModal} disabled={watchState === 'pending'}>

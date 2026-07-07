@@ -6,6 +6,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- PDS-121: mise en conformité Polar Checkout et Webhooks — convergence opérationnelle du flux de paiement. Checkout link hébergé `buy.polar.sh` (frontend), endpoint webhook canonique `/api/v1/webhooks/polar` (backend), tolérance orthographe `subscription.canceled`/`cancelled`. Ticket enfant PDS-121.1 pour l'exécution en production (dashboard Polar, E2E, preuves Go/No-Go).
 - PDS-86: tables de surveillance (`watchers`, `watched_datasets`, `change_log`) et repositories associés.
 - PDS-87: `DetectChangesUseCase` branché dans le cycle de sync avec 5 types de changements détectés.
 - PDS-89: endpoints Polar/watchers/alerts (`POST /webhooks/polar`, `POST/GET/DELETE /watchers`, `GET /alerts`).

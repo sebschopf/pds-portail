@@ -72,9 +72,7 @@
 			checkoutLink.searchParams.set('customer_email', email);
 			checkoutLink.searchParams.set('metadata[dataset_id]', dataset_id);
 			checkoutLink.searchParams.set('metadata[dataset_title]', dataset_title);
-			const finalUrl = checkoutLink.toString();
-			console.log('[PDS-121] Redirection Checkout Link:', finalUrl);
-			window.location.href = finalUrl;
+			window.location.href = checkoutLink.toString();
 			return;
 		}
 

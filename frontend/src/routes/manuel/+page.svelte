@@ -3,7 +3,6 @@
 	import SearchIcon from '$lib/assets/icons/SearchIcon.svelte';
 	import DatasetIcon from '$lib/assets/icons/DatasetIcon.svelte';
 	import CompareIcon from '$lib/assets/icons/CompareIcon.svelte';
-	import FilterIcon from '$lib/assets/icons/FilterIcon.svelte';
 	import AccessibilityIcon from '$lib/assets/icons/AccessibilityIcon.svelte';
 </script>
 
@@ -54,23 +53,45 @@
 		</ul>
 	</section>
 
-	<section aria-labelledby="personnaliser">
-		<h3 id="personnaliser">
-			<FilterIcon size="1.5em" label="" />
-			Ajuster ce qui compte pour vous
+	<section aria-labelledby="surveillance">
+		<h3 id="surveillance">
+			<DatasetIcon size="1.5em" label="" />
+			Service payant&nbsp;: Surveiller des datasets
 		</h3>
 		<p>
-			Le score de qualité est calculé automatiquement, mais <strong>vos priorités
-			ne sont pas forcément les mêmes</strong> que celles du calcul par défaut.
-			Vous pouvez changer la pondération des critères&nbsp;:
+			Vous pouvez <strong>surveiller plusieurs datasets</strong> et recevoir une alerte par email
+			à chaque modification détectée. Ce service coûte <strong>5 CHF par mois</strong> (abonnement
+			unique, quel que soit le nombre de datasets surveillés).
 		</p>
+
+		<h4>Ce que vous obtenez</h4>
+		<ul>
+			<li>Un <strong>email d'alerte</strong> dès qu'un changement est détecté (métadonnées, ressources, qualité, liens)</li>
+			<li>Un <strong>tableau de bord personnel</strong> avec l'historique complet des changements</li>
+			<li>La possibilité d'arrêter la surveillance à tout moment</li>
+		</ul>
+
+		<h4>Comment ça marche</h4>
 		<ol>
-			<li>Sur une fiche dataset, cliquez sur <strong>«&nbsp;Personnaliser la pondération&nbsp;»</strong></li>
-			<li>Attribuez un poids à chaque critère&nbsp;: complétude, fraîcheur, accessibilité</li>
-			<li>Le score se recalcule tout seul selon vos choix</li>
+			<li>Sur une fiche dataset, cliquez sur <strong>«&nbsp;Surveiller ce dataset&nbsp;»</strong></li>
+			<li>Entrez votre adresse email et cliquez sur <strong>«&nbsp;Procéder au paiement&nbsp;»</strong></li>
+			<li>Vous êtes redirigé vers <strong>Polar</strong> pour finaliser le paiement (carte bancaire)</li>
+			<li>Une fois le paiement confirmé, vous recevez un <strong>email de bienvenue</strong> contenant un lien vers votre tableau de bord</li>
+			<li>Cliquez sur <strong>«&nbsp;Accéder à mon tableau de bord&nbsp;»</strong> dans l'email pour voir vos datasets surveillés et l'historique des alertes</li>
 		</ol>
+
+		<h4>Accéder à votre tableau de bord</h4>
 		<p>
-			Votre pondération reste active pendant toute votre session.
+			Votre tableau de bord est accessible à tout moment depuis la page
+			<a href="/alertes"><strong>Mes alertes</strong></a>.
+			Deux méthodes pour vous connecter&nbsp;:
+		</p>
+		<ul>
+			<li><strong>Navigateur reconnu</strong>&nbsp;: si vous avez déjà ouvert le tableau de bord sur ce navigateur, vous êtes reconnecté automatiquement</li>
+			<li><strong>Lien email</strong>&nbsp;: demandez un lien d'accès temporaire (valable 15 minutes) en entrant votre email sur la page Mes alertes</li>
+		</ul>
+		<p>
+			PDS-Portail ne stocke jamais vos données bancaires. Le paiement est géré par Polar.
 		</p>
 	</section>
 

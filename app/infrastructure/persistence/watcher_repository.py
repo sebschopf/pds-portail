@@ -21,11 +21,15 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
+MAX_WATCHED_DATASETS = 10
+
+
 def _model_to_watcher(model: WatcherModel) -> Watcher:
     return Watcher(
         id=model.id,
         email=model.email,
         polar_subscription_id=model.polar_subscription_id,
+        polar_customer_id=model.polar_customer_id,
         plan=model.plan,
         status=model.status,
         token=model.token,
@@ -55,6 +59,7 @@ class SqlAlchemyWatcherRepository:
         token: str,
         plan: str = "monthly",
         polar_subscription_id: str | None = None,
+        polar_customer_id: str | None = None,
     ) -> Watcher:
         """Crée un nouveau watcher actif."""
         now = _now_iso()
@@ -62,6 +67,7 @@ class SqlAlchemyWatcherRepository:
             id=str(uuid.uuid4()),
             email=email,
             polar_subscription_id=polar_subscription_id,
+            polar_customer_id=polar_customer_id,
             plan=plan,
             status="active",
             token=token,
@@ -157,6 +163,12 @@ class SqlAlchemyWatcherRepository:
             model.updated_at = _now_iso()
             session.commit()
 
+    def count_watched_datasets(self, watcher_id: str) -> int:
+        """Retourne le nombre de datasets surveillés par un watcher."""
+        with SessionLocal() as session:
+            stmt = select(WatchedDatasetModel).where(WatchedDatasetModel.watcher_id == watcher_id)
+            return len(list(session.execute(stmt).scalars().all()))
+
     def add_watched_dataset(
         self,
         watcher_id: str,
@@ -167,8 +179,19 @@ class SqlAlchemyWatcherRepository:
     ) -> WatchedDataset:
         """Ajoute un dataset à surveiller.
 
+        Lève ValueError si la limite MAX_WATCHED_DATASETS est atteinte.
         Lève IntegrityError si le couple (watcher_id, dataset_id) existe déjà.
         """
+        current_count = 0
+        with SessionLocal() as session:
+            stmt = select(WatchedDatasetModel).where(WatchedDatasetModel.watcher_id == watcher_id)
+            current_count = len(list(session.execute(stmt).scalars().all()))
+
+        if current_count >= MAX_WATCHED_DATASETS:
+            raise ValueError(
+                f"Limite de {MAX_WATCHED_DATASETS} datasets surveillés atteinte pour ce watcher."
+            )
+
         model = WatchedDatasetModel(
             id=str(uuid.uuid4()),
             watcher_id=watcher_id,

@@ -12,6 +12,7 @@ class Watcher(NamedTuple):
     id: str
     email: str
     polar_subscription_id: str | None
+    polar_customer_id: str | None
     plan: str  # 'monthly' | 'yearly'
     status: str  # 'active' | 'cancelled' | 'paused'
     token: str  # UUID v4, clé d'accès à /alertes

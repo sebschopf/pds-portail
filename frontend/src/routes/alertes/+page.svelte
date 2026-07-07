@@ -188,37 +188,57 @@
 		{:else if data.status === 'not-authenticated' || !isAuthenticated}
 			<Card title="Accéder à vos alertes">
 				<div class="auth-form">
+					<div class="auth-recap" role="note">
+						<h3>Rappel du fonctionnement</h3>
+						<p>
+							Le service de surveillance de datasets est <strong>payant</strong> (5 CHF/mois).
+							Après votre paiement sur Polar, vous avez reçu un email de bienvenue contenant
+							un lien vers votre tableau de bord. Cliquez sur ce lien pour voir vos datasets
+							surveillés et l'historique des changements.
+						</p>
+						<p>
+							Consultez le <a href="/manuel#surveillance">manuel d'utilisation</a> pour le détail du service.
+						</p>
+					</div>
+
+					<div class="auth-recap auth-recap-help" role="note">
+						<h3>Vous avez changé de navigateur ou perdu l'email ?</h3>
+						<p>
+							Pas d'inquiétude. Entrez simplement l'adresse email que vous avez utilisée
+							lors du paiement, et nous vous enverrons un <strong>nouveau lien d'accès</strong>
+							(valable 15 minutes). Vous pourrez alors consulter vos alertes depuis ce navigateur.
+						</p>
+					</div>
+
+					<form onsubmit={handleRequestMagicLink} class="magic-link-form magic-link-form--centered">
+						<input
+							type="email"
+							placeholder="Votre adresse email"
+							aria-label="Votre adresse email"
+							bind:value={magicLinkEmail}
+							required
+							disabled={magicLinkLoading}
+						/>
+						<button type="submit" disabled={magicLinkLoading || !magicLinkEmail}>
+							{magicLinkLoading ? 'Envoi...' : 'Recevoir un lien'}
+						</button>
+					</form>
+					{#if magicLinkMessage}
+						<p class={magicLinkMessage.includes('erreur') ? 'error-message' : 'success-message'}>
+							{magicLinkMessage}
+						</p>
+					{/if}
+
+					<div class="auth-divider" aria-hidden="true"></div>
+
 					<p class="auth-intro">
-						Deux façons d'accéder à vos alertes :
+						Déjà connecté sur ce navigateur ?
 					</p>
 
 					<div class="auth-methods">
 						<div class="auth-method">
-							<h3>1. Par navigateur reconnu</h3>
-							<p>Si un token d'accès est enregistré localement, PDS-Portail tentera de vous reconnecter automatiquement.</p>
-						</div>
-
-						<div class="auth-method">
-							<h3>2. Par lien email</h3>
-							<p>Demandez un lien d'accès temporaire valable 15 minutes. Vous le recevrez par email.</p>
-							<form onsubmit={handleRequestMagicLink} class="magic-link-form">
-								<input
-									type="email"
-									placeholder="Votre adresse email"
-									aria-label="Votre adresse email"
-									bind:value={magicLinkEmail}
-									required
-									disabled={magicLinkLoading}
-								/>
-								<button type="submit" disabled={magicLinkLoading || !magicLinkEmail}>
-									{magicLinkLoading ? 'Envoi...' : 'Demander un lien'}
-								</button>
-							</form>
-							{#if magicLinkMessage}
-								<p class={magicLinkMessage.includes('erreur') ? 'error-message' : 'success-message'}>
-									{magicLinkMessage}
-								</p>
-							{/if}
+							<h3>Par navigateur reconnu</h3>
+							<p>Si vous avez déjà ouvert le tableau de bord sur ce navigateur, PDS-Portail vous reconnecte automatiquement.</p>
 						</div>
 					</div>
 
@@ -337,6 +357,67 @@
 
 	.auth-form {
 		padding: var(--space-3) 0;
+	}
+
+	.auth-recap {
+		padding: var(--space-4);
+		margin-bottom: var(--space-5);
+		background: var(--color-surface-variant);
+		border: var(--border-thin) solid var(--color-outline);
+		border-radius: var(--radius-none);
+	}
+
+	.auth-recap h3 {
+		margin: 0 0 var(--space-2) 0;
+		font-size: clamp(1rem, 1.1rem, 1.25rem);
+		font-weight: 600;
+	}
+
+	.auth-recap p {
+		margin: 0 0 var(--space-2) 0;
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		color: var(--color-on-surface-variant);
+		line-height: var(--line-height-relaxed);
+	}
+
+	.auth-recap p:last-child {
+		margin-bottom: 0;
+	}
+
+	.auth-recap a {
+		color: var(--color-primary);
+		font-weight: 600;
+	}
+
+	.auth-recap-help {
+		padding: var(--space-4);
+		margin-bottom: var(--space-5);
+		background: var(--color-success-subtle);
+		border: var(--border-thin) solid var(--color-success);
+		border-radius: var(--radius-none);
+	}
+
+	.auth-recap-help h3 {
+		margin: 0 0 var(--space-2) 0;
+		font-size: clamp(1rem, 1.1rem, 1.25rem);
+		font-weight: 600;
+		color: var(--color-success);
+	}
+
+	.auth-recap-help p {
+		margin: 0;
+		font-size: clamp(0.875rem, 0.95rem, 1.05rem);
+		line-height: var(--line-height-relaxed);
+	}
+
+	.magic-link-form--centered {
+		justify-content: center;
+		margin-bottom: var(--space-3);
+	}
+
+	.auth-divider {
+		border-top: 1px solid var(--color-outline-variant);
+		margin: var(--space-4) 0 var(--space-5);
 	}
 
 	.auth-intro {

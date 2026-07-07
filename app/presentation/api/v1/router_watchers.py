@@ -104,6 +104,11 @@ async def webhook_polar(
             if event.data.get("subscription_id") is not None
             else None
         )
+        polar_customer_id = (
+            str(event.data.get("customer_id")).strip()
+            if event.data.get("customer_id") is not None
+            else None
+        )
         if not customer_email or not dataset_id:
             raise HTTPException(
                 status_code=400,
@@ -120,6 +125,7 @@ async def webhook_polar(
                 email=customer_email,
                 token=str(uuid.uuid4()),
                 polar_subscription_id=polar_subscription_id,
+                polar_customer_id=polar_customer_id,
             )
         else:
             if polar_subscription_id and watcher.polar_subscription_id != polar_subscription_id:

@@ -189,6 +189,7 @@ class WatcherModel(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True)
     email: Mapped[str] = mapped_column(Text, nullable=False)
     polar_subscription_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    polar_customer_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     plan: Mapped[str] = mapped_column(String(20), nullable=False, default="monthly")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
     token: Mapped[str] = mapped_column(String, nullable=False, unique=True)  # UUID v4

@@ -6,6 +6,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- PDS-121.2: proxys SvelteKit pour les endpoints watchers en production Vercel. Création des fichiers `+server.ts` pour `/api/v1/magic-link` (POST), `/api/v1/magic-link/consume` (GET), `/api/v1/watchers` (GET/POST), `/api/v1/watchers/[id]` (DELETE) et `/api/v1/alerts` (GET). Résout le bug 404 en production où le proxy Vite n'était pas actif.
+- PDS-121.3: alignement SPEC-009 — ajout du champ `polar_customer_id` dans le modèle `WatcherModel`, le port `Watcher`, le repository `SqlAlchemyWatcherRepository`, et extraction depuis le webhook `order.created`. Limite de 10 datasets surveillés par watcher (`MAX_WATCHED_DATASETS=10`) avec `ValueError` si dépassée.
+- Documentation utilisateur : section "Service payant" dans le manuel (`/manuel`), description complète du flux (paiement → email → tableau de bord) et méthode de récupération d'accès. Page `/alertes` avec bloc "Rappel du fonctionnement" et "Vous avez changé de navigateur ou perdu l'email ?".
 - PDS-121: mise en conformité Polar Checkout et Webhooks — convergence opérationnelle du flux de paiement. Checkout link hébergé `buy.polar.sh` (frontend), endpoint webhook canonique `/api/v1/webhooks/polar` (backend), tolérance orthographe `subscription.canceled`/`cancelled`. Ticket enfant PDS-121.1 pour l'exécution en production (dashboard Polar, E2E, preuves Go/No-Go).
 - PDS-86: tables de surveillance (`watchers`, `watched_datasets`, `change_log`) et repositories associés.
 - PDS-87: `DetectChangesUseCase` branché dans le cycle de sync avec 5 types de changements détectés.
@@ -26,6 +29,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - PDS-111/PDS-112: séparation de configuration `\.env.local` (dev) et `\.env.test` (tests) pour supprimer les dépendances implicites au `.env` local pendant les quality gates; ajout de `INTERNAL_API_TOKEN` dans le template d'environnement.
 
 ### Fixed
+- PDS-121: correction du checkout Polar en mode Checkout Link hébergé (`PUBLIC_POLAR_CHECKOUT_URL`). La redirection transmet désormais `customer_email`, `metadata[dataset_id]` et `metadata[dataset_title]` en query params, comme le faisait déjà le mode legacy `PUBLIC_POLAR_PRODUCT_ID`.
 - PDS-119: consommation de magic link durcie contre l'enumeration par message d'erreur unifie (`Magic link invalide`) pour tous les rejets 401.
 - PDS-88/PDS-89: alignement typage strict (Pylance/mypy), stabilité des fakes de tests et conformité quality gate.
 - PDS-116: un webhook `order.created` sur dataset inconnu n'écrit plus d'état partiel côté watcher, et un watcher suspendu peut être réactivé proprement sur repaiement.

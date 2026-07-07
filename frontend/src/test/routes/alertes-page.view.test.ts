@@ -16,8 +16,9 @@ describe('alertes (+page.svelte)', () => {
 		});
 
 		expect(view.body).toContain('Accéder à vos alertes');
-	expect(view.body).toContain('Si un token d\'accès est enregistré localement');
-	expect(view.body).toContain('Par lien email');
+		expect(view.body).toContain('Rappel du fonctionnement');
+		expect(view.body).toContain('Vous avez changé de navigateur ou perdu l\'email');
+		expect(view.body).toContain('Recevoir un lien');
 	});
 
 	it('affiche un message de suspension quand le watcher est suspendu', () => {

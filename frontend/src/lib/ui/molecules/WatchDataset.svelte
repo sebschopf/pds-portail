@@ -65,23 +65,23 @@
 		watchState = 'pending';
 		error = null;
 
-		// Preferred flow: hosted checkout link from Polar dashboard (buy.polar.sh/...)
-		// Fallback: legacy productId query flow.
-		const checkoutUrl = polar_checkout_url
-			? new URL(polar_checkout_url)
-			: new URL(`${POLAR_CHECKOUT_BASE}/checkout`);
+		// Mode hébergé (checkout link) : redirection vers l'URL telle quelle.
+		// Polar gère l'email, les métadonnées et la redirection via le dashboard.
+		// Mode legacy (productId) : fallback avec query params.
+		if (polar_checkout_url) {
+			window.location.href = polar_checkout_url;
+			return;
+		}
 
-		if (!polar_checkout_url && polar_product_id) {
+		const checkoutUrl = new URL(`${POLAR_CHECKOUT_BASE}/checkout`);
+		if (polar_product_id) {
 			checkoutUrl.searchParams.set('productId', polar_product_id);
 		}
 		checkoutUrl.searchParams.set('customerEmail', email);
-		checkoutUrl.searchParams.set('customerName', ''); // Empty, user will fill in Polar
+		checkoutUrl.searchParams.set('customerName', '');
 		checkoutUrl.searchParams.set('metadata[dataset_id]', dataset_id);
 		checkoutUrl.searchParams.set('metadata[dataset_title]', dataset_title);
 
-		// Redirect to Polar Checkout
-		// Note: After successful payment, Polar webhook will handle watcher creation
-		// and frontend will receive token via email magic link
 		window.location.href = checkoutUrl.toString();
 	}
 

@@ -72,6 +72,7 @@
 			<nav class="footer-links" aria-label="Liens du pied de page">
 				<a href="/manuel">Manuel d’utilisation</a>
 				<a href="/suite">Suite du projet</a>
+				<a href="/contact">Contact</a>
 			</nav>
 		</div>
 		<div class="footer-meta">

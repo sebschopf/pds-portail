@@ -37,6 +37,7 @@ from app.infrastructure.persistence.query_cache_repository import SqlAlchemyQuer
 from app.infrastructure.persistence.search_adapter import SqlAlchemySearchAdapter
 from app.infrastructure.persistence.watcher_repository import SqlAlchemyWatcherRepository
 from app.presentation.api.dependencies import require_license_without_quota_check
+from app.presentation.api.v1.router_contact import contact_router
 from app.presentation.api.v1.router_support import support_router
 from app.presentation.api.v1.router_watchers import watchers_router
 from app.presentation.api.v1.schemas import (
@@ -63,6 +64,7 @@ logger = logging.getLogger(__name__)
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(support_router)
+api_router.include_router(contact_router)
 api_router.include_router(watchers_router)
 
 

@@ -198,6 +198,7 @@
 						</p>
 						<p>
 							Consultez le <a href="/manuel#surveillance">manuel d'utilisation</a> pour le détail du service.
+							Un problème ? <a href="/contact">Formulaire de contact</a>
 						</p>
 					</div>
 

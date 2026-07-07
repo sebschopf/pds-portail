@@ -467,3 +467,22 @@ class CacheStatsResponse(BaseModel):
     stale_entries: int
     total_entries: int
     hit_ratio: float
+
+
+class ContactRequest(BaseModel):
+    """Formulaire de contact public (PDS-122.1)."""
+
+    email: str = Field(
+        description="Email de l'utilisateur pour la réponse",
+        min_length=5,
+        max_length=254,
+    )
+    concerne: str = Field(
+        description="Catégorie du message",
+        pattern=r"^(surveillance|paiement|donnees|technique|autre)$",
+    )
+    message: str = Field(
+        description="Message de l'utilisateur",
+        min_length=10,
+        max_length=5000,
+    )

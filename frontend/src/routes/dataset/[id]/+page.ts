@@ -19,7 +19,6 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 	const datasetId = params.id;
 	const searchContext = normalizeSearchContext(url?.searchParams?.get('ctx'));
 	const contextData = searchContext ? { searchContext } : {};
-	// Read Polar product ID from dynamic public env to avoid build-time drift.
 	const polarProductId = env.PUBLIC_POLAR_PRODUCT_ID || undefined;
 	const polarCheckoutUrl = env.PUBLIC_POLAR_CHECKOUT_URL || undefined;
 	const response = await fetch(`/api/v1/dataset/${encodeURIComponent(datasetId)}`);

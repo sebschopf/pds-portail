@@ -65,11 +65,14 @@
 		watchState = 'pending';
 		error = null;
 
-		// Mode hébergé (checkout link) : redirection vers l'URL telle quelle.
-		// Polar gère l'email, les métadonnées et la redirection via le dashboard.
-		// Mode legacy (productId) : fallback avec query params.
+		// Mode hébergé (checkout link) : ajout email + métadonnées en query params.
+		// Mode legacy (productId) : fallback avec URL construite manuellement.
 		if (polar_checkout_url) {
-			window.location.href = polar_checkout_url;
+			const checkoutLink = new URL(polar_checkout_url);
+			checkoutLink.searchParams.set('customer_email', email);
+			checkoutLink.searchParams.set('metadata[dataset_id]', dataset_id);
+			checkoutLink.searchParams.set('metadata[dataset_title]', dataset_title);
+			window.location.href = checkoutLink.toString();
 			return;
 		}
 

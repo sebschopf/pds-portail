@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button, Input, Modal } from '$lib';
 	import { onMount } from 'svelte';
-	import type { WatchDatasetState } from '$lib/types/watchers';
+	import { useWatchDataset } from '$lib/runes/watcher.svelte';
 
 	let {
 		dataset_id,
@@ -11,139 +11,44 @@
 	}: {
 		dataset_id: string;
 		dataset_title: string;
-		polar_product_id?: string; // Legacy mode: product_xxx
-		polar_checkout_url?: string; // Preferred mode: https://buy.polar.sh/...
+		polar_product_id?: string;
+		polar_checkout_url?: string;
 	} = $props();
 
-	let watchState: WatchDatasetState = $state('idle');
-	let email = $state('');
-	let error = $state<string | null>(null);
-	let modalOpen = $state(false);
-	let isWatched = $state(false);
-
-	const POLAR_CHECKOUT_BASE = 'https://buy.polar.sh';
-	const storageKey = $derived(`pds-watcher-${dataset_id}`);
-
-	// Polar product ID should be configured per environment
-	// Format: product_xxxxxxxxxxxx
+	const watch = useWatchDataset(() => ({ dataset_id, dataset_title, polar_product_id, polar_checkout_url }));
 
 	onMount(() => {
-		// Check if this dataset is being watched (token in localStorage)
-		const token = localStorage.getItem(storageKey);
-		if (token) {
-			isWatched = true;
-			watchState = 'active';
-		}
+		watch.init();
 	});
-
-	function openModal() {
-		email = '';
-		error = null;
-		modalOpen = true;
-		watchState = 'modal';
-	}
-
-	function closeModal() {
-		modalOpen = false;
-		if (watchState === 'modal') {
-			watchState = 'idle';
-		}
-	}
-
-	function handlePolarCheckout() {
-		if (!email || !email.includes('@')) {
-			error = 'Veuillez entrer une adresse email valide.';
-			return;
-		}
-
-		if (!polar_product_id && !polar_checkout_url) {
-			error = 'Service de paiement indisponible. Veuillez réessayer plus tard.';
-			watchState = 'error';
-			return;
-		}
-
-		watchState = 'pending';
-		error = null;
-
-		// Mode hébergé (checkout link) : ajout email + métadonnées en query params.
-		// Mode legacy (productId) : fallback avec URL construite manuellement.
-		if (polar_checkout_url) {
-			const checkoutLink = new URL(polar_checkout_url);
-			checkoutLink.searchParams.set('customer_email', email);
-			checkoutLink.searchParams.set('metadata[dataset_id]', dataset_id);
-			checkoutLink.searchParams.set('metadata[dataset_title]', dataset_title);
-			window.location.href = checkoutLink.toString();
-			return;
-		}
-
-		const checkoutUrl = new URL(`${POLAR_CHECKOUT_BASE}/checkout`);
-		if (polar_product_id) {
-			checkoutUrl.searchParams.set('productId', polar_product_id);
-		}
-		checkoutUrl.searchParams.set('customerEmail', email);
-		checkoutUrl.searchParams.set('customerName', '');
-		checkoutUrl.searchParams.set('metadata[dataset_id]', dataset_id);
-		checkoutUrl.searchParams.set('metadata[dataset_title]', dataset_title);
-
-		window.location.href = checkoutUrl.toString();
-	}
-
-	function handleRemoveWatch() {
-		if (confirm(`Êtes-vous sûr d'arrêter la surveillance de "${dataset_title}" ?`)) {
-			watchState = 'pending';
-			// Token from localStorage is used to call DELETE endpoint
-			const token = localStorage.getItem(storageKey);
-			if (token) {
-				fetch(`/api/v1/watchers/${dataset_id}?token=${encodeURIComponent(token)}`, {
-					method: 'DELETE'
-				})
-					.then((res) => {
-						if (res.ok) {
-							localStorage.removeItem(storageKey);
-						isWatched = false;
-						watchState = 'idle';
-					} else {
-						error = 'Impossible d\'arrêter la surveillance.';
-						watchState = 'error';
-						}
-					})
-					.catch((err) => {
-						console.error('Error removing watch:', err);
-						error = 'Erreur de connexion.';
-						watchState = 'error';
-					});
-			}
-		}
-	}
 </script>
 
 <div class="watch-dataset">
-	{#if watchState === 'active'}
+	{#if watch.watchState === 'active'}
 		<div class="watched-badge" role="status" aria-label="Ce dataset est surveillé">
 			<span class="badge-icon" aria-hidden="true">✓</span>
 			<span class="badge-text">Surveillé</span>
-			<button class="unwatch-btn" onclick={handleRemoveWatch} aria-label="Arrêter la surveillance">
+			<button class="unwatch-btn" onclick={watch.handleRemoveWatch} aria-label="Arrêter la surveillance">
 				Arrêter
 			</button>
 		</div>
-	{:else if watchState === 'idle' || watchState === 'error'}
+	{:else if watch.watchState === 'idle' || watch.watchState === 'error'}
 		<Button
 			label="Surveiller ce dataset"
 			variant="primary"
-			onclick={openModal}
+			onclick={watch.openModal}
 			disabled={!polar_product_id && !polar_checkout_url}
 		/>
-		{#if watchState === 'error' && error}
-			<p class="error-message" role="alert">{error}</p>
+		{#if watch.watchState === 'error' && watch.error}
+			<p class="error-message" role="alert">{watch.error}</p>
 		{/if}
-	{:else if watchState === 'pending'}
+	{:else if watch.watchState === 'pending'}
 		<div class="pending-state">
 			<span class="spinner" aria-hidden="true"></span>
 			<span>Traitement en cours...</span>
 		</div>
 	{/if}
 
-	<Modal title="Surveiller ce dataset" open={modalOpen} onclose={closeModal}>
+	<Modal title="Surveiller ce dataset" open={watch.modalOpen} onclose={watch.closeModal}>
 		{#snippet children()}
 			<div class="modal-content">
 				<h3 class="modal-title">Surveillance de dataset</h3>
@@ -159,23 +64,23 @@
 						label="Votre adresse email"
 						type="email"
 						placeholder="vous@exemple.ch"
-						bind:value={email}
-						disabled={watchState === 'pending'}
+						bind:value={watch.email}
+						disabled={watch.watchState === 'pending'}
 					/>
 				</div>
 
-				{#if error}
-					<p class="error-message" role="alert">{error}</p>
+				{#if watch.error}
+					<p class="error-message" role="alert">{watch.error}</p>
 				{/if}
 
 				<div class="form-actions">
 					<Button
-				label={watchState === 'pending' ? 'Redirection vers Polar...' : 'Procéder au paiement'}
-				variant="primary"
-					disabled={watchState === 'pending' || !email || (!polar_product_id && !polar_checkout_url)}
-						onclick={handlePolarCheckout}
+						label={watch.watchState === 'pending' ? 'Redirection vers Polar...' : 'Procéder au paiement'}
+						variant="primary"
+						disabled={watch.watchState === 'pending' || !watch.email || (!polar_product_id && !polar_checkout_url)}
+						onclick={watch.handlePolarCheckout}
 					/>
-					<button class="cancel-btn" onclick={closeModal} disabled={watchState === 'pending'}>
+					<button class="cancel-btn" onclick={watch.closeModal} disabled={watch.watchState === 'pending'}>
 						Annuler
 					</button>
 				</div>

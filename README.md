@@ -80,7 +80,7 @@ make quality
 Cela lance toute la chaîne qualité :
 
 - **Backend** : format (black), lint (ruff), types (mypy), tests (pytest --cov-fail-under=80)
-- **Frontend** : Svelte check, tests (vitest), build, validation design system
+- **Frontend** : Svelte check, tests vitest (19 files, 128 tests — SPEC-015), build, validation design system
 
 Pour exécuter la qualité sur une seule partie :
 

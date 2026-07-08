@@ -1,10 +1,7 @@
 <script lang="ts">
-	let concerne = $state('surveillance');
-	let email = $state('');
-	let message = $state('');
-	let loading = $state(false);
-	let sent = $state(false);
-	let error = $state<string | null>(null);
+	import { useContactForm } from '$lib/runes/contact.svelte';
+
+	const form = useContactForm();
 
 	const options = [
 		{ value: 'surveillance', label: 'Problème de surveillance' },
@@ -13,28 +10,6 @@
 		{ value: 'technique', label: 'Problème technique' },
 		{ value: 'autre', label: 'Autre demande' }
 	];
-
-	async function handleSubmit(e: Event) {
-		e.preventDefault();
-		loading = true;
-		error = null;
-		try {
-			const res = await fetch('/api/v1/contact', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ concerne, email, message })
-			});
-			if (res.ok) {
-				sent = true;
-			} else {
-				error = 'Une erreur est survenue. Veuillez réessayer.';
-			}
-		} catch {
-			error = 'Erreur de connexion. Veuillez réessayer.';
-		} finally {
-			loading = false;
-		}
-	}
 </script>
 
 <svelte:head>
@@ -44,7 +19,7 @@
 <article class="contact-page">
 	<h1>Contact</h1>
 
-	{#if sent}
+	{#if form.sent}
 		<div class="success-box" role="status">
 			<p>Votre message a été envoyé. Nous vous répondrons dans les meilleurs délais.</p>
 			<p><a href="/">Retour à l'accueil</a></p>
@@ -55,10 +30,10 @@
 			Remplissez ce formulaire et nous vous répondrons par email.
 		</p>
 
-		<form onsubmit={handleSubmit} class="contact-form">
+		<form onsubmit={form.handleSubmit} class="contact-form">
 			<div class="form-group">
 				<label for="concerne">Concerne</label>
-				<select id="concerne" bind:value={concerne} required>
+				<select id="concerne" bind:value={form.concerne} required>
 					{#each options as opt (opt.value)}
 						<option value={opt.value}>{opt.label}</option>
 					{/each}
@@ -70,7 +45,7 @@
 				<input
 					id="contact-email"
 					type="email"
-					bind:value={email}
+					bind:value={form.email}
 					placeholder="vous@exemple.ch"
 					required
 					autocomplete="email"
@@ -81,7 +56,7 @@
 				<label for="contact-message">Votre message</label>
 				<textarea
 					id="contact-message"
-					bind:value={message}
+					bind:value={form.message}
 					placeholder="Décrivez votre demande ou vos difficultés…"
 					rows={6}
 					required
@@ -90,12 +65,12 @@
 				></textarea>
 			</div>
 
-			{#if error}
-				<p class="error-message" role="alert">{error}</p>
+			{#if form.error}
+				<p class="error-message" role="alert">{form.error}</p>
 			{/if}
 
-			<button type="submit" disabled={loading || !email || !message}>
-				{loading ? 'Envoi en cours…' : 'Envoyer'}
+			<button type="submit" disabled={form.loading || !form.email || !form.message}>
+				{form.loading ? 'Envoi en cours…' : 'Envoyer'}
 			</button>
 		</form>
 	{/if}

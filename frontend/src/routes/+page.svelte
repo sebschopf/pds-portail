@@ -1,291 +1,15 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public';
-	import { replaceState } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	import { Button, Card, CardDataset, CompareBar, EmptyState, FiltersPanel, PageLayout, SkeletonCard, StateBadge } from '$lib';
-	import { normalizeSearchContext } from '$lib/navigation/search-context';
-	import type { SearchDatasetItem, FacetItem, SearchResponse } from '$lib/types/search';
+	import { useSearch, sortOptions, sortLabels } from '$lib/runes/search.svelte';
 
-	type SortValue =
-		| 'modified_desc'
-		| 'modified_asc'
-		| 'quality_desc'
-		| 'quality_asc'
-		| 'hybrid'
-		| 'title_asc'
-		| 'title_desc';
-
-	const PAGE_SIZE = 10;
-	const sortLabels: Record<SortValue, string> = {
-		modified_desc: 'Date (plus récent)',
-		modified_asc: 'Date (plus ancien)',
-		quality_desc: 'Qualité (meilleure)',
-		quality_asc: 'Qualité (moins bonne)',
-		hybrid: 'Pertinence (hybride)',
-		title_asc: 'Nom (A-Z)',
-		title_desc: 'Nom (Z-A)'
-	};
-	const sortOptions = Object.entries(sortLabels).map(([value, label]) => ({ value, label }));
-
-	let query = $state('');
-	let sort = $state<SortValue>('modified_desc');
-	let selectedOrg = $state('');
-	let selectedFormat = $state('');
-	let selectedTags = $state<string[]>([]);
-	let currentPage = $state(1);
-	let isLoading = $state(false);
-	let errorMessage = $state('');
-	let data = $state<SearchResponse | null>(null);
+	const search = useSearch();
 	let resultHeading = $state<HTMLParagraphElement | null>(null);
 
-	// Etat comparaison guidee (PDS-43)
-	const MAX_COMPARE = 4;
-	let compareIds = $state<string[]>([]);
-	const compareDisabled = $derived(compareIds.length >= MAX_COMPARE);
-
-	function toggleCompare(id: string): void {
-		const idx = compareIds.indexOf(id);
-		if (idx >= 0) {
-			compareIds = compareIds.filter((cid) => cid !== id);
-		} else if (compareIds.length < MAX_COMPARE) {
-			compareIds = [...compareIds, id];
-		}
-	}
-
-	function clearCompare(): void {
-		compareIds = [];
-	}
-
-	function navigateToCompare(): void {
-		const ids = compareIds.join(',');
-		window.location.href = `/comparer?ids=${encodeURIComponent(ids)}`;
-	}
-
-	const totalPages = $derived.by(() => {
-		if (!data) {
-			return 1;
-		}
-		return Math.max(1, Math.ceil(data.total / data.limit));
-	});
-
-	const canGoPrev = $derived(currentPage > 1);
-	const canGoNext = $derived(currentPage < totalPages);
-	const activeFilterCount = $derived(
-		(selectedOrg ? 1 : 0) + (selectedFormat ? 1 : 0) + selectedTags.length
-	);
-
-	// Badges d'état reflétant l'état réel de l'interface
-	const readyState = $derived(errorMessage ? 'danger' : isLoading ? 'warning' : 'success');
-	const readyLabel = $derived(errorMessage ? 'Erreur' : isLoading ? 'Recherche en cours…' : 'Prêt');
-	const sortLabel = $derived(sortLabels[sort] ?? 'Tri');
-	const pageLabel = $derived(`Page ${currentPage}/${totalPages}`);
-
-	const organizations = $derived.by(() => data?.facets?.organizations ?? []);
-	const formats = $derived.by(() => data?.facets?.formats ?? []);
-	const tags = $derived.by(() => data?.facets?.tags ?? []);
-
-	const useMockApi = env.PUBLIC_USE_MOCK_API === '1';
-	const apiBase = useMockApi ? '' : (env.PUBLIC_API_BASE_URL || '');
-	const searchContext = $derived.by(() => normalizeSearchContext(buildSearchStateParams().toString()));
-	const resultsKey = $derived(
-		`${query}|${sort}|${selectedOrg}|${selectedFormat}|${selectedTags.join(',')}|${currentPage}`
-	);
-
-	function dedupe(values: string[]): string[] {
-		const output: string[] = [];
-		for (const value of values) {
-			if (!output.includes(value)) {
-				output.push(value);
-			}
-		}
-		return output;
-	}
-
-	function parseSelectedTags(params: URLSearchParams): string[] {
-		const csvTags = (params.get('tags') ?? '')
-			.split(',')
-			.map((tag) => tag.trim())
-			.filter((tag) => tag.length > 0);
-
-		if (csvTags.length > 0) {
-			return dedupe(csvTags);
-		}
-
-		const legacyTags = params
-			.getAll('tag')
-			.map((tag) => tag.trim())
-			.filter((tag) => tag.length > 0);
-
-		if (legacyTags.length > 0) {
-			return dedupe(legacyTags);
-		}
-
-		const singleLegacyTag = (params.get('tag') ?? '').trim();
-		return singleLegacyTag.length > 0 ? [singleLegacyTag] : [];
-	}
-
-	function safeTrim(value: string): string {
-		return value.trim();
-	}
-
-	function buildSearchStateParams(): URLSearchParams {
-		const params = new URLSearchParams();
-		const textQuery = safeTrim(query);
-
-		if (textQuery.length > 0) {
-			params.set('q', textQuery);
-		}
-		if (sort !== 'modified_desc') {
-			params.set('sort', sort);
-		}
-		if (currentPage > 1) {
-			params.set('page', String(currentPage));
-		}
-		if (selectedOrg) {
-			params.set('org', selectedOrg);
-		}
-		if (selectedFormat) {
-			params.set('fmt', selectedFormat);
-		}
-		if (selectedTags.length === 1) {
-			params.set('tag', selectedTags[0]);
-		}
-		if (selectedTags.length > 1) {
-			params.set('tags', selectedTags.join(','));
-		}
-
-		return params;
-	}
-
-	function syncUrlState(): void {
-		const params = buildSearchStateParams();
-
-		const queryString = params.toString();
-		const nextUrl = queryString.length > 0 ? `${window.location.pathname}?${queryString}` : window.location.pathname;
-		replaceState(nextUrl, {});
-	}
-
-	function hydrateStateFromUrl(): void {
-		const params = new URLSearchParams(window.location.search);
-		const urlSort = params.get('sort');
-		const urlPage = params.get('page');
-
-		query = params.get('q') ?? '';
-		selectedOrg = params.get('org') ?? '';
-		selectedFormat = params.get('fmt') ?? '';
-		selectedTags = parseSelectedTags(params);
-
-		if (urlSort && urlSort in sortLabels) {
-			sort = urlSort as SortValue;
-		}
-
-		if (urlPage) {
-			const parsed = Number.parseInt(urlPage, 10);
-			if (Number.isFinite(parsed) && parsed > 0) {
-				currentPage = parsed;
-			}
-		}
-	}
-
-	function buildSearchUrl(): string {
-		const params = new URLSearchParams({
-			offset: String((currentPage - 1) * PAGE_SIZE),
-			limit: String(PAGE_SIZE),
-			sort
-		});
-		const textQuery = safeTrim(query);
-		if (textQuery.length > 0) {
-			params.set('q', textQuery);
-		}
-		if (selectedOrg) {
-			params.set('org', selectedOrg);
-		}
-		if (selectedFormat) {
-			params.set('fmt', selectedFormat);
-		}
-		for (const tag of selectedTags) {
-			params.append('tag', tag);
-		}
-		if (selectedTags.length > 1) {
-			params.set('tags', selectedTags.join(','));
-		}
-		return `${apiBase}/api/v1/search?${params.toString()}`;
-	}
-
-	async function runSearch({ focusResults = false }: { focusResults?: boolean } = {}): Promise<void> {
-		isLoading = true;
-		errorMessage = '';
-		try {
-			const response = await fetch(buildSearchUrl());
-			if (!response.ok) {
-				throw new Error(`Erreur API ${response.status}`);
-			}
-			data = (await response.json()) as SearchResponse;
-		} catch (error) {
-			errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-			data = null;
-		} finally {
-			syncUrlState();
-			isLoading = false;
-			if (focusResults && resultHeading) {
-				requestAnimationFrame(() => resultHeading?.focus());
-			}
-		}
-	}
-
-	async function submitSearch(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		currentPage = 1;
-		await runSearch({ focusResults: true });
-	}
-
-	async function handleQueryChange(newQuery: string): Promise<void> {
-		query = newQuery;
-		currentPage = 1;
-		await runSearch({ focusResults: true });
-	}
-
-	async function changeSort(event: Event): Promise<void> {
-		sort = (event.currentTarget as HTMLSelectElement).value as SortValue;
-		currentPage = 1;
-		await runSearch();
-	}
-
-	async function changeFacet(value: string | string[], facet: 'org' | 'fmt' | 'tag'): Promise<void> {
-		if (facet === 'org') {
-			selectedOrg = value as string;
-		}
-		if (facet === 'fmt') {
-			selectedFormat = value as string;
-		}
-		if (facet === 'tag') {
-			selectedTags = Array.isArray(value) ? value : value ? [value] : [];
-		}
-		currentPage = 1;
-		await runSearch();
-	}
-
-	async function clearAllFilters(): Promise<void> {
-		selectedOrg = '';
-		selectedFormat = '';
-		selectedTags = [];
-		currentPage = 1;
-		await runSearch();
-	}
-
-	async function goToPage(page: number): Promise<void> {
-		if (page < 1 || page > totalPages) {
-			return;
-		}
-		currentPage = page;
-		await runSearch({ focusResults: true });
-	}
-
 	onMount(async () => {
-		hydrateStateFromUrl();
-		await runSearch();
+		await search.init(resultHeading);
 	});
 </script>
 
@@ -296,39 +20,35 @@
 <PageLayout>
 	<Card title="Recherche datasets">
 		<div class="badges" aria-label="Etats de l'interface" role="status" aria-live="polite">
-			<StateBadge label={readyLabel} variant={readyState} />
-			<StateBadge label={sortLabel} variant="info" />
-			<StateBadge label={pageLabel} variant="warning" />
-			{#if errorMessage}
-				<StateBadge label={errorMessage} variant="danger" />
+			<StateBadge label={search.readyLabel} variant={search.readyState} />
+			<StateBadge label={search.sortLabel} variant="info" />
+			<StateBadge label={search.pageLabel} variant="warning" />
+			{#if search.errorMessage}
+				<StateBadge label={search.errorMessage} variant="danger" />
 			{/if}
 		</div>
 
 		<FiltersPanel
-				bind:query
-				bind:sort
-				bind:selectedOrg
-				bind:selectedFormat
-				bind:selectedTags
-				{activeFilterCount}
-				{organizations}
-				{formats}
-				{tags}
+				bind:query={search.query}
+				bind:sort={search.sort}
+				bind:selectedOrg={search.selectedOrg}
+				bind:selectedFormat={search.selectedFormat}
+				bind:selectedTags={search.selectedTags}
+				activeFilterCount={search.activeFilterCount}
+				organizations={search.organizations}
+				formats={search.formats}
+				tags={search.tags}
 				{sortOptions}
-				onSubmit={submitSearch}
-				onSortChange={changeSort}
-				onFacetChange={changeFacet}
-				onQueryChange={handleQueryChange}
-				onClearQuery={async () => {
-					query = '';
-					currentPage = 1;
-					await runSearch({ focusResults: true });
-				}}
-				onClearFilters={clearAllFilters}
+				onSubmit={(e) => search.submitSearch(e, resultHeading)}
+				onSortChange={search.changeSort}
+				onFacetChange={search.changeFacet}
+				onQueryChange={(q) => search.handleQueryChange(q, resultHeading)}
+				onClearQuery={() => search.handleQueryChange('', resultHeading)}
+				onClearFilters={search.clearAllFilters}
 			/>
 	</Card>
 
-	{#if isLoading}
+	{#if search.isLoading}
 		<div role="status" aria-live="polite" aria-label="Chargement des résultats">
 			<ul class="results">
 				{#each Array(3) as _, idx (`skeleton-${idx}`)}
@@ -336,27 +56,27 @@
 				{/each}
 			</ul>
 		</div>
-	{:else if errorMessage}
+	{:else if search.errorMessage}
 		<EmptyState
 			variant="error"
 			title="Impossible de lancer la recherche"
-			description="Verifiez votre connexion et reessayez. {errorMessage}"
+			description="Verifiez votre connexion et reessayez. {search.errorMessage}"
 		/>
-	{:else if data && data.datasets.length > 0}
-		{#key resultsKey}
+	{:else if search.data && search.data.datasets.length > 0}
+		{#key search.resultsKey}
 			<div class="results-wrapper" in:fade={{ duration: 300 }} out:fade={{ duration: 150 }}>
 				<p class="results-summary" tabindex="-1" bind:this={resultHeading}>
-					{data.total} résultats trouvés.
+					{search.data.total} résultats trouvés.
 				</p>
 				<ul class="results" aria-label="Résultats de recherche">
-					{#each data.datasets as dataset (dataset.id)}
+					{#each search.data.datasets as dataset (dataset.id)}
 						<li>
 							<CardDataset
 								{dataset}
-								{searchContext}
-								isCompared={compareIds.includes(dataset.id)}
-								compareDisabled={compareDisabled}
-								onToggleCompare={toggleCompare}
+								searchContext={search.searchContext}
+								isCompared={search.compareIds.includes(dataset.id)}
+								compareDisabled={search.compareDisabled}
+								onToggleCompare={search.toggleCompare}
 							/>
 						</li>
 					{/each}
@@ -368,18 +88,18 @@
 			<Button
 				label="Précédent"
 				variant="ghost"
-				disabled={!canGoPrev}
+				disabled={!search.canGoPrev}
 				onclick={async () => {
-					await goToPage(currentPage - 1);
+					await search.goToPage(search.currentPage - 1, resultHeading);
 				}}
 			/>
-			<p>Page {currentPage} / {totalPages}</p>
+			<p>Page {search.currentPage} / {search.totalPages}</p>
 			<Button
 				label="Suivant"
 				variant="ghost"
-				disabled={!canGoNext}
+				disabled={!search.canGoNext}
 				onclick={async () => {
-					await goToPage(currentPage + 1);
+					await search.goToPage(search.currentPage + 1, resultHeading);
 				}}
 			/>
 		</nav>
@@ -391,18 +111,18 @@
 	{/if}
 
 	<CompareBar
-		{compareIds}
-		onClear={clearCompare}
-		onCompare={navigateToCompare}
+		compareIds={search.compareIds}
+		onClear={search.clearCompare}
+		onCompare={search.navigateToCompare}
 	/>
 
-	{#if data?.facets}
+	{#if search.data?.facets}
 		<Card title="Facettes" subtitle="Aide à la navigation des résultats">
 			<div class="facets-grid">
 				<section>
 					<h3>Organisations</h3>
 					<ul>
-						{#each data.facets.organizations.slice(0, 5) as facet, idx (`${facet.name}-${idx}`)}
+						{#each search.data.facets.organizations.slice(0, 5) as facet, idx (`${facet.name}-${idx}`)}
 							<li>{facet.display_name ?? facet.name} ({facet.count})</li>
 						{/each}
 					</ul>
@@ -410,7 +130,7 @@
 				<section>
 					<h3>Formats</h3>
 					<ul>
-						{#each data.facets.formats.slice(0, 5) as facet, idx (`${facet.name}-${idx}`)}
+						{#each search.data.facets.formats.slice(0, 5) as facet, idx (`${facet.name}-${idx}`)}
 							<li>{facet.name} ({facet.count})</li>
 						{/each}
 					</ul>

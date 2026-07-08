@@ -21,7 +21,6 @@ export const load: PageLoad<DatasetPageData> = async ({ fetch, params, url }) =>
 	const contextData = searchContext ? { searchContext } : {};
 	const polarProductId = env.PUBLIC_POLAR_PRODUCT_ID || undefined;
 	const polarCheckoutUrl = env.PUBLIC_POLAR_CHECKOUT_URL || undefined;
-	console.log('[PDS-121 DEBUG] PUBLIC_POLAR_PRODUCT_ID:', polarProductId, 'PUBLIC_POLAR_CHECKOUT_URL:', polarCheckoutUrl);
 	const response = await fetch(`/api/v1/dataset/${encodeURIComponent(datasetId)}`);
 
 	if (response.status === 404) {

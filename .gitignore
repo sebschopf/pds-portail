@@ -47,3 +47,6 @@ pds_portail_backend.egg-info/
 .github/instructions/
 copilot-instructions.md
 .vscode/
+
+# Fichiers internes (non commités)
+.cline/

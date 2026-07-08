@@ -37,3 +37,7 @@ export { default as ExternalLinkIcon } from './assets/icons/ExternalLinkIcon.sve
 
 // Assets SVG (PDS-62)
 export { default as SwissCantonsMap } from './assets/SwissCantonsMap.svelte';
+
+// Runes Svelte 5 (PDS-123)
+export { usePoll } from './runes/poller.svelte.ts';
+export { useAlerts } from './runes/alerts.svelte.ts';

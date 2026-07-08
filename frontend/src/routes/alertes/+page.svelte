@@ -1,92 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Button, PageLayout, Card, EmptyState } from '$lib';
+	import { useAlerts } from '$lib/runes/alerts.svelte';
 	import type { PageData } from './$types';
 	import type { ChangeLog } from '$lib/types/watchers';
 
 	let { data } = $props();
 
-	let isAuthenticated = $derived(data.status === 'success');
-	let watcherStatus = $derived(data.watchers?.status ?? null);
-	let unsubscribeError = $state<string | null>(null);
-	let magicLinkEmail = $state('');
-	let magicLinkLoading = $state(false);
-	let magicLinkMessage = $state<string | null>(null);
-
-	const pageTitle = $derived(isAuthenticated ? 'Mes alertes - PDS Portail' : 'Alertes datasets - PDS Portail');
-
-	function storeWatcherTokens(token: string, datasetIds: string[]) {
-		localStorage.setItem('pds-watcher-token', token);
-
-		for (const datasetId of datasetIds) {
-			localStorage.setItem(`pds-watcher-${datasetId}`, token);
-		}
-	}
-
-	function findStoredWatcherToken(): string | null {
-		const directToken = localStorage.getItem('pds-watcher-token');
-		if (directToken) {
-			return directToken;
-		}
-
-		for (let index = 0; index < localStorage.length; index += 1) {
-			const key = localStorage.key(index);
-			if (!key || !key.startsWith('pds-watcher-')) {
-				continue;
-			}
-
-			const token = localStorage.getItem(key);
-			if (token) {
-				return token;
-			}
-		}
-
-		return null;
-	}
+	const alerts = useAlerts(() => data);
 
 	onMount(() => {
-		if (data.status === 'success' && data.token && data.watchers?.items) {
-			storeWatcherTokens(
-				data.token,
-				data.watchers.items.map((item) => item.dataset_id)
-			);
-			return;
-		}
-
-		if (data.status !== 'not-authenticated') {
-			return;
-		}
-
-		const storedToken = findStoredWatcherToken();
-		if (storedToken) {
-			window.location.href = `/alertes?token=${encodeURIComponent(storedToken)}`;
-		}
+		alerts.initTokens();
 	});
-
-	async function handleRequestMagicLink(event: Event) {
-		event.preventDefault();
-		magicLinkLoading = true;
-		magicLinkMessage = null;
-		try {
-			const res = await fetch('/api/v1/magic-link', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email: magicLinkEmail })
-			});
-
-			if (res.ok) {
-				magicLinkMessage = `Un lien d'accès a été envoyé à ${magicLinkEmail}. Vérifiez votre boîte email (validité 15 minutes).`;
-				magicLinkEmail = '';
-			} else {
-				magicLinkMessage = 'Une erreur est survenue. Veuillez réessayer.';
-			}
-		} catch (err) {
-			console.error('Magic link request error:', err);
-			magicLinkMessage = 'Erreur de connexion. Veuillez réessayer.';
-		} finally {
-			magicLinkLoading = false;
-		}
-	}
 
 	/**
 	 * Get grouped changes by dataset
@@ -118,31 +43,6 @@
 		return watched?.dataset_title || datasetId;
 	}
 
-	/**
-	 * Handle remove single watched dataset
-	 */
-	async function handleRemoveWatch(watchedDatasetId: string, datasetTitle: string) {
-		if (!confirm(`Êtes-vous sûr d'arrêter la surveillance de "${datasetTitle}" ?`)) {
-			return;
-		}
-
-		try {
-			const res = await fetch(`/api/v1/watchers/${watchedDatasetId}?token=${encodeURIComponent(data.token || '')}`, {
-				method: 'DELETE'
-			});
-
-			if (res.ok) {
-				// Reload page
-				window.location.reload();
-			} else {
-				unsubscribeError = 'Impossible d\'arrêter la surveillance.';
-			}
-		} catch (err) {
-			console.error('Remove watch error:', err);
-			unsubscribeError = 'Erreur de connexion.';
-		}
-	}
-
 	function formatDate(isoDate: string): string {
 		return new Intl.DateTimeFormat('fr-CH', {
 			year: 'numeric',
@@ -166,7 +66,7 @@
 </script>
 
 <svelte:head>
-	<title>{pageTitle}</title>
+	<title>{alerts.pageTitle}</title>
 </svelte:head>
 
 <PageLayout>
@@ -185,7 +85,7 @@
 					{/snippet}
 				</EmptyState>
 			</Card>
-		{:else if data.status === 'not-authenticated' || !isAuthenticated}
+		{:else if data.status === 'not-authenticated' || !alerts.isAuthenticated}
 			<Card title="Accéder à vos alertes">
 				<div class="auth-form">
 					<div class="auth-recap" role="note">
@@ -212,22 +112,22 @@
 						</p>
 					</div>
 
-					<form onsubmit={handleRequestMagicLink} class="magic-link-form magic-link-form--centered">
+					<form onsubmit={alerts.handleRequestMagicLink} class="magic-link-form magic-link-form--centered">
 						<input
 							type="email"
 							placeholder="Votre adresse email"
 							aria-label="Votre adresse email"
-							bind:value={magicLinkEmail}
+							bind:value={alerts.magicLinkEmail}
 							required
-							disabled={magicLinkLoading}
+							disabled={alerts.magicLinkLoading}
 						/>
-						<button type="submit" disabled={magicLinkLoading || !magicLinkEmail}>
-							{magicLinkLoading ? 'Envoi...' : 'Recevoir un lien'}
+						<button type="submit" disabled={alerts.magicLinkLoading || !alerts.magicLinkEmail}>
+							{alerts.magicLinkLoading ? 'Envoi...' : 'Recevoir un lien'}
 						</button>
 					</form>
-					{#if magicLinkMessage}
-						<p class={magicLinkMessage.includes('erreur') ? 'error-message' : 'success-message'}>
-							{magicLinkMessage}
+					{#if alerts.magicLinkMessage}
+						<p class={alerts.magicLinkMessage.includes('erreur') ? 'error-message' : 'success-message'}>
+							{alerts.magicLinkMessage}
 						</p>
 					{/if}
 
@@ -264,16 +164,18 @@
 				{:else}
 					<div class="datasets-list">
 						{#each data.watchers.items as watched (watched.id)}
+							{@const dsTitle = getDatasetTitle(watched.dataset_id)}
+							{@const datasetChanges = (getChangesByDataset()[watched.dataset_id] || [])}
 							<article class="dataset-card">
 								<div class="card-header">
 									<div class="card-title-section">
-										<h3 class="dataset-title">{getDatasetTitle(watched.dataset_id)}</h3>
+										<h3 class="dataset-title">{dsTitle}</h3>
 										<p class="dataset-id">ID: {watched.dataset_id}</p>
 									</div>
 									<button
 										class="remove-btn"
-										onclick={() => handleRemoveWatch(watched.id, getDatasetTitle(watched.dataset_id))}
-										aria-label="Arrêter la surveillance de {getDatasetTitle(watched.dataset_id)}"
+										onclick={() => alerts.handleRemoveWatch(watched.id, dsTitle)}
+										aria-label="Arrêter la surveillance de {dsTitle}"
 									>
 										Arrêter la surveillance
 									</button>
@@ -287,11 +189,11 @@
 								</div>
 
 								<!-- Changes history for this dataset -->
-								{#if (getChangesByDataset()[watched.dataset_id] || []).length > 0}
+								{#if datasetChanges.length > 0}
 									<div class="changes-section">
 										<h4>Historique des changements</h4>
 										<ul class="changes-list">
-											{#each (getChangesByDataset()[watched.dataset_id] || []) as change (change.id)}
+											{#each datasetChanges as change (change.id)}
 												<li class="change-item">
 													<div class="change-header">
 														<strong>{getChangeTypeLabel(change.change_type)}</strong>
@@ -327,7 +229,7 @@
 			<Card title="Paramètres d'abonnement">
 				<div class="settings-section">
 					<p class="settings-text">Vous êtes inscrit avec l'adresse <strong>{data.watchers?.email}</strong>.</p>
-					{#if watcherStatus === 'suspended'}
+					{#if alerts.watcherStatus === 'suspended'}
 						<p class="warning-message" role="status">
 							Votre abonnement est actuellement suspendu. Les alertes restent en pause tant que Polar n'a pas réactivé le watcher.
 						</p>
@@ -335,8 +237,8 @@
 					<p class="settings-text">
 						Le token d'accès actuel permet de consulter vos alertes et de gérer vos surveillances existantes.
 					</p>
-					{#if unsubscribeError}
-						<p class="error-message" role="alert">{unsubscribeError}</p>
+					{#if alerts.unsubscribeError}
+						<p class="error-message" role="alert">{alerts.unsubscribeError}</p>
 					{/if}
 				</div>
 			</Card>

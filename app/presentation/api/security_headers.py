@@ -84,7 +84,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Uniquement les features reconnues par defaut (pas de flag experimental)
         if self._enable_permissions_policy:
             headers_to_set["Permissions-Policy"] = (
-                "accelerometer=(), autoplay=(), browsing-topics=(), "
+                "accelerometer=(), autoplay=(), "
                 "camera=(), cross-origin-isolated=(), "
                 "display-capture=(), encrypted-media=(), "
                 "fullscreen=(), geolocation=(), gyroscope=(), "

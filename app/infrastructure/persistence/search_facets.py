@@ -40,14 +40,16 @@ def aggregate_facets(
             .order_by(FacetsCacheModel.count.desc())
             .all()
         )
-        cached_orgs = [
-            FacetItem(
-                name=str(row.name),
-                display_name=str(row.display_name) if row.display_name is not None else None,
-                count=int(row.count),
-            )
-            for row in cached_org_rows
-        ]
+        cached_orgs = _deduplicate_facets_by_name(
+            [
+                FacetItem(
+                    name=str(row.name),
+                    display_name=str(row.display_name) if row.display_name is not None else None,
+                    count=int(row.count),
+                )
+                for row in cached_org_rows
+            ]
+        )
 
         cached_fmt_rows = (
             session.query(FacetsCacheModel)
@@ -55,9 +57,9 @@ def aggregate_facets(
             .order_by(FacetsCacheModel.count.desc())
             .all()
         )
-        cached_formats = [
-            FacetItem(name=str(row.name), count=int(row.count)) for row in cached_fmt_rows
-        ]
+        cached_formats = _deduplicate_facets_by_name(
+            [FacetItem(name=str(row.name), count=int(row.count)) for row in cached_fmt_rows]
+        )
 
         cached_tags = _aggregate_tags(session, base_filters, fts_where_clause)
         return SearchFacets(organizations=cached_orgs, formats=cached_formats, tags=cached_tags)
@@ -85,15 +87,16 @@ def aggregate_facets(
         org_query = org_query.where(and_(*base_filters))
 
     org_rows = cast(list[tuple[str, str, int]], session.execute(org_query).all())
-    orgs: list[FacetItem] = []
+    orgs_raw: list[FacetItem] = []
     for org_id, org_name, count in org_rows:
-        orgs.append(
+        orgs_raw.append(
             FacetItem(
                 name=org_id,
                 display_name=org_name,
                 count=count,
             )
         )
+    orgs = _deduplicate_facets_by_name(orgs_raw)
 
     format_query = (
         select(
@@ -112,10 +115,11 @@ def aggregate_facets(
         format_query = format_query.where(and_(*base_filters))
 
     format_rows = cast(list[tuple[str | None, int]], session.execute(format_query).all())
-    formats: list[FacetItem] = []
+    formats_raw: list[FacetItem] = []
     for format_name, count in format_rows:
         if format_name:
-            formats.append(FacetItem(name=format_name, count=count))
+            formats_raw.append(FacetItem(name=format_name, count=count))
+    formats = _deduplicate_facets_by_name(formats_raw)
 
     tags = _aggregate_tags_with_format(session, base_filters, format_filter, fts_where_clause)
 
@@ -160,4 +164,18 @@ def _aggregate_tags_with_format(
         for tag in parse_tags(tags_str):
             if tag:
                 tag_counter[tag] += 1
-    return [FacetItem(name=name, count=count) for name, count in tag_counter.most_common()]
+    return _deduplicate_facets_by_name(
+        [FacetItem(name=name, count=count) for name, count in tag_counter.most_common()]
+    )
+
+
+def _deduplicate_facets_by_name(facets: list[FacetItem]) -> list[FacetItem]:
+    """Dédoublonne les facettes par nom (première occurrence gagnante)."""
+    seen: set[str] = set()
+    deduped: list[FacetItem] = []
+    for facet in facets:
+        if facet.name in seen:
+            continue
+        seen.add(facet.name)
+        deduped.append(facet)
+    return deduped

@@ -1,8 +1,8 @@
 import logging
 import threading
 import traceback
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -102,7 +102,7 @@ def _stop_sync_worker(app: FastAPI) -> None:
         worker_thread.join(timeout=2)
 
 
-def _build_lifespan(settings: Settings):
+def _build_lifespan(settings: Settings) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
     @asynccontextmanager
     async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         if settings.enable_ckan_sync:

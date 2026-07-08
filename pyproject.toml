@@ -48,7 +48,7 @@ warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 check_untyped_defs = true
-disallow_untyped_defs = false
+disallow_untyped_defs = true
 plugins = ["sqlalchemy.ext.mypy.plugin"]
 exclude = [
     # PDS-45/PDS-00 : les fixtures partagees et fakes dans tests/ declenchent

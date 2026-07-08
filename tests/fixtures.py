@@ -11,6 +11,7 @@ et d'intégration. Elles sont organisées par responsabilité:
 from collections.abc import Generator
 from pathlib import Path
 
+import httpx
 import pytest
 from sqlalchemy.orm import Session
 
@@ -89,7 +90,7 @@ def temp_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[
 
 
 @pytest.fixture(scope="function")
-def mock_http_client():
+def mock_http_client() -> type[httpx.MockTransport]:
     """Return httpx.MockTransport class for HTTP mocking.
 
     Usage:
@@ -110,6 +111,4 @@ def mock_http_client():
     Note: For complex HTTP mocking, prefer `pytest-httpx` plugin with `httpx_mock` fixture.
     This is a simple reference to the transport class.
     """
-    import httpx
-
     return httpx.MockTransport

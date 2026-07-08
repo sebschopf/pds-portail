@@ -149,6 +149,7 @@
 				<h3 class="modal-title">Surveillance de dataset</h3>
 				<p class="modal-description">
 					Recevez une alerte par email à chaque changement détecté sur <strong>{dataset_title}</strong>.
+					Vous pouvez surveiller jusqu'à 10 datasets.
 				</p>
 				<p class="modal-price">5 CHF/mois</p>
 

@@ -191,7 +191,8 @@
 					<div class="auth-recap" role="note">
 						<h3>Rappel du fonctionnement</h3>
 						<p>
-							Le service de surveillance de datasets est <strong>payant</strong> (5 CHF/mois).
+							Le service de surveillance de datasets est <strong>payant</strong>
+							(5 CHF/mois, jusqu'à 10 datasets).
 							Après votre paiement sur Polar, vous avez reçu un email de bienvenue contenant
 							un lien vers votre tableau de bord. Cliquez sur ce lien pour voir vos datasets
 							surveillés et l'historique des changements.

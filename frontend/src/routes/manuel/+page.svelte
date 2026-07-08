@@ -59,9 +59,9 @@
 			Service payant&nbsp;: Surveiller des datasets
 		</h3>
 		<p>
-			Vous pouvez <strong>surveiller plusieurs datasets</strong> et recevoir une alerte par email
+			Vous pouvez <strong>surveiller jusqu'à 10 datasets</strong> et recevoir une alerte par email
 			à chaque modification détectée. Ce service coûte <strong>5 CHF par mois</strong> (abonnement
-			unique, quel que soit le nombre de datasets surveillés).
+			unique, quel que soit le nombre de datasets surveillés, dans la limite de 10).
 		</p>
 
 		<h4>Ce que vous obtenez</h4>

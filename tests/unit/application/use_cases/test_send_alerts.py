@@ -53,8 +53,9 @@ class _FakeWatcherRepository:
         token: str,
         plan: str = "monthly",
         polar_subscription_id: str | None = None,
+        polar_customer_id: str | None = None,
     ) -> Watcher:
-        _ = (email, token, plan, polar_subscription_id)
+        _ = (email, token, plan, polar_subscription_id, polar_customer_id)
         raise NotImplementedError
 
     def find_by_email(self, email: str) -> Watcher | None:

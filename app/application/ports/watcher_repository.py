@@ -41,6 +41,7 @@ class WatcherRepositoryPort(Protocol):
         token: str,
         plan: str = "monthly",
         polar_subscription_id: str | None = None,
+        polar_customer_id: str | None = None,
     ) -> Watcher:
         """Crée un nouveau watcher actif.
 

@@ -153,13 +153,11 @@ class SqlAlchemySearchAdapter:
         if fts_where_clause is not None:
             dataset_query = dataset_query.where(fts_where_clause)
 
-        # Filtre format
+        # Filtre format par sous-requête EXISTS pour éviter les doublons
+        # quand un dataset a plusieurs ressources du même format (ex: API).
         if fmt_filter is not None:
-            dataset_query = dataset_query.join(
-                ResourceModel, ResourceModel.dataset_id == DatasetModel.id
-            )
             dataset_query = dataset_query.where(
-                func.upper(ResourceModel.format) == fmt_filter.upper()
+                DatasetModel.resources.any(func.upper(ResourceModel.format) == fmt_filter.upper())
             )
 
         # Filtres non-FTS

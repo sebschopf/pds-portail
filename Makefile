@@ -33,6 +33,8 @@ install-hooks:
 	@echo "✅ Hook installé — make quality s'exécutera automatiquement avant chaque commit."
 
 quality-frontend:
+	@echo "=== Frontend: Génération types API (OpenAPI -> TypeScript) ==="
+	cd frontend && npm run generate:api-types
 	@echo "=== Frontend: Svelte check ==="
 	cd frontend && npm run check
 	@echo "=== Frontend: Tests (vitest) ==="

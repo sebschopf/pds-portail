@@ -41,6 +41,7 @@ from app.infrastructure.persistence.search_tag_filter import (
     build_exact_tag_filter as _build_exact_tag_filter,
 )
 from app.presentation.api.v1.schemas import (
+    RankingSignals,
     SearchDatasetItem,
     SearchResponse,
 )
@@ -201,7 +202,15 @@ class SqlAlchemySearchAdapter:
                     title=ds.title,
                     description=ds.description,
                 )
-                ranking_signals = signals.to_dict()
+                ranking_signals = RankingSignals(
+                    hybrid_score=round(signals.hybrid_score, 4),
+                    text_score=round(signals.text_score, 4),
+                    quality_normalized=round(signals.quality_normalized, 4),
+                    freshness_component=round(signals.freshness_component, 4),
+                    weight_text=signals.weight_text,
+                    weight_quality=signals.weight_quality,
+                    weight_freshness=signals.weight_freshness,
+                )
 
             search_items.append(
                 SearchDatasetItem(

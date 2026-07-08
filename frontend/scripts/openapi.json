@@ -1,0 +1,3561 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PDS-Portail Backend",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/internal/support/watchers/by-email": {
+      "get": {
+        "summary": "Internal Support Get Watcher By Email",
+        "operationId": "internal_support_get_watcher_by_email_api_v1_internal_support_watchers_by_email_get",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Adresse email de l'abonne",
+              "title": "Email"
+            },
+            "description": "Adresse email de l'abonne"
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Operator-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalSupportWatcherLookupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/support/watchers/{watcher_id}/subscription": {
+      "get": {
+        "summary": "Internal Support Get Subscription",
+        "operationId": "internal_support_get_subscription_api_v1_internal_support_watchers__watcher_id__subscription_get",
+        "parameters": [
+          {
+            "name": "watcher_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Watcher Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Operator-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalSupportSubscriptionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/support/watchers/{watcher_id}/webhooks/latest": {
+      "get": {
+        "summary": "Internal Support Get Latest Webhooks",
+        "operationId": "internal_support_get_latest_webhooks_api_v1_internal_support_watchers__watcher_id__webhooks_latest_get",
+        "parameters": [
+          {
+            "name": "watcher_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Watcher Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Operator-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalSupportWebhookEventsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/support/watchers/{watcher_id}/magic-links/state": {
+      "get": {
+        "summary": "Internal Support Get Magic Link State",
+        "operationId": "internal_support_get_magic_link_state_api_v1_internal_support_watchers__watcher_id__magic_links_state_get",
+        "parameters": [
+          {
+            "name": "watcher_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Watcher Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Operator-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalSupportMagicLinkStateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/support/watchers/{watcher_id}/email-deliverability": {
+      "get": {
+        "summary": "Internal Support Get Email Deliverability",
+        "operationId": "internal_support_get_email_deliverability_api_v1_internal_support_watchers__watcher_id__email_deliverability_get",
+        "parameters": [
+          {
+            "name": "watcher_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Watcher Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Operator-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalSupportEmailDeliverabilityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/support/watchers/{watcher_id}/magic-link/resend": {
+      "post": {
+        "summary": "Internal Support Resend Magic Link",
+        "operationId": "internal_support_resend_magic_link_api_v1_internal_support_watchers__watcher_id__magic_link_resend_post",
+        "parameters": [
+          {
+            "name": "watcher_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Watcher Id"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "name": "X-Operator-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Operator-Id"
+            }
+          },
+          {
+            "name": "X-Request-Id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Request-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InternalSupportMagicLinkResendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalSupportMagicLinkResendResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contact": {
+      "post": {
+        "summary": "Submit Contact",
+        "description": "Reçoit un message du formulaire de contact et l'envoie par email.\n\nAnti-spam : rate-limit par IP (3 req/min), toujours 200 pour éviter l'énumération.",
+        "operationId": "submit_contact_api_v1_contact_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Submit Contact Api V1 Contact Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/polar": {
+      "post": {
+        "summary": "Webhook Polar",
+        "description": "Endpoint public Polar : vérifie signature puis traite l'événement métier.",
+        "operationId": "webhook_polar_api_v1_webhooks_polar_post",
+        "parameters": [
+          {
+            "name": "X-Polar-Signature",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Polar-Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Webhook Polar Api V1 Webhooks Polar Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/watchers": {
+      "post": {
+        "summary": "Create Watcher Watch",
+        "description": "Crée un watcher (ou le réutilise) puis ajoute un dataset surveillé.",
+        "operationId": "create_watcher_watch_api_v1_watchers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatcherCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatcherCreateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Watchers",
+        "description": "Retourne les datasets surveillés d'un watcher identifié par token.",
+        "operationId": "get_watchers_api_v1_watchers_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Token UUID du watcher",
+              "title": "Token"
+            },
+            "description": "Token UUID du watcher"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchersListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/watchers/{watched_dataset_id}": {
+      "delete": {
+        "summary": "Delete Watcher Watch",
+        "description": "Supprime une surveillance dataset à partir de son identifiant.",
+        "operationId": "delete_watcher_watch_api_v1_watchers__watched_dataset_id__delete",
+        "parameters": [
+          {
+            "name": "watched_dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Watched Dataset Id"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Token UUID du watcher",
+              "title": "Token"
+            },
+            "description": "Token UUID du watcher"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/alerts": {
+      "get": {
+        "summary": "Get Alerts",
+        "description": "Retourne l'historique des changements des datasets surveillés par le watcher.",
+        "operationId": "get_alerts_api_v1_alerts_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Token UUID du watcher",
+              "title": "Token"
+            },
+            "description": "Token UUID du watcher"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/magic-link/consume": {
+      "get": {
+        "summary": "Consume Magic Link",
+        "description": "Consomme un magic link temporaire et retourne le token watcher permanent (ADR-030).",
+        "operationId": "consume_magic_link_api_v1_magic_link_consume_get",
+        "parameters": [
+          {
+            "name": "magic",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Token magic link brut issu du lien email",
+              "title": "Magic"
+            },
+            "description": "Token magic link brut issu du lien email"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MagicLinkConsumeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/magic-link": {
+      "post": {
+        "summary": "Request Magic Link",
+        "description": "Génère et envoie un magic link par email à un watcher actif (ADR-030).",
+        "operationId": "request_magic_link_api_v1_magic_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MagicLinkRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Request Magic Link Api V1 Magic Link Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Expose l'etat du service et le dernier horodatage de synchronisation.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/cache": {
+      "get": {
+        "summary": "Internal Cache Status",
+        "description": "Lecture interne minimale pour verifier que le cache est consultable.",
+        "operationId": "internal_cache_status_api_v1_internal_cache_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalCacheResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "summary": "Search",
+        "description": "Recherche les datasets avec pagination et filtres.\n\nSupporte la recherche full-text sur titre/description ainsi que\nle filtrage par organisation, format de ressource, et tag. Inclut les facettes\npour construire une interface de recherche facettee.\n\nQuery params:\n    q: Texte libre (optionnel)\n    offset: Premiere position (defaut 0)\n    limit: Resultats par page (1-100, defaut 20)\n    org: Filtrer par ID organisation (optionnel)\n    fmt: Filtrer par format (CSV, JSON, etc) (optionnel)\n    tag: Filtrer par tag specifique (optionnel)\n    sort: Strategie de tri explicite\n\nReturns:\n    SearchResponse avec datasets pagines et facettes d'agregation",
+        "operationId": "search_api_v1_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Texte libre: titre, description",
+              "title": "Q"
+            },
+            "description": "Texte libre: titre, description"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Position de pagination",
+              "default": 0,
+              "title": "Offset"
+            },
+            "description": "Position de pagination"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Resultats par page",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Resultats par page"
+          },
+          {
+            "name": "org",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrer par ID organisation",
+              "title": "Org"
+            },
+            "description": "Filtrer par ID organisation"
+          },
+          {
+            "name": "fmt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrer par format ressource",
+              "title": "Fmt"
+            },
+            "description": "Filtrer par format ressource"
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrer par tag (exact match)",
+              "title": "Tag"
+            },
+            "description": "Filtrer par tag (exact match)"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "modified_desc",
+                "modified_asc",
+                "quality_desc",
+                "quality_asc",
+                "hybrid",
+                "title_asc",
+                "title_desc"
+              ],
+              "type": "string",
+              "description": "Strategie de tri explicite",
+              "default": "modified_desc",
+              "title": "Sort"
+            },
+            "description": "Strategie de tri explicite"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dataset/{dataset_id}": {
+      "get": {
+        "summary": "Get Dataset",
+        "description": "Retourne le detail complet d'un dataset avec ses ressources.\n\nInclut les indicateurs de qualite (quality_score, completeness, freshness_days),\nla structure du dataset et les modes d'acces disponibles.\n\nPath params:\n    dataset_id: UUID du dataset CKAN\n\nReturns:\n    DatasetDetailResponse avec detail complet ou 404 si non trouve",
+        "operationId": "get_dataset_api_v1_dataset__dataset_id__get",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resource/{resource_id}": {
+      "get": {
+        "summary": "Get Resource",
+        "description": "Retourne le detail d'une ressource avec reference au dataset.\n\nPath params:\n    resource_id: UUID de la ressource CKAN\n\nReturns:\n    ResourceDetailResponse ou 404 si non trouve",
+        "operationId": "get_resource_api_v1_resource__resource_id__get",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compare": {
+      "post": {
+        "summary": "Compare Datasets",
+        "description": "Compare 2 a 4 datasets sur des criteres homogenes (PDS-43).\n\nCharge les datasets en une seule requete batch et retourne les champs\ncomparables : qualite, fraicheur, formats, ressources, tags, etc.\n\nBody:\n    ids: Liste de 2 a 4 IDs de datasets\n\nReturns:\n    CompareResponse avec les items trouves (ordre preserve)\n\nRaises:\n    400: Moins de 2 IDs fournis ou IDs invalides",
+        "operationId": "compare_datasets_api_v1_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompareResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/sync/status": {
+      "get": {
+        "summary": "Internal Sync Status",
+        "description": "Retourne l'offset courant de la synchronisation CKAN incrementale.\n\nPermet de superviser la progression du chargement du catalogue\nopendata.swiss (~10 000+ datasets) sans acceder a la base de donnees.",
+        "operationId": "internal_sync_status_api_v1_internal_sync_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/sync/metrics": {
+      "get": {
+        "summary": "Internal Sync Metrics",
+        "description": "Retourne l'historique des metriques d'ingestion CKAN (PDS-45).\n\nPermet le pilotage du volume, de la duree et des erreurs d'ingestion.\nLes cycles les plus recents apparaissent en premier.\n\nQuery params:\n    limit: Nombre de cycles a retourner (1-100, defaut 20)",
+        "operationId": "internal_sync_metrics_api_v1_internal_sync_metrics_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Nombre de cycles recents",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Nombre de cycles recents"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncMetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/sync": {
+      "post": {
+        "summary": "Internal Sync Trigger",
+        "description": "Declenche un cycle de synchronisation CKAN immediat (PDS-52).\n\nUtilise les memes parametres de lot que le scheduler periodique\n(ckan_sync_max_batches_per_run, ckan_sync_batch_rows, etc.).\nUtile pour forcer un rattrapage sans attendre le prochain cycle horaire.\n\nReturns:\n    Message de confirmation avec le timestamp de declenchement.",
+        "operationId": "internal_sync_trigger_api_v1_internal_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Internal Sync Trigger Api V1 Internal Sync Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/cache/stats": {
+      "get": {
+        "summary": "Internal Cache Stats",
+        "description": "Retourne les statistiques hit/miss du cache applicatif (PDS-46).\n\nPermet de mesurer le hit-ratio et les gains de latence du cache\nmulti-niveaux. Les compteurs sont cumulatifs depuis le dernier\nredemarrage applicatif ou reset explicite.",
+        "operationId": "internal_cache_stats_api_v1_internal_cache_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/cache/reset-stats": {
+      "post": {
+        "summary": "Internal Cache Reset Stats",
+        "description": "Reinitialise les compteurs hit/miss du cache applicatif (PDS-46).\n\nProtege par un token optionnel (INTERNAL_API_TOKEN). Si le token est\nconfigure, il doit etre passe dans le header X-Internal-Token.\nSans token configure, l'endpoint reste ouvert (dev local).",
+        "operationId": "internal_cache_reset_stats_api_v1_internal_cache_reset_stats_post",
+        "parameters": [
+          {
+            "name": "X-Internal-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Internal Cache Reset Stats Api V1 Internal Cache Reset Stats Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/metrics/top-queries": {
+      "get": {
+        "summary": "Internal Metrics Top Queries",
+        "description": "Retourne les N requetes les plus frequentes, triees par hit_count decroissant (PDS-58).\n\nExploite la table query_cache existante (PDS-46) sans infrastructure supplementaire.\nChaque entree expose la cle de cache, le type d'endpoint, le nombre de hits\net la date de derniere mise en cache.\n\nQuery params:\n    limit: Nombre de requetes a retourner (1-100, defaut 20)",
+        "operationId": "internal_metrics_top_queries_api_v1_internal_metrics_top_queries_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Nombre de requetes a retourner",
+              "default": 20,
+              "title": "Limit"
+            },
+            "description": "Nombre de requetes a retourner"
+          },
+          {
+            "name": "X-Internal-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopQueriesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/internal/metrics/zero-results": {
+      "get": {
+        "summary": "Internal Metrics Zero Results",
+        "description": "Retourne les requetes dont le response_json contient total=0 (PDS-58).\n\nPermet d'identifier les recherches infructueuses et les lacunes du catalogue.\nLes entrees avec response_json non parsable sont ignorees.",
+        "operationId": "internal_metrics_zero_results_api_v1_internal_metrics_zero_results_get",
+        "parameters": [
+          {
+            "name": "X-Internal-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZeroResultsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resources/{resource_id}/explore": {
+      "post": {
+        "summary": "Explore Resource",
+        "description": "Explore la structure d'une ressource (CSV/JSON/RDF) via sa clé API.\n\nLe quota n'est consommé que sur cache miss (pas sur cache hit).",
+        "operationId": "explore_resource_api_v1_resources__resource_id__explore_post",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Resource Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExploreResourceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccessMode": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Type: 'direct_download', 'exploration', 'api'"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Label lisible pour utilisateur"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "label"
+        ],
+        "title": "AccessMode",
+        "description": "Mode d'acces au dataset (direct, exploration, API)."
+      },
+      "AlertItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "dataset_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Title"
+          },
+          "change_type": {
+            "type": "string",
+            "title": "Change Type"
+          },
+          "previous_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Value"
+          },
+          "new_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value"
+          },
+          "detected_at": {
+            "type": "string",
+            "title": "Detected At"
+          },
+          "notified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notified At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "dataset_id",
+          "dataset_title",
+          "change_type",
+          "previous_value",
+          "new_value",
+          "detected_at",
+          "notified_at"
+        ],
+        "title": "AlertItemResponse",
+        "description": "Entree d'alerte pour un changement detecte."
+      },
+      "AlertsResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AlertItemResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "count",
+          "items"
+        ],
+        "title": "AlertsResponse",
+        "description": "Reponse de consultation des alertes d'un watcher."
+      },
+      "CacheCountsResponse": {
+        "properties": {
+          "organizations": {
+            "type": "integer",
+            "title": "Organizations"
+          },
+          "datasets": {
+            "type": "integer",
+            "title": "Datasets"
+          },
+          "resources": {
+            "type": "integer",
+            "title": "Resources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organizations",
+          "datasets",
+          "resources"
+        ],
+        "title": "CacheCountsResponse",
+        "description": "Compteurs minimaux du cache."
+      },
+      "CacheStatsResponse": {
+        "properties": {
+          "hits": {
+            "type": "integer",
+            "title": "Hits"
+          },
+          "misses": {
+            "type": "integer",
+            "title": "Misses"
+          },
+          "stale_entries": {
+            "type": "integer",
+            "title": "Stale Entries"
+          },
+          "total_entries": {
+            "type": "integer",
+            "title": "Total Entries"
+          },
+          "hit_ratio": {
+            "type": "number",
+            "title": "Hit Ratio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hits",
+          "misses",
+          "stale_entries",
+          "total_entries",
+          "hit_ratio"
+        ],
+        "title": "CacheStatsResponse",
+        "description": "Statistiques de hit/miss du cache applicatif (PDS-46)."
+      },
+      "ColumnInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Nom de la colonne"
+          },
+          "detected_type": {
+            "type": "string",
+            "title": "Detected Type",
+            "description": "Type detecte: 'string', 'integer', 'float', 'date', 'unknown'"
+          },
+          "fill_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Fill Rate",
+            "description": "Taux de remplissage (0.0-1.0)"
+          },
+          "sample_values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sample Values",
+            "description": "Echantillon de valeurs (max 5)"
+          },
+          "stats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ColumnStats"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Statistiques numeriques (si applicable)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "detected_type",
+          "fill_rate"
+        ],
+        "title": "ColumnInfo",
+        "description": "Information sur une colonne detectee dans le fichier explore."
+      },
+      "ColumnStats": {
+        "properties": {
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min",
+            "description": "Valeur minimale"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max",
+            "description": "Valeur maximale"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean",
+            "description": "Moyenne arithmetique"
+          },
+          "median": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median",
+            "description": "Mediane"
+          }
+        },
+        "type": "object",
+        "title": "ColumnStats",
+        "description": "Statistiques descriptives pour une colonne numerique."
+      },
+      "CompareItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "quality_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Score"
+          },
+          "completeness": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completeness"
+          },
+          "freshness_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness Days"
+          },
+          "resource_formats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Resource Formats"
+          },
+          "resource_count": {
+            "type": "integer",
+            "title": "Resource Count"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "ckan_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ckan Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "org_name",
+          "description",
+          "license",
+          "quality_score",
+          "completeness",
+          "freshness_days",
+          "resource_formats",
+          "resource_count",
+          "tags",
+          "ckan_url"
+        ],
+        "title": "CompareItem",
+        "description": "Dataset comparable : champs homogenes pour le tableau comparatif.\n\nContrat strict (ADR-035) : tous les champs sont requis, valeurs nulles explicites."
+      },
+      "CompareRequest": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 2,
+            "title": "Ids",
+            "description": "IDs des datasets a comparer (2 a 4)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "title": "CompareRequest",
+        "description": "Requete de comparaison : liste d'IDs de datasets (2 a 4)."
+      },
+      "CompareResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CompareItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "Datasets comparables (2 a 4)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CompareResponse",
+        "description": "Reponse de comparaison : liste de datasets comparables."
+      },
+      "ContactRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 5,
+            "title": "Email",
+            "description": "Email de l'utilisateur pour la réponse"
+          },
+          "concerne": {
+            "type": "string",
+            "pattern": "^(surveillance|paiement|donnees|technique|autre)$",
+            "title": "Concerne",
+            "description": "Catégorie du message"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 10,
+            "title": "Message",
+            "description": "Message de l'utilisateur"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "concerne",
+          "message"
+        ],
+        "title": "ContactRequest",
+        "description": "Formulaire de contact public (PDS-122.1)."
+      },
+      "DatasetDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "org_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Id"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "modified": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified"
+          },
+          "quality_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Score"
+          },
+          "completeness": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completeness"
+          },
+          "freshness_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness Days"
+          },
+          "dataset_structure": {
+            "$ref": "#/components/schemas/DatasetStructure"
+          },
+          "access_modes": {
+            "items": {
+              "$ref": "#/components/schemas/AccessMode"
+            },
+            "type": "array",
+            "title": "Access Modes"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceResponse"
+            },
+            "type": "array",
+            "title": "Resources"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "ckan_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ckan Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "org_id",
+          "org_name",
+          "license",
+          "author",
+          "created",
+          "modified",
+          "quality_score",
+          "completeness",
+          "freshness_days",
+          "dataset_structure",
+          "access_modes",
+          "resources",
+          "tags",
+          "ckan_url"
+        ],
+        "title": "DatasetDetailResponse",
+        "description": "Detail complet du dataset avec structure et indicateurs.\n\nContrat partiel (ADR-035) : dataset_structure, resources, tags obligatoires.\nLes champs nullables conservent = None pour compatibilité tests internes."
+      },
+      "DatasetStructure": {
+        "properties": {
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fields",
+            "description": "Champs/colonnes du dataset"
+          },
+          "formats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Formats",
+            "description": "Formats des ressources"
+          },
+          "update_frequency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Update Frequency",
+            "description": "Frequence MAJ esperee"
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Updated",
+            "description": "Date derniere MAJ"
+          }
+        },
+        "type": "object",
+        "title": "DatasetStructure",
+        "description": "Structure explicitee du dataset pour comprehension par utilisateurs non-techniques."
+      },
+      "ExploreResourceResponse": {
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "title": "Resource Id",
+            "description": "ID de la ressource"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Format du fichier (csv, json)"
+          },
+          "parsed_at": {
+            "type": "string",
+            "title": "Parsed At",
+            "description": "Horodatage du parsing (ISO 8601)"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/ColumnInfo"
+            },
+            "type": "array",
+            "title": "Columns",
+            "description": "Colonnes detectees"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count",
+            "description": "Nombre de lignes/enregistrements",
+            "default": 0
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResourceAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Analyse heuristique contextualisee a partir des colonnes detectees"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached",
+            "description": "True si le resultat provient du cache (moins de 24h)",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource_id",
+          "format",
+          "parsed_at"
+        ],
+        "title": "ExploreResourceResponse",
+        "description": "Reponse du parsing et de l'analyse d'une ressource (CSV/JSON)."
+      },
+      "FacetItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "count"
+        ],
+        "title": "FacetItem",
+        "description": "Item de facette (organisation, format, tag)."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "last_sync"
+        ],
+        "title": "HealthResponse",
+        "description": "Reponse minimale de sante service/cache."
+      },
+      "InternalCacheResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "cache_populated": {
+            "type": "boolean",
+            "title": "Cache Populated"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CacheCountsResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "last_sync",
+          "cache_populated",
+          "counts"
+        ],
+        "title": "InternalCacheResponse",
+        "description": "Vue interne pour verifier qu'un cache peuple est consultable."
+      },
+      "InternalSupportEmailDeliverabilityResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "last_send_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Send Status"
+          },
+          "last_send_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Send At"
+          },
+          "provider_message_id_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Message Id Masked"
+          },
+          "recent_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Error Code"
+          },
+          "recent_error_count_24h": {
+            "type": "integer",
+            "title": "Recent Error Count 24H"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "last_send_status",
+          "last_send_at",
+          "provider_message_id_masked",
+          "recent_error_code",
+          "recent_error_count_24h"
+        ],
+        "title": "InternalSupportEmailDeliverabilityResponse",
+        "description": "Indicateurs rediges sur l'envoi email pour un watcher."
+      },
+      "InternalSupportMagicLinkResendRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "InternalSupportMagicLinkResendRequest",
+        "description": "Corps de la requête de renvoi de magic link support."
+      },
+      "InternalSupportMagicLinkResendResponse": {
+        "properties": {
+          "audit_id": {
+            "type": "string",
+            "title": "Audit Id"
+          },
+          "dispatch_status": {
+            "type": "string",
+            "title": "Dispatch Status"
+          },
+          "issued_at": {
+            "type": "string",
+            "title": "Issued At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audit_id",
+          "dispatch_status",
+          "issued_at"
+        ],
+        "title": "InternalSupportMagicLinkResendResponse",
+        "description": "Réponse auditee d'un renvoi de magic link support."
+      },
+      "InternalSupportMagicLinkStateResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "last_issued_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Issued At"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "active_unexpired_count": {
+            "type": "integer",
+            "title": "Active Unexpired Count"
+          },
+          "expired_unconsumed_count": {
+            "type": "integer",
+            "title": "Expired Unconsumed Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "last_issued_at",
+          "last_used_at",
+          "active_unexpired_count",
+          "expired_unconsumed_count"
+        ],
+        "title": "InternalSupportMagicLinkStateResponse",
+        "description": "Etat des magic links temporaires pour le support interne."
+      },
+      "InternalSupportSubscriptionResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "subscription_state": {
+            "type": "string",
+            "title": "Subscription State"
+          },
+          "subscription_id_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Id Masked"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "subscription_state",
+          "subscription_id_masked",
+          "updated_at"
+        ],
+        "title": "InternalSupportSubscriptionResponse",
+        "description": "Etat redigé d'un abonnement watcher pour le support interne."
+      },
+      "InternalSupportWatcherLookupResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "watcher_status": {
+            "type": "string",
+            "title": "Watcher Status"
+          },
+          "subscription_id_present": {
+            "type": "boolean",
+            "title": "Subscription Id Present"
+          },
+          "watched_datasets_count": {
+            "type": "integer",
+            "title": "Watched Datasets Count"
+          },
+          "last_webhook_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Webhook At"
+          },
+          "last_magic_link_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Magic Link At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "watcher_status",
+          "subscription_id_present",
+          "watched_datasets_count",
+          "last_webhook_at",
+          "last_magic_link_at"
+        ],
+        "title": "InternalSupportWatcherLookupResponse",
+        "description": "Vue redigée pour retrouver un watcher par email côté support."
+      },
+      "InternalSupportWebhookEventResponse": {
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "received_at": {
+            "type": "string",
+            "title": "Received At"
+          },
+          "delivery_status": {
+            "type": "string",
+            "title": "Delivery Status"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type",
+          "received_at",
+          "delivery_status",
+          "correlation_id"
+        ],
+        "title": "InternalSupportWebhookEventResponse",
+        "description": "Evenement webhook redigé expose par le support interne."
+      },
+      "InternalSupportWebhookEventsResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InternalSupportWebhookEventResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "items"
+        ],
+        "title": "InternalSupportWebhookEventsResponse",
+        "description": "Historique recent des webhooks Polar associes a un watcher."
+      },
+      "MagicLinkConsumeResponse": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "watcher_id",
+          "email",
+          "status"
+        ],
+        "title": "MagicLinkConsumeResponse",
+        "description": "Réponse après consommation réussie d'un magic link (ADR-030)."
+      },
+      "MagicLinkRequestBody": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "MagicLinkRequestBody",
+        "description": "Corps de la requête pour demander un nouveau magic link par email."
+      },
+      "RankingSignals": {
+        "properties": {
+          "hybrid_score": {
+            "type": "number",
+            "title": "Hybrid Score"
+          },
+          "text_score": {
+            "type": "number",
+            "title": "Text Score"
+          },
+          "quality_normalized": {
+            "type": "number",
+            "title": "Quality Normalized"
+          },
+          "freshness_component": {
+            "type": "number",
+            "title": "Freshness Component"
+          },
+          "weight_text": {
+            "type": "number",
+            "title": "Weight Text"
+          },
+          "weight_quality": {
+            "type": "number",
+            "title": "Weight Quality"
+          },
+          "weight_freshness": {
+            "type": "number",
+            "title": "Weight Freshness"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hybrid_score",
+          "text_score",
+          "quality_normalized",
+          "freshness_component",
+          "weight_text",
+          "weight_quality",
+          "weight_freshness"
+        ],
+        "title": "RankingSignals",
+        "description": "Signaux de ranking hybride PDS-40, contrat strict ADR-035."
+      },
+      "ResourceAnalysis": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "Resume interpretable de la structure detectee"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities",
+            "description": "Usages ou visualisations suggeres a partir des signaux detectes"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats",
+            "description": "Limites et points d'attention observes sur l'aperçu"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary"
+        ],
+        "title": "ResourceAnalysis",
+        "description": "Analyse heuristique actionnable de la ressource exploree."
+      },
+      "ResourceDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "last_modified": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modified"
+          },
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "dataset_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ResourceDetailResponse",
+        "description": "Detail complet de ressource avec reference au dataset."
+      },
+      "ResourceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "last_modified": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ResourceResponse",
+        "description": "Ressource (fichier/endpoint) normalise."
+      },
+      "SearchDatasetItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "quality_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Score"
+          },
+          "completeness": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completeness"
+          },
+          "freshness_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness Days"
+          },
+          "resource_formats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Resource Formats"
+          },
+          "resource_count": {
+            "type": "integer",
+            "title": "Resource Count"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "ranking_signals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RankingSignals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "org_name",
+          "description",
+          "quality_score",
+          "completeness",
+          "freshness_days",
+          "resource_formats",
+          "resource_count",
+          "tags",
+          "ranking_signals"
+        ],
+        "title": "SearchDatasetItem",
+        "description": "Dataset dans les resultats de recherche (card minimale).\n\nContrat strict (ADR-035) : tous les champs sont requis, valeurs nulles explicites."
+      },
+      "SearchFacets": {
+        "properties": {
+          "organizations": {
+            "items": {
+              "$ref": "#/components/schemas/FacetItem"
+            },
+            "type": "array",
+            "title": "Organizations",
+            "default": []
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/FacetItem"
+            },
+            "type": "array",
+            "title": "Formats",
+            "default": []
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/FacetItem"
+            },
+            "type": "array",
+            "title": "Tags",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "SearchFacets",
+        "description": "Facettes d'agrégation pour la recherche."
+      },
+      "SearchResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Nombre total de resultats"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "Offset pagination",
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "Limite par page"
+          },
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/SearchDatasetItem"
+            },
+            "type": "array",
+            "title": "Datasets"
+          },
+          "facets": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SearchFacets"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "datasets"
+        ],
+        "title": "SearchResponse",
+        "description": "Reponse paginee de recherche dataset."
+      },
+      "SyncMetricsItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "synced_datasets": {
+            "type": "integer",
+            "title": "Synced Datasets"
+          },
+          "synced_organizations": {
+            "type": "integer",
+            "title": "Synced Organizations"
+          },
+          "synced_resources": {
+            "type": "integer",
+            "title": "Synced Resources"
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "title": "Duration Ms"
+          },
+          "started_at": {
+            "type": "string",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "type": "string",
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "synced_datasets",
+          "synced_organizations",
+          "synced_resources",
+          "errors",
+          "mode",
+          "duration_ms",
+          "started_at",
+          "completed_at"
+        ],
+        "title": "SyncMetricsItem",
+        "description": "Metriques d'un cycle de sync unique (PDS-45)."
+      },
+      "SyncMetricsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SyncMetricsItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "SyncMetricsResponse",
+        "description": "Historique des metriques d'ingestion (PDS-45)."
+      },
+      "SyncStatusResponse": {
+        "properties": {
+          "ckan_offset": {
+            "type": "integer",
+            "title": "Ckan Offset"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ckan_offset",
+          "updated_at"
+        ],
+        "title": "SyncStatusResponse",
+        "description": "Etat de la synchronisation CKAN incrementale."
+      },
+      "TopQueriesResponse": {
+        "properties": {
+          "queries": {
+            "items": {
+              "$ref": "#/components/schemas/TopQueryItem"
+            },
+            "type": "array",
+            "title": "Queries",
+            "description": "Requetes triees par hit_count decroissant"
+          }
+        },
+        "type": "object",
+        "required": [
+          "queries"
+        ],
+        "title": "TopQueriesResponse",
+        "description": "Liste des N requetes les plus frequentes."
+      },
+      "TopQueryItem": {
+        "properties": {
+          "query_key": {
+            "type": "string",
+            "title": "Query Key",
+            "description": "Cle de cache (contient les parametres de requete)"
+          },
+          "endpoint_type": {
+            "type": "string",
+            "title": "Endpoint Type",
+            "description": "Type d'endpoint (search, dataset_detail)"
+          },
+          "hit_count": {
+            "type": "integer",
+            "title": "Hit Count",
+            "description": "Nombre de hits cumules"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Date de derniere mise en cache"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query_key",
+          "endpoint_type",
+          "hit_count",
+          "created_at"
+        ],
+        "title": "TopQueryItem",
+        "description": "Requete la plus frequente dans le cache applicatif."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WatchedDatasetItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "dataset_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Title"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "dataset_id",
+          "dataset_title",
+          "created_at"
+        ],
+        "title": "WatchedDatasetItemResponse",
+        "description": "Element de dataset surveille expose a l'utilisateur."
+      },
+      "WatcherCreateRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "dataset_id"
+        ],
+        "title": "WatcherCreateRequest",
+        "description": "Requete de creation d'une surveillance dataset."
+      },
+      "WatcherCreateResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "email",
+          "token",
+          "dataset_id",
+          "status"
+        ],
+        "title": "WatcherCreateResponse",
+        "description": "Reponse de creation de watcher/surveillance."
+      },
+      "WatchersListResponse": {
+        "properties": {
+          "watcher_id": {
+            "type": "string",
+            "title": "Watcher Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WatchedDatasetItemResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watcher_id",
+          "email",
+          "status",
+          "items"
+        ],
+        "title": "WatchersListResponse",
+        "description": "Liste des datasets surveilles pour un token watcher."
+      },
+      "ZeroResultItem": {
+        "properties": {
+          "query_key": {
+            "type": "string",
+            "title": "Query Key",
+            "description": "Cle de cache"
+          },
+          "endpoint_type": {
+            "type": "string",
+            "title": "Endpoint Type",
+            "description": "Type d'endpoint (search, dataset_detail)"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "Date de mise en cache"
+          },
+          "response_total": {
+            "type": "integer",
+            "title": "Response Total",
+            "description": "Valeur du champ total dans la reponse",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "query_key",
+          "endpoint_type",
+          "created_at"
+        ],
+        "title": "ZeroResultItem",
+        "description": "Requete n'ayant retourne aucun resultat."
+      },
+      "ZeroResultsResponse": {
+        "properties": {
+          "queries": {
+            "items": {
+              "$ref": "#/components/schemas/ZeroResultItem"
+            },
+            "type": "array",
+            "title": "Queries",
+            "description": "Requetes avec total=0 dans le response_json"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "Nombre total de requetes sans resultat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "queries",
+          "count"
+        ],
+        "title": "ZeroResultsResponse",
+        "description": "Liste des requetes sans resultat (total=0)."
+      }
+    }
+  }
+}

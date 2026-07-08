@@ -34,15 +34,22 @@ def sample_detail_response() -> DatasetDetailResponse:
     return DatasetDetailResponse(
         id="test-dataset-001",
         title="Dataset Test",
-        org_name="Org Test",
         description="Un dataset de test",
+        org_id=None,
+        org_name="Org Test",
+        license=None,
+        author=None,
+        created=None,
+        modified=None,
         quality_score=80,
         completeness=90,
         freshness_days=5,
         tags=["test", "unitaire"],
         resources=[],
         access_modes=[],
-        dataset_structure=DatasetStructure(),  # type: ignore[call-arg]
+        dataset_structure=DatasetStructure(
+            fields=[], formats=[], update_frequency=None, last_updated=None
+        ),
         ckan_url=None,
     )
 

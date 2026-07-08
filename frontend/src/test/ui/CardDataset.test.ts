@@ -13,7 +13,8 @@ const BASE_DATASET = {
 	freshness_days: 3,
 	resource_formats: ['CSV', 'JSON'],
 	resource_count: 2,
-	tags: ['mobilite', 'transport']
+	tags: ['mobilite', 'transport'],
+	ranking_signals: null
 };
 
 const RANKING_SIGNALS_SAMPLE = {

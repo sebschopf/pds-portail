@@ -4,11 +4,7 @@
 	import SearchIcon from '../../assets/icons/SearchIcon.svelte';
 	import FilterIcon from '../../assets/icons/FilterIcon.svelte';
 
-	export type FacetItem = {
-		name: string;
-		count: number;
-		display_name?: string;
-	};
+	import type { FacetItem } from '$lib/types/search';
 
 	let {
 		query = $bindable(''),

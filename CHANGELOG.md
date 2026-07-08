@@ -6,6 +6,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- PDS-M11: Suppression de `uv` du stage de production Dockerfile — .venv copié depuis le build, CMD/HEALTHCHECK utilisent python directement (recommandation architecte).
+- PDS-M11: Activation mypy strict (`disallow_untyped_defs = true`) — 1 seule fonction non-annotée corrigée dans tout le codebase.
+- PDS-125: ADR-035 — Contrat OpenAPI comme source de vérité unique backend↔frontend, génération automatique des types TypeScript.
+- PDS-125: SPEC-016 — Pipeline de génération des types TypeScript en 4 phases, implémenté (openapi-typescript, make quality, contrats stricts).
+- PDS-125: Durcissement du contrat backend — `RankingSignals` en modèle Pydantic, suppression des `default_factory=list` sur les DTOs cœur UI (SearchDatasetItem, CompareItem, DatasetDetailResponse) pour un typage TypeScript strict.
+- PDS-125: Migration des types frontend — alias explicites `components['schemas']['...']` dans search.ts, compare.ts, ranking.ts, watchers.ts.
+- PDS-125: Audit terminé — correctif `ranking_signals: null` dans `CardDataset.test.ts` (svelte-check 0 erreur), ADR-035 → Accepted.
 - PDS-122: `polar_customer_id` dans le port, migration SQLite, limite 10 datasets affichée dans le manuel, WatchDataset et /alertes.
 - PDS-121.2: proxys SvelteKit pour watchers en production Vercel (magic-link, watchers CRUD, alerts).
 - PDS-121.3: champ `polar_customer_id` dans WatcherModel, extraction webhook `order.created`, limite `MAX_WATCHED_DATASETS=10`.

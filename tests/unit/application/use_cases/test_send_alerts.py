@@ -283,6 +283,8 @@ def dataset_detail() -> DatasetDetailResponse:
         description="Description",
         org_id="org-1",
         org_name="Org 1",
+        license=None,
+        author=None,
         created="2026-06-01T00:00:00+00:00",
         modified="2026-07-03T11:00:00+00:00",
         quality_score=82,

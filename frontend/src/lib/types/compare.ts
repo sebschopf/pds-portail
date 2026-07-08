@@ -1,20 +1,8 @@
-/** Types pour la comparaison guidee de datasets (PDS-43). */
+import type { components } from './api.generated';
 
-export interface CompareItem {
-	id: string;
-	title: string;
-	org_name: string | null;
-	description: string | null;
-	license: string | null;
-	quality_score: number | null;
-	completeness: number | null;
-	freshness_days: number | null;
-	resource_formats: string[];
-	resource_count: number;
-	tags: string[];
-	ckan_url: string | null;
-}
-
-export interface CompareResponse {
-	items: CompareItem[];
-}
+/**
+ * Types de comparaison — alias vers le contrat OpenAPI généré automatiquement.
+ * SPEC-016 / ADR-035 : source de vérité unique backend↔frontend.
+ */
+export type CompareItem = components['schemas']['CompareItem'];
+export type CompareResponse = components['schemas']['CompareResponse'];

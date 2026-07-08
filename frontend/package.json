@@ -18,8 +18,10 @@
 		"lighthouse:mobile": "node ./scripts/run-lighthouse-profile.mjs mobile",
 		"lighthouse:all": "npm run lighthouse:desktop && npm run lighthouse:mobile",
 		"lighthouse:suite": "node ./scripts/run-lighthouse-suite.mjs",
+		"generate:api-types": "npx openapi-typescript scripts/openapi.json -o src/lib/types/api.generated.d.ts",
+		"export:openapi": "uv run python -c \"from app.main import app; import json; json.dump(app.openapi(), open('scripts/openapi.json','w'), indent=2, ensure_ascii=False)\"",
 		"validate:js-delivery": "node ./scripts/validate-js-delivery.mjs",
-		"quality:frontend": "npm run check && npm run validate:design && npm run build && npm run lighthouse:suite"
+		"quality:frontend": "npm run generate:api-types && npm run check && npm run validate:design && npm run build && npm run lighthouse:suite"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.1",
@@ -28,6 +30,7 @@
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@types/node": "^25.9.3",
 		"lighthouse": "^13.4.0",
+		"openapi-typescript": "^7.13.0",
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",

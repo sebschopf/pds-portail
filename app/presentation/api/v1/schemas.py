@@ -2,6 +2,11 @@
 
 Normalisent et enrichissent les reponses CKAN via les indicateurs de qualite
 et la structure dataset explicitee.
+
+ADR-035 : contrats stricts pour les DTOs cœur de l'interface utilisateur
+(SearchDatasetItem, CompareItem, DatasetDetailResponse). Les schémas internes
+conservent leurs valeurs par défaut pour ne pas impacter les adaptateurs
+sans bénéfice frontend.
 """
 
 from __future__ import annotations
@@ -21,26 +26,91 @@ class ResourceResponse(BaseModel):
     last_modified: str | None = None
 
 
+class RankingSignals(BaseModel):
+    """Signaux de ranking hybride PDS-40, contrat strict ADR-035."""
+
+    hybrid_score: float
+    text_score: float
+    quality_normalized: float
+    freshness_component: float
+    weight_text: float
+    weight_quality: float
+    weight_freshness: float
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DTOs cœur UI — contrats stricts (ADR-035)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
 class SearchDatasetItem(BaseModel):
-    """Dataset dans les resultats de recherche (card minimale)."""
+    """Dataset dans les resultats de recherche (card minimale).
+
+    Contrat strict (ADR-035) : tous les champs sont requis, valeurs nulles explicites.
+    """
 
     id: str
     title: str
-    org_name: str | None = None
-    description: str | None = None
-    quality_score: int | None = Field(None, description="Score qualite 0-100")
-    completeness: int | None = Field(None, description="Completude metadata 0-100")
-    freshness_days: int | None = Field(None, description="Jours depuis derniere MAJ")
-    resource_formats: list[str] = Field(default_factory=list)
-    resource_count: int = 0
-    tags: list[str] = Field(default_factory=list)
-    ranking_signals: dict[str, float] | None = Field(
-        None,
-        description=(
-            "Signaux de ranking hybride: hybrid_score, text_score, quality_normalized, "
-            "freshness_component, weight_text, weight_quality, weight_freshness"
-        ),
-    )
+    org_name: str | None
+    description: str | None
+    quality_score: int | None
+    completeness: int | None
+    freshness_days: int | None
+    resource_formats: list[str]
+    resource_count: int
+    tags: list[str]
+    ranking_signals: RankingSignals | None
+
+
+class CompareItem(BaseModel):
+    """Dataset comparable : champs homogenes pour le tableau comparatif.
+
+    Contrat strict (ADR-035) : tous les champs sont requis, valeurs nulles explicites.
+    """
+
+    id: str
+    title: str
+    org_name: str | None
+    description: str | None
+    license: str | None
+    quality_score: int | None
+    completeness: int | None
+    freshness_days: int | None
+    resource_formats: list[str]
+    resource_count: int
+    tags: list[str]
+    ckan_url: str | None
+
+
+class DatasetDetailResponse(BaseModel):
+    """Detail complet du dataset avec structure et indicateurs.
+
+    Contrat partiel (ADR-035) : dataset_structure, resources, tags obligatoires.
+    Les champs nullables conservent = None pour compatibilité tests internes.
+    """
+
+    id: str
+    title: str
+    description: str | None
+    org_id: str | None
+    org_name: str | None
+    license: str | None
+    author: str | None
+    created: str | None
+    modified: str | None
+    quality_score: int | None
+    completeness: int | None
+    freshness_days: int | None
+    dataset_structure: DatasetStructure
+    access_modes: list[AccessMode]
+    resources: list[ResourceResponse]
+    tags: list[str]
+    ckan_url: str | None
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Schémas internes — valeurs par défaut conservées
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 class FacetItem(BaseModel):
@@ -87,28 +157,6 @@ class AccessMode(BaseModel):
     url: str | None = None
 
 
-class DatasetDetailResponse(BaseModel):
-    """Detail complet du dataset avec structure et indicateurs."""
-
-    id: str
-    title: str
-    description: str | None = None
-    org_id: str | None = None
-    org_name: str | None = None
-    license: str | None = None
-    author: str | None = None
-    created: str | None = None
-    modified: str | None = None
-    quality_score: int | None = Field(None, description="Score qualite 0-100")
-    completeness: int | None = Field(None, description="Completude metadata 0-100")
-    freshness_days: int | None = Field(None, description="Jours depuis derniere MAJ")
-    dataset_structure: DatasetStructure
-    access_modes: list[AccessMode] = []
-    resources: list[ResourceResponse] = []
-    tags: list[str] = Field(default_factory=list)
-    ckan_url: str | None = None
-
-
 class ResourceDetailResponse(BaseModel):
     """Detail complet de ressource avec reference au dataset."""
 
@@ -138,23 +186,6 @@ class CompareRequest(BaseModel):
         max_length=MAX_COMPARE_IDS,
         description="IDs des datasets a comparer (2 a 4)",
     )
-
-
-class CompareItem(BaseModel):
-    """Dataset comparable : champs homogenes pour le tableau comparatif."""
-
-    id: str
-    title: str
-    org_name: str | None = None
-    description: str | None = None
-    license: str | None = None
-    quality_score: int | None = Field(None, description="Score qualite 0-100")
-    completeness: int | None = Field(None, description="Completude metadata 0-100")
-    freshness_days: int | None = Field(None, description="Jours depuis derniere MAJ")
-    resource_formats: list[str] = Field(default_factory=list)
-    resource_count: int = 0
-    tags: list[str] = Field(default_factory=list)
-    ckan_url: str | None = None
 
 
 class CompareResponse(BaseModel):

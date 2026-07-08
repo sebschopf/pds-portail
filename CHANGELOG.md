@@ -6,161 +6,156 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased]
 
 ### Added
-- PDS-121.2: proxys SvelteKit pour les endpoints watchers en production Vercel. Création des fichiers `+server.ts` pour `/api/v1/magic-link` (POST), `/api/v1/magic-link/consume` (GET), `/api/v1/watchers` (GET/POST), `/api/v1/watchers/[id]` (DELETE) et `/api/v1/alerts` (GET). Résout le bug 404 en production où le proxy Vite n'était pas actif.
-- PDS-121.3: alignement SPEC-009 — ajout du champ `polar_customer_id` dans le modèle `WatcherModel`, le port `Watcher`, le repository `SqlAlchemyWatcherRepository`, et extraction depuis le webhook `order.created`. Limite de 10 datasets surveillés par watcher (`MAX_WATCHED_DATASETS=10`) avec `ValueError` si dépassée.
-- Documentation utilisateur : section "Service payant" dans le manuel (`/manuel`), description complète du flux (paiement → email → tableau de bord) et méthode de récupération d'accès. Page `/alertes` avec bloc "Rappel du fonctionnement" et "Vous avez changé de navigateur ou perdu l'email ?".
-- PDS-121: mise en conformité Polar Checkout et Webhooks — convergence opérationnelle du flux de paiement. Checkout link hébergé `buy.polar.sh` (frontend), endpoint webhook canonique `/api/v1/webhooks/polar` (backend), tolérance orthographe `subscription.canceled`/`cancelled`. Ticket enfant PDS-121.1 pour l'exécution en production (dashboard Polar, E2E, preuves Go/No-Go).
-- PDS-86: tables de surveillance (`watchers`, `watched_datasets`, `change_log`) et repositories associés.
-- PDS-87: `DetectChangesUseCase` branché dans le cycle de sync avec 5 types de changements détectés.
-- PDS-89: endpoints Polar/watchers/alerts (`POST /webhooks/polar`, `POST/GET/DELETE /watchers`, `GET /alerts`).
-- PDS-90: UI de surveillance côté frontend (modale abonnement, badge de suivi, page d'alertes).
-- PDS-111: module support interne protégé — diagnostics redigés par email, renvoi magic link audité, page SSR support et tests associés, sans exposition du token interne côté navigateur.
-- PDS-114: décision V1 checkout/webhooks Polar stabilisée dans la documentation. ADR-034 acte désormais le checkout frontend hébergé via `PUBLIC_POLAR_PRODUCT_ID` et le mapping webhook minimal `order.created` / `subscription.cancelled`, tandis que SPEC-012 devient un vrai plan de convergence M11.
-- PDS-91: ADR-029 et la documentation d'exploitation réalignées sur la réalité d'envoi email `smtplib` + SMTP Brevo, avec couverture explicite de l'email d'alerte et de l'email de bienvenue à magic link.
-- PDS-117.1: flux magic link bout en bout — endpoints `GET /api/v1/magic-link/consume` et `POST /api/v1/magic-link` (anti-énumération), validation hash/expiration/usage-unique/watcher-actif, intégration frontend `/alertes?magic=...`, templates email HTML/TXT, 7 tests backend + 113 tests frontend, conformité SPEC-003/004/006 design system.
+- PDS-122: `polar_customer_id` dans le port, migration SQLite, limite 10 datasets affichée dans le manuel, WatchDataset et /alertes.
+- PDS-121.2: proxys SvelteKit pour watchers en production Vercel (magic-link, watchers CRUD, alerts).
+- PDS-121.3: champ `polar_customer_id` dans WatcherModel, extraction webhook `order.created`, limite `MAX_WATCHED_DATASETS=10`.
+- Documentation utilisateur : section "Service payant" dans le manuel, page /alertes avec "Rappel du fonctionnement" et récupération email perdu.
+- PDS-121: mise en conformité Polar Checkout et Webhooks — Checkout link hébergé, webhook canonique, tolérance cancelled/canceled.
+- PDS-86: tables `watchers`, `watched_datasets`, `change_log` et repositories.
+- PDS-87: `DetectChangesUseCase` dans le cycle de sync, 5 types de changements détectés.
+- PDS-89: endpoints Polar/watchers/alerts (webhook, CRUD, historique).
+- PDS-90: UI surveillance frontend (modale abonnement, badge suivi, page alertes).
+- PDS-111: module support interne protégé — diagnostics par email, renvoi magic link audité, page SSR.
+- PDS-114: ADR-034 acte checkout frontend hébergé et mapping webhook minimal.
+- PDS-91: ADR-029 réalignée sur envoi email smtplib + SMTP Brevo.
+- PDS-117.1: flux magic link bout en bout — endpoints consume/create, validation hash/expiration, intégration frontend /alertes?magic=, templates email.
 
 ### Changed
-- PDS-88: envoi d'alertes email durci avec rate-limit strict par couple watcher+dataset sur 24h.
-- PDS-88: persistance du dernier envoi via `watched_datasets.last_alert_sent_at` pour tracer le throttling par abonné.
-- PDS-115: la page `/alertes` est désormais alignée sur le contrat V1 réellement livré. Un accès réussi via `?token=` persiste le token watcher en `localStorage`, et le frontend signale explicitement que le flux `?magic=` n'est pas encore livré de bout en bout.
-- PDS-116: le webhook `order.created` valide désormais le dataset avant toute mutation, réutilise/réactive correctement un watcher existant et resynchronise `polar_subscription_id` lors d'un repaiement.
-- PDS-118: refactor des tests magic link pour clocks contrôlables et horodatages déterministes.
-- Roadmap M11 mise à jour: PDS-114, PDS-116 et PDS-115 sont clôturées, et l'écart restant est désormais tracé dans `PDS-117.1` pour le flux magic link complet.
-- PDS-111/PDS-112: séparation de configuration `\.env.local` (dev) et `\.env.test` (tests) pour supprimer les dépendances implicites au `.env` local pendant les quality gates; ajout de `INTERNAL_API_TOKEN` dans le template d'environnement.
+- PDS-88: rate-limit strict par couple watcher+dataset sur 24h pour alertes email.
+- PDS-88: `watched_datasets.last_alert_sent_at` pour traçabilité du throttling.
+- PDS-115: page /alertes alignée contrat V1, persistance token localStorage.
+- PDS-116: webhook `order.created` valide dataset avant mutation, réutilise watcher existant, resynchronise `polar_subscription_id`.
+- PDS-118: refactor tests magic link pour clocks contrôlables et horodatages déterministes.
+- Roadmap M11 mise à jour.
+- PDS-111/PDS-112: séparation `.env.local` / `.env.test`, `INTERNAL_API_TOKEN` dans le template.
 
 ### Fixed
-- PDS-121: correction du checkout Polar en mode Checkout Link hébergé (`PUBLIC_POLAR_CHECKOUT_URL`). La redirection transmet désormais `customer_email`, `metadata[dataset_id]` et `metadata[dataset_title]` en query params, comme le faisait déjà le mode legacy `PUBLIC_POLAR_PRODUCT_ID`.
-- PDS-119: consommation de magic link durcie contre l'enumeration par message d'erreur unifie (`Magic link invalide`) pour tous les rejets 401.
-- PDS-88/PDS-89: alignement typage strict (Pylance/mypy), stabilité des fakes de tests et conformité quality gate.
-- PDS-116: un webhook `order.created` sur dataset inconnu n'écrit plus d'état partiel côté watcher, et un watcher suspendu peut être réactivé proprement sur repaiement.
-- PDS-115: le token watcher local n'est plus seulement lu par le frontend `/alertes`, il est aussi persisté automatiquement après un accès serveur réussi.
-- PDS-111/PDS-112: durcissement final du module support interne — garde Basic Auth serveur sur `/support`, traitement explicite `dispatch_status=queued` côté action support, tests d'erreurs supplémentaires (frontend/backend) et runbook de dépannage dédié (`R002` §4.7).
+- PDS-121: correction checkout Polar mode Checkout Link (`PUBLIC_POLAR_CHECKOUT_URL`).
+- PDS-119: message d'erreur unifié anti-énumération pour magic link.
+- PDS-88/PDS-89: alignement typage strict Pylance/mypy, stabilité fakes de tests.
+- PDS-116: webhook dataset inconnu n'écrit plus d'état partiel, réactivation watcher suspendu.
+- PDS-115: token watcher persisté automatiquement après accès serveur réussi.
+- PDS-111/PDS-112: durcissement support interne — Basic Auth serveur, dispatch_status queued, tests erreurs, runbook R002 §4.7.
 
 ## [1.1.5] - 2026-07-03
+
 ### Added
-- PDS-82 : Cloture et tracabilite documentaire finalisees — la version finale integre le parsing tabulaire + RDF V1 et l'analyse heuristique dans un flux unique `/api/v1/resources/{id}/explore`, suite a l'evolution ADR-032/SPEC-013 et a la fusion de PDS-83 dans PDS-82. Reference backlog: `backlog/completed/pds-82 - PDS-82-Backend-—-Endpoint-dexploration-de-ressource-avec-parsing-CSV-JSON.md`.
-- PDS-84 : Frontend ExploreDataset — Composant Svelte avec gestion d'état complète (locked → loading → error → success), intégration API `POST /api/v1/resources/{id}/explore` via proxy SvelteKit, stockage localStorage de la clé API avec auto-chargement, affichage tableau HTML avec `<caption>` et `scope='col'` (WCAG AA), section Analyse avec icônes/puces, et 35 tests unitaires. Route `/api/v1/resources/[id]/explore` créée pour proxy backend. Conformité WCAG AA complète (labels, role='alert', navigation clavier, contraste OKLCH). Tests : 35 unitaires + 45 intégration backend, build frontend OK. Qualité : ruff/black/mypy OK, pytest 165 tests vert. Traçabilité : SPEC-008 §3.2, ADR-027, PDS-82/PDS-83. Reference: `backlog/completed/pds-84 - PDS-84-Frontend-—-Composant-ExploreDataset-avec-clé-API-et-affichage-des-résultats.md`, commit `9a9e7c4`.
-- PDS-109 : Backend Hardening — Exploration endpoint production durci (fiabilité, quota, cache). Modifications : (1) Nouvelle dépendance `require_license_without_quota_check()` valide la clé API sans consommer quota; (2) Route `POST /api/v1/resources/{id}/explore` refactorisée pour décrémenter le quota seulement sur cache miss (post-réponse), éliminant la surcharge de quota sur hits; (3) Invalidation cache étendue — `invalidate_cache_after_sync()` inclut maintenant `CacheEndpointType.EXPLORATION` pour invalider les entrées de cache exploration quand les ressources source changent. Tests d'intégration couvrent : quota consumption asymétrique (miss→consomme, hit→pas), erreurs réseau sans débit de quota (timeout→504, URL inaccessible→422), et les 6 tests endpoint passent. Validations : pytest 209/209 ✅ (couverture 91.45%), black/ruff/mypy OK. Traçabilité : ADR-027 (respect intégral), SPEC-008 §3 (contrat stable + durci), SPEC-011 §9 (couverture comportementale). Reference: `backlog/tasks/pds-109 - PDS-109-Backend-Hardening-exploration-prod-timeout-quota-cache.md`.
-- PDS-108 : QA tests backend - baseline documentee (fiabilite, vitesse, couverture), publication d'une liste de modules critiques avec cibles progressives de couverture, et definition de gates en 2 phases (informative puis enforcee). Rapport versionne: `backlog/docs/RAPPORT-QA-PDS-108-2026-07-02.md`. Runbook exploitation synchronise: `Doc/40-exploitation/R004-description-plan-fiabilisation-tests.md`.
-- PDS-80 : ADR-027 Mécanisme de clé API — Documente le choix d'un token opaque UUID v4 hashé SHA-256 pour protéger l'endpoint d'exploration. Justifie le rejet de JWT, PASETO, et Redis. Détaille le format, le stockage en table `licenses`, la transmission via header `X-API-Key`, le rate limiting par clé, et le hachage SHA-256. Lien : `Doc/30-decisions/adr/0027-cle-api-exploration.md`.
-- PDS-81 : Backend Licence API — Implémente l'infrastructure de gestion des licences pour les services payants (ADR-027). Livrables : modèle SQLAlchemy `LicenseModel` (table `licenses`), port `LicenseRepositoryPort`, repository `SqlAlchemyLicenseRepository`, dépendance FastAPI `require_license` (X-API-Key validation via SHA-256), endpoint stub `POST /api/v1/resources/{id}/explore` protégé par licence, DTOs `ExploreResourceResponse`/`ColumnInfo`/`ColumnStats`. Tests : 6 tests d'intégration couvrant validation de clé, format, expiration, quota, increment usage. Qualité : 198/198 pytest passed, 92.56% coverage, ruff/black/mypy OK. Traçabilité : SPEC-008 §3 & §4, ADR-027, PDS-80.
+- PDS-82: clôture exploration ressources — parsing tabulaire + RDF V1, analyse heuristique, endpoint unique `/api/v1/resources/{id}/explore`.
+- PDS-84: composant ExploreDataset Svelte avec états (locked→loading→error→success), localStorage clé API, tableau WCAG AA, 35 tests.
+- PDS-109: hardening exploration prod — cache, quota asymétrique (miss=consomme, hit=non), timeout réseau, invalidation ciblée.
+- PDS-108: baseline QA tests backend — rapport, modules critiques, cibles couverture progressives, gates 2 phases.
+- PDS-80: ADR-027 — clé API UUID v4 hashée SHA-256, table `licenses`, header `X-API-Key`.
+- PDS-81: implémentation infrastructure licences — LicenseModel, repository, dépendance `require_license`.
 
 ## [1.1.4] - 2026-07-01
+
 ### Added
-- PDS-102 : Frontend recherche migré vers la multi-sélection de tags (`selectedTags`) avec URL partageable/réhydratable (`tags=` pour multi, `tag=` conservé en legacy mono-tag), compatibilité ascendante des anciens liens `tag=...`, adaptation du mock API au filtrage multi-tags (OR), et extension des tests frontend (FiltersPanel, search-context, search-api) pour couvrir le nouveau comportement.
-- M11 : Milestone Monétisation & Exploration Premium créé (m-14).
-- SPEC-008 : Service payant Exploration des champs — endpoint `POST /api/v1/resources/{id}/explore` protégé par clé API, parsing CSV/JSON avec colonnes/types/remplissage/échantillons/stats, analyse sémantique automatique (géo/temporel/statistique/catégoriel/croisement), table `licenses` avec quotas et rate limiting, composant `ExploreDataset.svelte` avec localStorage et WCAG AA. Traçabilité PRD-F12, PRD-F13, PRD-F17. Document : `Doc/20-technique/01-spec/spec-008-service-payant-exploration-champs.md`.
-- SPEC-009 : Service payant Surveillance des changements — abonnement 5 CHF/mois (10 datasets max), détection automatique à chaque cycle d'ingestion, alertes email avec magic links (15 min, multi-usage), tables `watchers`/`watched_datasets`/`change_log`/`magic_links`, page `/alertes` tokenisée, paiement Polar MoR CHF natif. Traçabilité PRD-F14, PRD-F15, PRD-F16. Document : `Doc/20-technique/01-spec/spec-009-service-payant-surveillance-changements.md`.
-- SPEC-010 : Exploration I14Y — Faisabilité multisource (renuméroté de SPEC-008 pour éviter collision). Document : `Doc/20-technique/01-spec/spec-010-exploration-i14y.md`.
-- PRD-F12 à PRD-F17 : Exigences fonctionnelles M11 ajoutées au PRD (exploration, clé API, surveillance, paiement, page /alertes, analyse sémantique). Matrice de traçabilité mise à jour.
-- Index specs : `Doc/20-technique/01-spec/README.md` mis à jour avec SPEC-008, SPEC-009, SPEC-010.
-- PDS-78~79 : Remplacés par les tickets PDS-80 à PDS-90 (décomposition granulaire avec ADR, specs et dépendances).
-- PDS-80 (ADR-027) : Clé API pour l'exploration — token opaque UUID v4 hashé SHA-256, table `licenses`, middleware FastAPI `X-API-Key`, rate limiting par clé, distinct du token watcher (ADR-030). Document : `Doc/30-decisions/adr/0027-cle-api-exploration.md`.
-- PDS-81 : Backend Licence API — modèle `LicenseModel`, port `LicenseRepositoryPort`, dépendance `require_license`, protection endpoint exploration.
-- PDS-82 : Backend Exploration structurelle tabulaire et semantique — endpoint `POST /api/v1/resources/{id}/explore`, parsing CSV/JSON + RDF V1 (Turtle, RDF/XML, JSON-LD), dataclasses `ExploredResource`/`ColumnInfo`/`ColumnStats`, analyse heuristique integree (`summary`, `capabilities`, `caveats`) et cache 24h. Tracabilite: SPEC-013, ADR-032, ADR-027.
-- PDS-83 : Ticket fusionne dans PDS-82 (ADR-032, Decision D2) — pas d'endpoint d'analyse separe, analyse incluse directement dans `/explore`.
-- PDS-84 : Frontend ExploreDataset — composant Svelte avec clé API, localStorage, tableau des colonnes, section Analyse, WCAG AA.
-- PDS-85 (ADR-028) : Paiement Polar pour la surveillance — Polar MoR open-source, CHF natif (130+ devises), webhooks `order.created` et `subscription.cancelled`, SvelteKit adapter, frais transparents (5% + 0.50$). Document : `Doc/30-decisions/adr/0028-paiement-polar-surveillance.md`.
-- PDS-91 (ADR-029) : Envoi d'emails pour la surveillance — smtplib stdlib, templates HTML+texte, déduplication 24h, lien désabonnement, pas de tracking. Document : `Doc/30-decisions/adr/0029-envoi-emails-surveillance.md`.
-- PDS-92 (ADR-030) : Magic Links pour /alertes — token temporaire 15min à usage unique dans les emails, token permanent `watchers.token` pour localStorage uniquement (jamais exposé dans les URLs). Double mécanisme : magic link (email) + token permanent (localStorage). Table `magic_links`. Document : `Doc/30-decisions/adr/0030-token-watcher-surveillance.md`.
-- PDS-86 : Backend Tables surveillance — `WatcherModel`, `WatchedDatasetModel`, `ChangeLogModel`, migrations, repositories.
-- PDS-87 : Backend Détection changements — `DetectChangesUseCase` intégré à `RunSyncCycleUseCase`, 5 types de changements (metadata, ressources, qualité, liens).
-- PDS-88 : Backend Alertes email — `SendAlertsUseCase`, smtplib, templates HTML+texte, déduplication 24h, lien désabonnement.
-- PDS-89 : Backend Endpoints Polar/watchers/alertes — webhook `order.created`, endpoints CRUD watchers, historique alertes.
-- PDS-90 : Frontend WatchDataset + /alertes — modale abonnement Polar (5 CHF/mois), badge Surveillé, page tokenisée avec historique des changements, WCAG AA.
-- Fiche portfolio : `Doc/10-produit/description-portfolio.md` décrivant le projet (Problématique/Solution/Défis/Résultats/Modèle économique) pour intégration sur schopfer.moustik.site.
+- PDS-102: multi-sélection tags recherche, URL partageable, compatibilité ascendante `tag=`.
+- M11: milestone Monétisation & Exploration Premium.
+- SPEC-008: exploration payante — endpoint, parsing CSV/JSON, analyse sémantique, licenses avec quotas.
+- SPEC-009: surveillance changements — abonnement 5 CHF/mois, 10 datasets max, alertes email magic links.
+- SPEC-010: exploration I14Y — faisabilité multisource.
+- PRD-F12 à F17: exigences M11 ajoutées au PRD, matrice de traçabilité mise à jour.
+- Index specs mis à jour avec SPEC-008/009/010.
+- PDS-78~79 remplacés par PDS-80 à PDS-90 (décomposition granulaire).
+- PDS-80 à PDS-92: ADR et tickets infrastructure M11 (clé API, exploration, paiement Polar, emails, magic links, tables, détection, alertes, endpoints, frontend).
+- Fiche portfolio ajoutée.
 
 ### Fixed
-- PDS-84 / PDS-108 : La prévisualisation courte sur la fiche ressource affiche désormais un état sémantique explicite. Les formats compatibles sont signalés en vert avec un badge accessibilité clé API, et les formats non supportés en orange/jaune avec un badge de non-prise en charge, en s'appuyant sur les tokens `success` et `warning` du frontend.
-- Frontend recherche : correction de la navigation dans la facette `Categorie / tag` (multi-selection). Le focus n'est plus vole vers le resume des resultats pendant la selection des tags, la selection au clic est plus fluide (ajout/retrait direct), et le composant conserve une navigation lisible sur longues listes (scroll vertical du select multiple).
-- PDS-104 : Refactor `search_adapter` finalisé en orchestrateur mince avec extraction SRP des responsabilités vers `search_fts`, `search_facets` et `search_tag_filter`, sans rupture du contrat `/api/v1/search`. Correctif de cohérence de reload des modules d'intégration (`search_facets` et `search_tag_filter`) pour éliminer le doublon implicite `datasets` dans SQLAlchemy (erreur `ambiguous column name: datasets.id`). Validation complète backend: `pytest -q` vert (165 tests) avec couverture maintenue au-dessus du seuil.
-- PDS-103 : Maillage documentaire final synchronisé entre runtime et documentation — SPEC-007 réalignée avec l’implémentation effective (expansion backend branchée, stratégie FTS5, dégradation contrôlée), rapport de révision complété avec état de clôture M15 et preuves livrées, index documentaire mis à jour (SPEC/ADR/exploitation), et traçabilité PRD/SPEC/ADR explicitée dans les documents d’exploitation.
-- PDS-101 : Validation production recherche combinée réalisée avec deux sentinelles d'intégration supplémentaires (combinaison q+org+fmt+tag+sort, et hit_ratio cache sur scénario combiné), rapport p50/p95 avant/après archivé en exploitation (R003), et décision Go/No-Go explicite publiée (GO conditionnel avec surveillance p95/hit_ratio/stale_entries).
-- PDS-100 : Hardening production de la recherche — bump du versionnement de clés (`CACHE_SCHEMA_VERSION=2`) pour invalider proprement le cache search lors d'un changement de contrat, gestion défensive des erreurs FTS5 (`datasets_fts` indisponible, `MATCH` malformé, `bm25` indisponible) avec dégradation contrôlée sans 500 non géré, et mise à jour du runbook d'exploitation avec procédure de rollback explicite (application + cache + reconstruction index FTS5 + requêtes sentinelles).
-- PDS-94/PDS-99 : Investigation et confirmation du correctif CORS+502 — le DROP TABLE FTS5 a été remplacé par une vérification `IF NOT EXISTS` dans `create_schema()`, un exception handler global a été ajouté dans `main.py` pour garantir les headers CORS même sur les erreurs 500. Les logs Fly confirment que `/search` répond 200 OK depuis le déploiement.
-- PDS-99 : Parsing CKAN des tags multilingues aligné sur les autres champs textuels (`name`/`display_name` acceptent désormais les objets de locales), avec normalisation d'ingestion (trim, lowercase, suppression des accents, compactage espaces) et déduplication des tags pour réduire les doublons sémantiques en facettes.
-- PDS-96 : Migration contrôlée de `datasets_fts` pour indexer aussi `tags` (en plus de `id,title,description`) avec reconstruction conditionnelle du schéma historique, mise à jour des triggers INSERT/UPDATE/DELETE et backfill complet. Ajout d'un test d'intégration garantissant qu'un terme présent uniquement dans les tags est trouvable via `q=`.
-- PDS-96 : Preuve de rollback/migration miroir ajoutée — test d'intégration qui simule un ancien schéma FTS5 sans `tags`, relance `create_schema()`, vérifie la reconstruction automatique avec `tags`, puis valide la recherche sur terme tag-only.
-- PDS-97 : Câblage backend de l'expansion multilingue/synonymes dans `SearchDatasetsUseCase` (`expand_query`), propagation des termes étendus jusqu'au repository (`expanded_terms`) et exploitation côté FTS5 via clause OR. Ajout d'un test d'intégration validant `q=wetter` -> dataset taggé `meteo`.
-- PDS-98 : Facettes alignées sur le scope de recherche actif (FTS + filtres), correction du filtre tag exact (JSON `json_each` + fallback CSV) pour supprimer les faux positifs de sous-chaîne. Ajout de tests d'intégration dédiés (facettes filtrées et `tag=air` vs `agriculture`).
+- PDS-84/PDS-108: prévisualisation ressource avec état sémantique explicite, badges accessibilité.
+- Frontend recherche: navigation facette tags multi-sélection améliorée (focus, clic, scroll).
+- PDS-104: refactor search_adapter en orchestrateur SRP, correction doublon SQLAlchemy.
+- PDS-103: maillage documentaire synchronisé — SPEC-007 réalignée, rapport révision, index mis à jour.
+- PDS-101: validation production recherche combinée, sentinelles d'intégration, rapport p50/p95.
+- PDS-100: hardening production recherche — CACHE_SCHEMA_VERSION=2, FTS5 défensif, runbook rollback.
+- PDS-94/PDS-99: correctif CORS+502, DROP TABLE → IF NOT EXISTS, exception handler global.
+- PDS-99: parsing CKAN tags multilingues, normalisation ingestion, déduplication facettes.
+- PDS-96: migration FTS5 index tags, reconstruction conditionnelle, backfill complet.
+- PDS-96: preuve rollback/migration miroir — test schéma ancien → reconstruction auto.
+- PDS-97: expansion multilingue branchée dans SearchDatasetsUseCase, propagation FTS5.
+- PDS-98: facettes alignées scope recherche, correction filtre tag exact.
 
 ## [1.1.3] — M10 Préparation multisource
 
 ### Added
-- PDS-71 : Colonne `source` sur les 3 tables du cache — `source` (VARCHAR, NOT NULL, DEFAULT 'ckan') ajoutée aux modèles SQLAlchemy `OrganizationModel`, `DatasetModel`, `ResourceModel` et aux dataclasses domaine `Organization`, `Dataset`, `Resource`. Les upserts (`cache_repository.py`) propagent `source='ckan'`. Migration automatique `_migrate_add_source_column()` dans `create_schema()` pour les bases existantes (ALTER TABLE avec fallback si colonne déjà présente). Prépare le modèle multisource CKAN/I14Y/metadata.swiss (ADR-026).
-- PDS-72 : Protocole de veille I14Y/metadata.swiss — document `Doc/20-technique/07-veille/veille-i14y-metadata-swiss.md` décrivant la fréquence de vérification (bimensuelle), les URLs à surveiller (API I14Y, handbook, GitHub, DCAT-AP), les 8 signaux de bascule (dont 4 primaires : champ ckanId, endpoint structures, bêta metadata.swiss, besoin utilisateur), les commandes curl de test API, le template de note de veille, et la procédure de réévaluation. Première vérification documentée : 2026-06-28 (S1-S4 tous absents, report confirmé ADR-026).
-- PDS-74 : Mise à jour roadmap post-MVP v2.0 — refonte complète de `Doc/10-produit/03-roadmap/roadmap-mvp.md` : nouveau §0 Contexte global expliquant l'abandon CKAN, la découverte I14Y, et la stratégie 2026-2028 ; §1 Rétrospective M1-M9 avec tous les tickets livrés ; §2 M10 en cours avec tableau des tâches et justification de chaque ; §3 M11 Améliorations UX ; §4 2027 Veille et sandbox ; §5 2028 Migration metadata.swiss avec préparation déjà faite et inconnues ; §6 Timeline visuelle ASCII ; §7 Risques et mitigations. Document conçu pour servir de référence contextuelle complète même après une absence prolongée.
-- PDS-76 : Page publique « Suite du projet » — nouvelle route `/suite` expliquant aux utilisateurs la transition opendata.swiss → metadata.swiss (2028). 5 sections : données actuelles (CKAN), la transition (DCAT-AP, I14Y), actions PDS-Portail, calendrier prévisionnel, ressources officielles. Nouveaux composants : molécule `Timeline` (chronologie avec marqueurs done/current/upcoming et animation pulse, conforme `--radius-none`, `prefers-reduced-motion`) et icône `ExternalLinkIcon` (SVG néo-brutaliste). Tous les liens externes annotés `aria-label="... (s'ouvre dans une nouvelle fenêtre)"` (WCAG 2.2). Liens ajoutés dans le header et le footer du layout. `make quality` 0 erreur (svelte-check 0/0, vitest 90/90, pytest 148/148, build, validate:design).
+- PDS-71: colonne `source` sur tables cache, migration auto, préparation multisource ADR-026.
+- PDS-72: protocole veille I14Y/metadata.swiss — 8 signaux bascule, première vérification 2026-06-28.
+- PDS-74: roadmap post-MVP v2.0 — refonte complète avec contexte, rétrospective M1-M9, planning 2026-2028.
+- PDS-76: page `/suite` — transition opendata.swiss → metadata.swiss, composants Timeline et ExternalLinkIcon.
 
 ## [1.1.2] - 2026-06-27
+
 ### Added
-- PDS-69 : Polish cosmétique Frontend — intégration des 6 icônes SVG néo-brutalistes (PDS-67) dans les composants : SearchIcon+FilterIcon dans FiltersPanel, DatasetIcon+CompareIcon dans CardDataset, CompareIcon dans CompareBar. Espacements aérés (`--space-*` +25%, `--line-height-body` 1.6→1.7, `--paragraph-gap` 0.75em→1em). Correction overflow texte des `<select>` dans FiltersPanel (`text-overflow: ellipsis`). Pied de page avec lien "Sébastien Schopfer" vers schopfer.moustik.site.
-- Favicon « cube de données » — SVG 32×32 trois panneaux OKLCH (bleu primaire, jaune, rouge) évoquant une pile de données structurées. Remplace le logo Svelte par défaut.
-- Footer enrichi — identité du portail, source opendata.swiss, lien manuel d'utilisation, crédits auteur, mentions accessibilité WCAG 2.2 AA et RGPD.
-- Page `/manuel` — manuel d'utilisation complet en 6 sections (rechercher, comprendre, personnaliser, comparer, ressources, accessibilité). Lien dans le header et le footer.
+- PDS-69: polish cosmétique — icônes SVG néo-brutalistes, espacements aérés, pied de page auteur.
+- Favicon cube de données SVG OKLCH 32×32.
+- Footer enrichi — identité, source opendata.swiss, manuel, crédits, mentions WCAG 2.2 AA et RGPD.
+- Page `/manuel` — 6 sections (rechercher, comprendre, personnaliser, comparer, ressources, accessibilité).
 
 ### Fixed
-- PDS-70 : Timeout recherche 3+ termes — l'expansion multilingue générait une explosion combinatoire de clauses LIKE (50+ termes → 200+ LIKE → timeout SQLite). Ajout d'une limite `MAX_EXPANSION_TERMS=12` dans `search_repository.py`, les termes originaux de l'utilisateur étant prioritaires (placés en tête de `all_terms`).
-- PDS-70 : Index FTS5 migré vers `tokenize='unicode61 remove_diacritics 2'` (suppression automatique des accents FR/DE/IT), ajout de triggers AFTER INSERT/UPDATE/DELETE sur `datasets` pour maintenir l'index FTS5, et backfill initial au `create_schema()`.
-- PDS-70 : Recherche instantanée sans bouton — le champ texte déclenche automatiquement la recherche après 400ms d'arrêt de frappe (debounce), comme sur Galaxus. Le bouton "Rechercher" est conservé en fallback (submit formulaire). `Input.svelte` forwarde désormais `oninput` et `...restProps`.
-- PDS-71 : Accents français manquants dans l'interface — ~185 chaînes hardcodées sans accents dans 12 fichiers du frontend (pages, composants UI). Qualité → Qualité, Fraicheur → Fraîcheur, Completude → Complétude, resultats → résultats, jeu de donnees → jeu de données, etc. Correction syntaxique Breadcrumb (`"Fil d'Ariane"`). `svelte-check` 0 erreur, build ok.
+- PDS-70: timeout recherche 3+ termes — limite `MAX_EXPANSION_TERMS=12`.
+- PDS-70: index FTS5 migré `unicode61 remove_diacritics 2`, triggers auto, backfill.
+- PDS-70: recherche instantanée debounce 400ms sans bouton.
+- PDS-71: accents français manquants dans ~185 chaînes UI.
 
 ## [1.1.1] - 2026-06-27
+
 ### Fixed
-- each_key_duplicate : dédoublonnage des facettes dans `optionList()` (Set) et clés indexées dans `+page.svelte` (`facet.name-idx`)
+- each_key_duplicate: dédoublonnage facettes dans `optionList()` (Set) et clés indexées.
 
 ## [1.1.0] - 2026-06-27 (Milestones M6, M7, M8, M9)
+
 ### Fixed (Corrections)
-- PDS-69 : Audit recherche combinée tag/format/org — le mock API ignorait le filtre `tag` (paramètre parsé mais jamais appliqué), le filtre `org` comparait sur `dataset.id` au lieu de `dataset.org_id`, et le debounce partagé entre facettes pouvait perdre une sélection lors de changements rapides. Les 3 filtres sont désormais cumulables et indépendants, chacun avec son propre timer 300ms. 16 nouveaux tests unitaires ajoutés (`search-api.test.ts`). (M9)
+- PDS-69: audit recherche combinée — mock API ignorait tag, org comparait sur mauvais champ, debounce indépendant par facette, 16 tests.
 
 ### Added (Ajouts)
-- PDS-64 : Nettoyage et fondations UI — bits-ui retiré (~50KB économisés, 0 import), PageLayout factorise `.stack` (4 pages), debounce 300ms sur facets+sort dans FiltersPanel. (M9)
-- PDS-63 : Transitions et micro-interactions — fade+fly entre les pages via `{#key page.url.pathname}` dans `+layout.svelte` (in:fly 8px/300ms, out:fade 150ms), slide fluide du `CompareBar` (300ms), crossfade des résultats de recherche via `{#key resultsKey}` (in:fade 300ms, out:fade 150ms). Toutes les durées respectent les tokens `--duration-fast` (150ms) / `--duration-normal` (300ms) / `--duration-slow` (500ms). `prefers-reduced-motion` forcé à 0ms via `motion.css`. Zéro librairie externe, transitions Svelte natives uniquement. (M9)
-- PDS-62 : Page 404 personnalisée — carte interactive des 26 cantons suisses en SVG néo-brutaliste (`SwissCantonsMap.svelte`), chaque canton est un lien vers une recherche opendata.swiss pré-remplie avec l'organisation cantonale. Remplace la page d'erreur par défaut de SvelteKit. Design OKLCH, messages français conformes au guide rédactionnel §3.2, accessibilité (`role="alert"`, `aria-live="assertive"`, navigation clavier SVG avec `focus-visible`, labels ARIA par canton). (M9)
-- PDS-61 : États vides illustrés — composant `EmptyState` réutilisable (icône + titre + description + action optionnelle), variantes `empty`/`error`, remplacement des 8 messages texte passe-partout dans `+page.svelte` (recherche), `comparer/+page.svelte` et `dataset/[id]/+page.svelte` par des états illustrés conformes au guide rédactionnel, suppression des CSS orphelines `.state`, `.state-danger`, `.error-banner`. (M9)
-- PDS-60 : Skeletons et états de chargement — composant `Skeleton` réutilisable avec shimmer OKLCH et support `prefers-reduced-motion`, molécule `SkeletonCard` alignée sur `CardDataset` pour éviter le CLS, remplacement de tous les textes "Chargement..." dans `+layout.svelte` (barre de navigation) et `+page.svelte` (3 squelettes pendant la recherche). (M9)
-- PDS-67 : Librairie d'icônes SVG néo-brutalistes — 6 icônes : SearchIcon, FilterIcon, DatasetIcon, CompareIcon, EmptyIcon, ErrorIcon. Style `stroke-width: 2.5`, `stroke-linecap: square`, `currentColor`. Props `size`/`class`. Accessibles (`aria-label`). Exportées via `$lib/index.ts`. Pas de CDN (ADR-014). (M9)
-- PDS-66 : Tokens de motion et contrat d'animation — `tokens/motion.css` avec `--duration-instant` (0ms), `--duration-fast` (150ms), `--duration-normal` (300ms), `--duration-slow` (500ms) et easings `--easing-standard`, `--easing-emphasized`, `--easing-decelerated`. `prefers-reduced-motion: reduce` force toutes les durées à 0ms. Importé dans `tokens/index.css`, documenté dans SPEC-003 §3.6. (M9)
-- PDS-38 : Durcissement HTTPS et headers de sécurité web — middleware `SecurityHeadersMiddleware` backend (HSTS, X-Content-Type-Options, X-Frame-Options, COOP, Referrer-Policy, Permissions-Policy), headers injectés dans `hooks.server.ts` frontend, script `scripts/check-security-headers.sh` de vérification HTTP, Trusted Types en mode rapport via CSP, documentation des compromis MVP (M8).
-- PDS-65 : Réorganisation du design system en Atomic Design — tokens CSS extraits (colors, typography, spacing), composants rangés en atoms/molecules/organisms, barrel `$lib/index.ts` ré-export, document `spec-004-ui-design-system.md`, script `validate-design-system.mjs` adapté pour suivre les `@import` CSS (M9).
-- PDS-45 : Métriques d'ingestion CKAN — table `sync_metrics`, endpoint `GET /api/v1/internal/sync/metrics`, refactorisation extraction `RunSyncCycleUseCase` (élimination duplication ADR-003) (M7).
-- PDS-40 : Recherche différenciante avec ranking hybride explicable et mise en avant de la pertinence (M6).
-- PDS-41 : Recherche multilingue FR/DE/IT/EN — dictionnaire 20 concepts × 4 langues, 15 concepts de synonymes métier, expansion de requête traçable intégrée au pipeline de recherche (M6).
-- PDS-42 : Affichage du "Pourquoi ce résultat" dans les cartes de recherche et refonte de la page pondération (M6).
-- PDS-43 : Comparaison guidée de datasets — sélection de 2 à 4 datasets depuis la recherche, tableau comparatif avec badges de qualité colorés (OKLCH sémantique), vue desktop/mobile responsive, endpoint batch optimisé (1 seul round-trip DB) (M6).
-- PDS-47 : Instrumentation KPI de base pour le Time-to-first-relevant-dataset (M7, planifié).
-- PDS-50 : Documentation technique — glossaire (27 termes), diagramme de flux Mermaid, modèle de menaces (6 menaces, trust boundaries), section Documentation dans le README.
-- PDS-51 : Mise en conformité Svelte 5 best practices — `app.html` lang="fr", suppression meta non standard, `onMount` → `$effect`, titres de page uniques sur les 4 pages.
-- PDS-49 : Validation de la persistance du cache Render — ADR-024 accepté, protocole de vérification avant/après redéploiement documenté dans la procédure d'exploitation, mode dégradé explicité (M7).
-- PDS-52 : Ingestion CKAN incrémentale avec suivi d'offset persistant — table `sync_state`, reprise après redéploiement, endpoints `POST /api/v1/internal/sync` et `GET /api/v1/internal/sync/status` (M7).
-- PDS-44 : Index FTS5 et facettes pré-calculées — table `facets_cache` mise à jour après chaque cycle d'ingestion, fallback sur agrégation directe si cache vide. Réduction de la charge SQL par requête de recherche (M7).
-- PDS-53 : Synchro CKAN différentielle — une fois le catalogue complet chargé, seuls les datasets modifiés depuis `last_full_sync` sont récupérés (filtre `fq=metadata_modified`). Réduit les requêtes CKAN de ~100 à ~1-3 par cycle, fraîcheur quasi temps réel (M7).
-- Gouvernance d'ouverture de session en mode production : lecture courte obligatoire, ancrage backlog/SPEC/ADR, validation ciblée et traçabilité d'exploitation.
-- PDS-46 : Cache multi-niveaux avec invalidation fine — clés versionnées par type d'endpoint (search/dataset_detail/resource_detail/compare), TTL 24h (ADR-007), invalidation ciblée déclenchée après sync CKAN, instrumentation hit/miss/ratio via `GET /api/v1/internal/cache/stats`, feature flag `QUERY_CACHE_ENABLED` (M7).
-- PDS-54 : Rate-limiting global sur l'API publique (slowapi, 30 req/min) et timeout CKAN configurable via `CKAN_HTTP_TIMEOUT_SECONDS` (M8).
-- PDS-55 : Durcissement du Dockerfile — build multi-stage, utilisateur non-root `appuser`, `HEALTHCHECK`, `uv cache clean` (M8).
-- PDS-56 : Content Security Policy (CSP) stricte — header `Content-Security-Policy` injecté via `hooks.server.ts`, script-src self (blocage inline), connect-src restreint à `self` + `pds-portail-backend.fly.dev` + `opendata.swiss`, renommage `svelte.config.js` → `svelte.config.ts` (M8).
-- PDS-57 : Typage des interfaces SvelteKit (`App.PageData`, `App.Error`, `App.Locals`, `App.Platform`) dans `app.d.ts` et validation runtime du contrat `CompareResponse` dans `comparer/+page.ts` via `isCompareResponse` (contrat `$lib/contracts/compare`), suppression du cast brutal `as CompareResponse` (M8).
-- PDS-37 : Baseline SEO technique MVP — métadonnées par type de page (title, meta description, canonical, robots, sitemap), document `Doc/20-technique/05-seo/seo-baseline.md`, `sitemap.xml` statique, `robots.txt` avec directive Sitemap, cartographie des écarts Lighthouse SEO et limites MVP explicites. Références multi-moteurs (Google, Bing, IBM). (M8).
-- PDS-59 : Baseline de métriques qualité sans blocage automatique — intégration Lighthouse dans `make quality` (desktop ≥90, mobile ≥70), script `check-lighthouse-thresholds.mjs`, document `Doc/20-technique/02-exploitation/slo-baseline.md` listant les métriques et leur vérification, pas de CI/CD externe ni dashboard (M8).
-- PDS-58 : Métriques d'usage minimales via le cache existant — endpoints internes `GET /api/v1/internal/metrics/top-queries` (top N par hit_count) et `GET /api/v1/internal/metrics/zero-results` (requêtes sans résultat), exploite la table `query_cache` (PDS-46) sans infrastructure supplémentaire, protégés par `INTERNAL_API_TOKEN`, pas de PII (M8).
-- PDS-68 : Documentation du Design System — trois nouveaux documents techniques : SPEC-006 (Référence des Composants / UI Catalog avec Props, Events, Slots et exemples pour les 11 composants), Guide de gestion des Icônes et Assets SVG (pipeline SVGO → Svelte, règles currentColor/viewBox, checklist conformité) et Checklist d'Accessibilité QA manuelle (42 items sur 5 parcours critiques : clavier, lecteur d'écran, zoom 200%, motion réduite, mode sombre). README table des matières dans `Doc/20-technique/01-spec/` et mise à jour de l'index `Doc/README.md` (M9).
+- PDS-64: nettoyage UI — bits-ui retiré (~50KB), PageLayout factorisé, debounce 300ms facettes.
+- PDS-63: transitions Svelte natives — fly/fade pages, slide CompareBar, crossfade résultats, prefers-reduced-motion.
+- PDS-62: page 404 personnalisée — carte SVG 26 cantons suisses néo-brutaliste, liens recherche par canton.
+- PDS-61: états vides illustrés — composant EmptyState réutilisable, variantes empty/error, 8 remplacements.
+- PDS-60: skeletons — composant Skeleton shimmer OKLCH, SkeletonCard anti-CLS.
+- PDS-67: librairie icônes SVG néo-brutalistes — 6 icônes, stroke-width 2.5, currentColor.
+- PDS-66: tokens motion — durées/easings, prefers-reduced-motion → 0ms.
+- PDS-38: durcissement HTTPS/headers sécurité — SecurityHeadersMiddleware, hooks.server.ts, script vérification.
+- PDS-65: design system Atomic Design — tokens CSS, atoms/molecules/organisms, barrel exports.
+- PDS-45: métriques ingestion CKAN — table sync_metrics, endpoint métriques.
+- PDS-40: ranking hybride explicable, mise en avant pertinence.
+- PDS-41: recherche multilingue FR/DE/IT/EN — 20 concepts × 4 langues, expansion traçable.
+- PDS-42: "Pourquoi ce résultat" dans cartes recherche, refonte pondération.
+- PDS-43: comparaison guidée datasets — sélection 2-4, tableau comparatif, endpoint batch.
+- PDS-47: instrumentation KPI Time-to-first-relevant-dataset (planifié).
+- PDS-50: documentation technique — glossaire 27 termes, diagramme Mermaid, modèle menaces.
+- PDS-51: conformité Svelte 5 — lang="fr", $effect, titres de page uniques.
+- PDS-49: validation persistance cache Render — ADR-024, protocole vérification.
+- PDS-52: ingestion CKAN incrémentale — table sync_state, reprise après redéploiement.
+- PDS-44: index FTS5, facettes pré-calculées — table facets_cache.
+- PDS-53: synchro CKAN différentielle — filtre metadata_modified.
+- Gouvernance d'ouverture de session production.
+- PDS-46: cache multi-niveaux — invalidation fine, TTL 24h, instrumentation hit/miss.
+- PDS-54: rate-limiting slowapi 30 req/min, timeout CKAN configurable.
+- PDS-55: Dockerfile multi-stage, non-root, HEALTHCHECK.
+- PDS-56: CSP stricte — hooks.server.ts, script-src self.
+- PDS-57: typage SvelteKit — App.PageData, validation runtime CompareResponse.
+- PDS-37: baseline SEO technique — métadonnées, sitemap.xml, robots.txt.
+- PDS-59: métriques qualité Lighthouse intégrées dans make quality.
+- PDS-58: métriques usage via cache — top-queries, zero-results.
+- PDS-68: documentation Design System — SPEC-006, guide icônes, checklist accessibilité 42 items.
 
 ### Fixed
-- PDS-40 : suppression des warnings SQLAlchemy de produit cartésien dans les requêtes de recherche/facettes afin de fiabiliser les comptages et la recherche en exploitation.
-- PDS-40 : correction du calcul de fraicheur — `metadata_modified` CKAN (mis à jour par le harvester) remplacé par `max(resources[].last_modified)` pour refléter l'âge réel des fichiers de données.
+- PDS-40: suppression warnings SQLAlchemy produit cartésien recherche/facettes.
+- PDS-40: correction calcul fraîcheur — `max(resources[].last_modified)` au lieu de `metadata_modified` CKAN.
 
 ## [1.0.0] - 2026-06-23 (Stabilisation MVP)
+
 ### Added
 - MVP déployé en production (Vercel + Render).
-- Interface de recherche SvelteKit 5 (UI Neo-Brutaliste OKLCH).
-- Calcul dynamique du score de qualité et de la fraîcheur.
-- Ingestion automatisée et normalisation de l'API CKAN opendata.swiss.
+- Interface de recherche SvelteKit 5, UI Neo-Brutaliste OKLCH.
+- Score qualité et fraîcheur dynamiques.
+- Ingestion automatisée CKAN opendata.swiss.
 
 ### Fixed
-- PDS-15 : Correction du CORS proxy et du passage des headers de compression `ERR_CONTENT_DECODING_FAILED`.
-- PDS-18 : Tolérance au parsing des champs CKAN éditoriaux multilingues (support objet ou string).
-- PDS-29 : Lancement du bootstrap CKAN limité avec gestion des redirections HTTP 302.
+- PDS-15: CORS proxy et headers compression `ERR_CONTENT_DECODING_FAILED`.
+- PDS-18: tolérance parsing champs CKAN multilingues (objet ou string).
+- PDS-29: bootstrap CKAN limité, gestion redirections HTTP 302.
 
 ### Security
-- PDS-54 : Protection anti-abus de l'API publique avec rate-limiting slowapi (30 req/min) et timeout strict sur les appels CKAN externes (30s par défaut, configurable).
+- PDS-54: rate-limiting slowapi 30 req/min, timeout CKAN.

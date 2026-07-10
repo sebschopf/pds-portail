@@ -6,6 +6,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- PDS-106: Tests backend — couverture des chemins critiques `invalidate_cache_after_sync`, `compare_adapter`, `cache_repository` (conflits/upsert), `_search_helpers.parse_tags`. 9 tests, 366 lignes, couverture backend → 91.41%.
 - PDS-M11: Suppression de `uv` du stage de production Dockerfile — .venv copié depuis le build, CMD/HEALTHCHECK utilisent python directement (recommandation architecte).
 - PDS-M11: Activation mypy strict (`disallow_untyped_defs = true`) — 1 seule fonction non-annotée corrigée dans tout le codebase.
 - PDS-125: ADR-035 — Contrat OpenAPI comme source de vérité unique backend↔frontend, génération automatique des types TypeScript.

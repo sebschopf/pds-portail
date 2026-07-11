@@ -5,10 +5,10 @@
 | Propriété           | Valeur                                                |
 |---------------------|-------------------------------------------------------|
 | **Titre**           | Roadmap PDS-Portail                                   |
-| **Version**         | 2.1                                                   |
-| **Date**            | 2026-07-06                                            |
+| **Version**         | 2.2                                                   |
+| **Date**            | 2026-07-11                                            |
 | **Auteur**          | mous_tik + Cline                                      |
-| **Statut**          | En cours (M10 en clôture, M11 actif)                  |
+| **Statut**          | En cours (M10 actif, M11 clôturé, M12 clôturé, M14 clôturé) |
 | **Phase du projet** | Post-MVP — Préparation multisource                    |
 
 ---
@@ -104,7 +104,7 @@ L'architecture (FastAPI + SQLite + SvelteKit 5), les engagements accessibilité 
 
 ---
 
-## 2. En cours : M10 — Préparation multisource (juin 2026)
+## 2. En cours : M10 — Préparation multisource (juin-juillet 2026)
 
 **Objectif** : Préparer PDS-Portail à la transition CKAN → metadata.swiss sans casser l'existant.
 
@@ -114,9 +114,9 @@ L'architecture (FastAPI + SQLite + SvelteKit 5), les engagements accessibilité 
 |----|-------|--------|----------|
 | PDS-71 | Ajouter colonne `source` au schéma cache | ✅ Done | `source` VARCHAR, DEFAULT 'ckan' sur organizations, datasets, resources |
 | PDS-72 | Protocole de veille I14Y/metadata.swiss | ✅ Done | [veille-i14y-metadata-swiss.md](../../20-technique/07-veille/veille-i14y-metadata-swiss.md) |
-| PDS-74 | Mise à jour roadmap post-MVP (ce document) | ✅ Done | Ce document |
-| PDS-75 | Gap analysis schéma cache vs DCAT-AP Suisse | ○ To Do | Document d'analyse d'écart |
-| PDS-73 | Schéma de cache orienté source (normalisateur) | ○ To Do | Refactor du normalisateur pour supporter source= paramétrable |
+| PDS-74 | Mise à jour roadmap post-MVP | ✅ Done | Ce document |
+| PDS-75 | Gap analysis schéma cache vs DCAT-AP Suisse | ○ To Do (PDS-127) | Document d'analyse d'écart |
+| PDS-73 | Schéma de cache orienté source (normalisateur) | ○ To Do (PDS-126) | Refactor du normalisateur pour supporter source= paramétrable |
 
 ### Pourquoi ces tâches
 
@@ -139,64 +139,70 @@ Si l'un de ces signaux apparaît, on réévalue immédiatement :
 
 ---
 
-## 3. Court terme : M11 — Convergence service payant + améliorations UX (juillet 2026)
+## 3. Clôturé : M11 — Convergence service payant + améliorations UX (juillet 2026)
 
-**Objectif** : Stabiliser le service payant de surveillance, fermer les écarts entre documentation et implémentation, puis reprendre les améliorations UX sur une base cohérente.
+**Objectif** : Stabiliser le service payant de surveillance, fermer les écarts entre documentation et implémentation.
 
-### Tâches actives et prochaines
+### Tâches
 
-| ID | Tâche | Statut | Livrable |
-|----|-------|--------|----------|
-| PDS-114 | Finaliser la décision checkout/webhooks Polar | ✅ Done | Décision V1 documentée dans ADR-034 + SPEC-012 stabilisée |
-| PDS-116 | Converger le backend watchers/webhooks | ✅ Done | Backend et tests alignés sur le flux retenu |
-| PDS-115 | Converger le frontend surveillance et accès alertes | ✅ Done | Frontend aligné sur le contrat V1 retenu |
-| PDS-117.1 | Implémenter le flux magic link bout en bout pour l'accès /alertes | ✅ Done | Consommation publique `?magic=`, bascule token local et tests e2e du parcours email |
-| PDS-117 | Convergence V1 surveillance datasets | ✅ Done | Initiative parent, impact mesuré, convergence clôturée |
-| PDS-76 | Page publique « Suite du projet » | ✅ Done | Route `/suite` expliquant la transition opendata.swiss → metadata.swiss |
+| ID | Tâche | Statut |
+|----|-------|--------|
+| PDS-114 | Finaliser la décision checkout/webhooks Polar | ✅ Done |
+| PDS-116 | Converger le backend watchers/webhooks | ✅ Done |
+| PDS-115 | Converger le frontend surveillance et accès alertes | ✅ Done |
+| PDS-117.1 | Implémenter le flux magic link bout en bout pour l'accès /alertes | ✅ Done |
+| PDS-117 | Convergence V1 surveillance datasets (initiative parent) | ✅ Done |
+| PDS-76 | Page publique « Suite du projet » | ✅ Done |
+| PDS-122 | Aligner exploitation sur SPEC-009 (polar_customer_id + limite 10 datasets) | ✅ Done |
 
-### Axes M11
-
-| Axe | Pourquoi maintenant | Priorité |
-|-----|---------------------|----------|
-| Convergence service payant | Le service existe mais mélange V1 livrée, briques préparatoires et cible documentaire | Haute |
-| Transparence produit | La page `/suite` explique la transition metadata.swiss et réduit l'incertitude côté utilisateur | Haute |
-| Qualité d'accès aux alertes | Le flux `/alertes` doit être cohérent avec l'identité email et les contrats backend | Haute |
-| Améliorations recherche | À reprendre une fois la convergence du service payant terminée | Moyenne |
-| Dark mode / onboarding | Toujours optionnels, mais non prioritaires tant que la convergence n'est pas close | Basse |
-
-### Règle de pilotage M11
-
-Tant que PDS-114, PDS-115, PDS-116 et PDS-117 ne sont pas clos, la priorité M11 n'est pas d'ajouter de nouvelles capacités au service payant, mais de rendre son comportement auditable, cohérent et exploitable de bout en bout.
-
-État de suivi au 2026-07-06 :
-- la décision V1 checkout/webhooks est stabilisée (✅ PDS-114) ;
-- les convergences backend et frontend V1 sont livrées (✅ PDS-116, PDS-115) ;
-- l'écart structurant restant avant clôture de PDS-117 est le parcours magic link de bout en bout (`✅ PDS-117.1`).
-- **PDS-117 et PDS-117.1 sont clôturés** : M11 converge vers sa clôture.
-
-### Travaux optionnels post-M11 (M12)
-
-Les tâches suivantes sont des nettoyages/refactors post-PDS-117.1, assignés à M12 (priorité moyenne à basse) :
-- **PDS-105** : Backend Tests — Éliminer les reload modules et stabiliser les fixtures d'intégration ✅
-- **PDS-106** : Backend Tests — Couvrir `invalidate_cache_after_sync` et adapters critiques (9 tests, 366 lignes, couverture 91.41%) ✅
-- **PDS-118** : Refactor magic link tests pour clocks contrôlables (déterminisme) ✅
-- **PDS-119** : Clarifier stratégie error messages magic link (UX vs sécurité, ADR-031)
-- **PDS-120** : Refactor router.py — déplacer imports au niveau module (maintenabilité 1085 lignes) ✅
-
-### Exécution opérationnelle Polar (M14)
-
-Une fois la convergence M11 livrée, le jumeau opérationnel doit être exécuté en production pour valider le flux de bout en bout :
-
-| ID | Tâche | Statut | Livrable |
-|----|-------|--------|----------|
-| PDS-121 | Mise en conformité Polar Checkout et Webhooks (cadrage) | ○ To Do | Checklist, critères d'acceptation, dépendance vers PDS-121.1 |
-| PDS-121.1 | Exécution opérationnelle Polar (prod, signatures, E2E, preuves Go/No-Go) | ○ To Do | Preuves archivées, checklist Go/No-Go complétée, rapport E2E |
-
-Ces tâches ne modifient pas le code : elles vérifient, valident et documentent l'état de la production.
+**M11 est clôturé** au 2026-07-11. Toutes les tâches sont Done.
 
 ---
 
-## 4. Moyen terme : 2027 — Veille et sandbox
+## 4. Clôturé : M12 — Travaux post-M11 (juillet 2026)
+
+Tâches de nettoyage, refactor, et qualité post-convergence M11.
+
+| ID | Tâche | Statut |
+|----|-------|--------|
+| PDS-105 | Backend Tests — Éliminer les reload modules et stabiliser les fixtures d'intégration | ✅ Done |
+| PDS-106 | Backend Tests — Couvrir `invalidate_cache_after_sync` et adapters critiques | ✅ Done |
+| PDS-118 | Refactor magic link tests pour clocks contrôlables (déterminisme) | ✅ Done |
+| PDS-119 | Clarifier stratégie error messages magic link (UX vs sécurité, ADR-031) | ✅ Done |
+| PDS-120 | Refactor router.py — déplacer imports au niveau module (maintenabilité) | ✅ Done |
+| PDS-108 | QA — Métriques de fiabilité tests et trajectoire couverture 95-98 | ✅ Done |
+
+**M12 est clôturé** au 2026-07-11. Toutes les tâches sont Done.
+
+---
+
+## 5. Clôturé : M14 — Exécution opérationnelle Polar (juillet 2026)
+
+Une fois la convergence M11 livrée, le jumeau opérationnel a été exécuté en production pour valider le flux de bout en bout :
+
+| ID | Tâche | Statut |
+|----|-------|--------|
+| PDS-121 | Mise en conformité Polar Checkout et Webhooks (cadrage) | ✅ Done |
+| PDS-121.1 | Exécution opérationnelle Polar (prod, signatures, E2E, preuves Go/No-Go) | ✅ Done |
+
+**M14 est clôturé** au 2026-07-11. Preuves archivées, checklist Go/No-Go complétée, rapport E2E livré.
+
+---
+
+## 6. Livraisons hors-milestone (juillet 2026)
+
+Tâches livrées en parallèle, non rattachées à un milestone spécifique de la roadmap :
+
+| ID | Tâche | Statut |
+|----|-------|--------|
+| PDS-123 | Frontend — Patterns Svelte 5 avancés (Runes, query.live) | ✅ Done |
+| PDS-123.1 | Élargir les patterns Svelte 5 à l'ensemble du frontend | ✅ Done |
+| PDS-124 | Backend — Optimisation Docker (uv workspaces) | ✅ Done |
+| PDS-125 | Générer les types TypeScript depuis le schéma OpenAPI | ✅ Done |
+
+---
+
+## 7. Moyen terme : 2027 — Veille et sandbox
 
 **Objectif** : Maintenir le produit, surveiller l'écosystème, expérimenter sans engager.
 
@@ -216,7 +222,7 @@ Ces tâches ne modifient pas le code : elles vérifient, valident et documentent
 
 ---
 
-## 5. Long terme : 2028 — Migration metadata.swiss
+## 8. Long terme : 2028 — Migration metadata.swiss
 
 **Objectif** : Basculer de l'API CKAN opendata.swiss vers l'API unifiée metadata.swiss.
 
@@ -233,8 +239,8 @@ Ces tâches ne modifient pas le code : elles vérifient, valident et documentent
 | Colonne `source` dans le cache | ✅ PDS-71 |
 | Protocole de veille | ✅ PDS-72 |
 | Roadmap documentée | ✅ PDS-74 (ce document) |
-| Gap analysis DCAT-AP CH | ⬜ PDS-75 |
-| Normalisateur paramétrable | ⬜ PDS-73 |
+| Gap analysis DCAT-AP CH | ⬜ PDS-75 (PDS-127) |
+| Normalisateur paramétrable | ⬜ PDS-73 (PDS-126) |
 
 ### Inconnues (à clarifier d'ici 2028)
 
@@ -245,12 +251,14 @@ Ces tâches ne modifient pas le code : elles vérifient, valident et documentent
 
 ---
 
-## 6. Timeline visuelle
+## 9. Timeline visuelle
 
 ```
 2026 Q2 (avr-juin)  ████████████████████  M1-M9 : MVP + Recherche + Robustesse + Sécurité + Polish
 2026 Q3 (juil-sept)  ████                  M10 : Préparation multisource (en cours)
-2026 Q3 (juil-sept)  ████                  M11 : Convergence service payant + améliorations UX
+2026 Q3 (juil)       ████                  M11 : Convergence service payant (✅ clôturé)
+2026 Q3 (juil)       ██                    M12 : Travaux post-M11 (✅ clôturé)
+2026 Q3 (juil)       ██                    M14 : Exécution opérationnelle Polar (✅ clôturé)
 2026 Q4 (oct-déc)    ░░░░                  Veille I14Y + sandbox si bêta
 2027                 ░░░░░░░░░░░░░░░░░░░░  Veille continue, maintenance, itérations UX
 2028                 ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  Migration metadata.swiss
@@ -262,7 +270,7 @@ Ces tâches ne modifient pas le code : elles vérifient, valident et documentent
 
 ---
 
-## 7. Risques et mitigations
+## 10. Risques et mitigations
 
 | Risque | Probabilité | Impact | Mitigation |
 |--------|-------------|--------|-----------|
@@ -274,7 +282,7 @@ Ces tâches ne modifient pas le code : elles vérifient, valident et documentent
 
 ---
 
-## 8. Références
+## 11. Références
 
 | Document | Lien |
 |----------|------|
@@ -291,4 +299,4 @@ Ces tâches ne modifient pas le code : elles vérifient, valident et documentent
 
 ---
 
-**Document propriétaire — PDS-Portail | Version 2.1 | Créé 2026-06-13, mis à jour 2026-07-06 (PDS-74)**
+**Document propriétaire — PDS-Portail | Version 2.2 | Créé 2026-06-13, mis à jour 2026-07-11 (correction roadmap vs backlog)**

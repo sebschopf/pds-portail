@@ -10,6 +10,7 @@ from types import ModuleType
 import pytest
 from sqlalchemy import select
 
+from app.application.errors.ingestion import CkanRateLimitError, CkanTimeoutError
 from app.application.ports.ckan_payloads import parse_package_search_response
 from app.application.ports.ckan_types import CkanPackageSearchResponse
 
@@ -30,6 +31,21 @@ class FakeCkanClient:
         payload = self._payloads[min(self._cursor, len(self._payloads) - 1)]
         self._cursor += 1
         return payload
+
+
+class FaultyCkanClient:
+    """Client CKAN factice qui leve des erreurs pour tester la resilience."""
+
+    def __init__(self, error: type[Exception]) -> None:
+        self._error = error
+        self.calls: list[tuple[int, int]] = []
+
+    def fetch_packages_batch(
+        self, start: int, rows: int = 100, modified_since: str | None = None
+    ) -> CkanPackageSearchResponse:
+        self.calls.append((start, rows))
+        _ = (start, rows, modified_since)
+        raise self._error("Simulee")
 
 
 def _package_payload(title: str, resource_name: str) -> CkanPackageSearchResponse:
@@ -202,3 +218,145 @@ def test_sync_ckan_batch_normalizes_and_deduplicates_multilingual_tags(
     assert dataset.tags is not None
     parsed_tags = json.loads(dataset.tags)
     assert parsed_tags == ["mobilite", "open data"]
+
+
+def test_normalizer_parametrable_par_source(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Une source fictive peut etre branchee avec son propre normalisateur (PDS-126 AC#3)."""
+
+    database_path = tmp_path / "sync-source-fictive.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+
+    database_module, models_module, repository_module, use_case_module = _configure_test_modules()
+    database_module.create_schema()
+
+    payload = _package_payload("Données source fictive", "Export JSON")
+
+    # Normalisateur factice : même logique CKAN mais avec source="fictive-src"
+    from app.domain.ckan_normalizer import CkanNormalizer
+
+    fake_normalizer = CkanNormalizer(source="fictive-src")
+
+    client = FakeCkanClient([payload])
+    repository = repository_module.SqlAlchemyCacheRepository()
+    use_case = use_case_module.SyncCkanBatchUseCase(
+        client=client,
+        repository=repository,
+        normalizer=fake_normalizer,
+    )
+
+    batch = use_case.execute(start=0, rows=100)
+
+    assert len(batch.datasets) == 1
+    assert batch.datasets[0].source == "fictive-src"
+    assert len(batch.organizations) == 1
+    assert batch.organizations[0].source == "fictive-src"
+    assert len(batch.resources) == 2
+    assert all(r.source == "fictive-src" for r in batch.resources)
+
+    # Vérification en base
+    with database_module.SessionLocal() as session:
+        db_dataset = session.scalar(
+            select(models_module.DatasetModel).where(models_module.DatasetModel.id == "dataset-001")
+        )
+        db_org = session.scalar(
+            select(models_module.OrganizationModel).where(
+                models_module.OrganizationModel.id == "org-001"
+            )
+        )
+        db_resources = session.scalars(
+            select(models_module.ResourceModel).where(
+                models_module.ResourceModel.dataset_id == "dataset-001"
+            )
+        ).all()
+
+    assert db_dataset is not None
+    assert db_dataset.source == "fictive-src"
+    assert db_org is not None
+    assert db_org.source == "fictive-src"
+    assert len(db_resources) == 2
+    assert all(r.source == "fictive-src" for r in db_resources)
+
+
+def test_execute_resiste_timeout_et_retourne_batch_vide(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Un timeout CKAN est intercepté et retourne un batch vide (lignes 66-68)."""
+
+    database_path = tmp_path / "sync-timeout.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+
+    database_module, _models_module, repository_module, use_case_module = _configure_test_modules()
+    database_module.create_schema()
+
+    client = FaultyCkanClient(CkanTimeoutError)
+    repository = repository_module.SqlAlchemyCacheRepository()
+    use_case = use_case_module.SyncCkanBatchUseCase(client=client, repository=repository)
+
+    batch = use_case.execute(start=0, rows=100)
+
+    assert client.calls == [(0, 100)]
+    assert len(batch.datasets) == 0
+    assert len(batch.organizations) == 0
+    assert len(batch.resources) == 0
+
+
+def test_execute_resiste_rate_limit_et_retourne_batch_vide(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Un rate-limit CKAN est intercepté et retourne un batch vide (lignes 69-73)."""
+
+    database_path = tmp_path / "sync-ratelimit.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+
+    database_module, _models_module, repository_module, use_case_module = _configure_test_modules()
+    database_module.create_schema()
+
+    client = FaultyCkanClient(CkanRateLimitError)
+    repository = repository_module.SqlAlchemyCacheRepository()
+    use_case = use_case_module.SyncCkanBatchUseCase(client=client, repository=repository)
+
+    batch = use_case.execute(start=0, rows=100)
+
+    assert client.calls == [(0, 100)]
+    assert len(batch.datasets) == 0
+    assert len(batch.organizations) == 0
+    assert len(batch.resources) == 0
+
+
+def test_execute_rejette_rows_invalide(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """rows <= 0 leve ValueError (ligne 55)."""
+
+    database_path = tmp_path / "sync-val.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+
+    database_module, _models_module, repository_module, use_case_module = _configure_test_modules()
+    database_module.create_schema()
+
+    client = FakeCkanClient([])
+    repository = repository_module.SqlAlchemyCacheRepository()
+    use_case = use_case_module.SyncCkanBatchUseCase(client=client, repository=repository)
+
+    with pytest.raises(ValueError, match="rows doit etre > 0"):
+        use_case.execute(start=0, rows=0)
+
+    with pytest.raises(ValueError, match="rows doit etre > 0"):
+        use_case.execute(start=0, rows=-5)
+
+
+def test_execute_rejette_start_negatif(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """start < 0 leve ValueError (ligne 57)."""
+
+    database_path = tmp_path / "sync-val2.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{database_path}")
+
+    database_module, _models_module, repository_module, use_case_module = _configure_test_modules()
+    database_module.create_schema()
+
+    client = FakeCkanClient([])
+    repository = repository_module.SqlAlchemyCacheRepository()
+    use_case = use_case_module.SyncCkanBatchUseCase(client=client, repository=repository)
+
+    with pytest.raises(ValueError, match="start doit etre >= 0"):
+        use_case.execute(start=-1, rows=100)

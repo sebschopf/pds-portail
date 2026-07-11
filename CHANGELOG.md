@@ -6,6 +6,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- PDS-126: Normalisateur paramétrable par source — extraction de la logique CKAN dans `CkanNormalizer` (implémentant `NormalizerPort`), injection dans `SyncCkanBatchUseCase`, colonne `source` propagée dans toutes les entités. Prépare l'arrivée de sources secondaires (I14Y, metadata.swiss) sans modifier le pipeline d'ingestion. 17 tests (14 nouveaux via audit), couverture 100% sur `ckan_normalizer.py`, `sync_ckan_batch.py` et `normalizer_port.py`. SPEC-001 §4.3.1 mis à jour. Classes `FaultyCkanClient` et `FakeCkanClient` pour tests de résilience.
 - PDS-106: Tests backend — couverture des chemins critiques `invalidate_cache_after_sync`, `compare_adapter`, `cache_repository` (conflits/upsert), `_search_helpers.parse_tags`. 9 tests, 366 lignes, couverture backend → 91.41%.
 - PDS-M11: Suppression de `uv` du stage de production Dockerfile — .venv copié depuis le build, CMD/HEALTHCHECK utilisent python directement (recommandation architecte).
 - PDS-M11: Activation mypy strict (`disallow_untyped_defs = true`) — 1 seule fonction non-annotée corrigée dans tout le codebase.

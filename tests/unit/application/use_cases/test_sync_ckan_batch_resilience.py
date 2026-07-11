@@ -86,9 +86,9 @@ def test_use_case_logs_and_skips_invalid_dataset_and_resource(
     assert len(batch.organizations) == 1
     assert len(batch.datasets) == 1
     assert len(batch.resources) == 1
-    assert "Dataset ignore sans organisation id/name" in caplog.text
-    assert "Dataset invalide ignore (id/title manquant)" in caplog.text
-    assert "Ressource invalide ignoree" in caplog.text
+    assert "Dataset ignoré sans organisation id/name" in caplog.text
+    assert "Dataset invalide ignoré (id/title manquant)" in caplog.text
+    assert "Ressource invalide ignorée" in caplog.text
 
 
 # ── Tests offset persisté (PDS-52) ───────────────────────────────────────
